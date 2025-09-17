@@ -1,16 +1,17 @@
 -- Arquivo: backend/schema.sql
 -- Descrição: Define a estrutura completa do banco de dados para o Sistema de Controle de Ocorrências.
--- Para usar: Execute este script em um banco de dados PostgreSQL local para criar todas as tabelas necessárias.
+-- Para usar: Execute este script em um banco de dados PostgreSQL para criar todas as tabelas necessárias.
 
--- Remove as tabelas na ordem inversa de dependência para evitar erros de chave estrangeira
-DROP TABLE IF EXISTS supervisor_plantao;
-DROP TABLE IF EXISTS ocorrencia_destaque;
-DROP TABLE IF EXISTS obitos;
-DROP TABLE IF EXISTS ocorrencias;
-DROP TABLE IF EXISTS usuarios;
-DROP TABLE IF EXISTS obms;
-DROP TABLE IF EXISTS crbms;
-DROP TABLE IF EXISTS naturezas_ocorrencia;
+-- Remove as tabelas e TODOS os seus objetos dependentes (constraints, views, etc.)
+-- A adição do CASCADE resolve erros de dependência ao recriar o schema.
+DROP TABLE IF EXISTS supervisor_plantao CASCADE;
+DROP TABLE IF EXISTS ocorrencia_destaque CASCADE;
+DROP TABLE IF EXISTS obitos CASCADE;
+DROP TABLE IF EXISTS ocorrencias CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
+DROP TABLE IF EXISTS obms CASCADE;
+DROP TABLE IF EXISTS crbms CASCADE;
+DROP TABLE IF EXISTS naturezas_ocorrencia CASCADE;
 
 -- Tabela para os Comandos Regionais de Bombeiro Militar (CRBMs)
 CREATE TABLE crbms (
@@ -105,6 +106,3 @@ CREATE TABLE supervisor_plantao (
 -- A cláusula ON CONFLICT DO NOTHING impede erros se as linhas já existirem.
 INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
 INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
-
--- Mensagem de conclusão
-
