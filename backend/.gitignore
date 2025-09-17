@@ -1,0 +1,15 @@
+# Dependências
+/node_modules
+
+# Arquivos de ambiente
+# Ignora todos os arquivos que começam com .env
+.env*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Metadados do sistema operacional
+.DS_Store
+Thumbs.db
