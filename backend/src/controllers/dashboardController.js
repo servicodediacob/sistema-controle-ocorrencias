@@ -9,15 +9,9 @@ const db = require('../db');
  */
 const getDashboardStats = async (req, res) => {
   try {
-    // Esta é a nossa consulta SQL principal. Vamos detalhá-la:
-    // 1. Usamos várias CTEs (Common Table Expressions) com a cláusula WITH para calcular cada métrica separadamente.
-    // 2. `total_ocorrencias`: Simplesmente conta todas as linhas da tabela 'ocorrencias'.
-    // 3. `total_obitos`: Soma a coluna 'quantidade_obitos' da tabela 'ocorrencias'.
-    // 4. `ocorrencias_por_natureza`: Agrupa as ocorrências por 'natureza_id', junta com a tabela 'naturezas_ocorrencia'
-    //    para obter o nome da natureza e conta o total para cada uma.
-    // 5. `ocorrencias_por_obm`: Faz o mesmo, mas agrupando por 'obm_id' e juntando com a tabela 'obms'.
-    // 6. No final, usamos `json_build_object` para construir um único objeto JSON com todos os resultados,
-    //    o que nos permite retornar tudo em uma única linha e uma única consulta.
+    // Consulta SQL CORRIGIDA e mais robusta para lidar com um banco de dados vazio.
+    // Usamos COALESCE para garantir que, se uma subconsulta de agregação (json_agg)
+    // não encontrar linhas e retornar NULL, ela seja substituída por um array JSON vazio ('[]'::json).
     const query = `
       WITH total_ocorrencias AS (
         SELECT COUNT(*) AS total FROM ocorrencias
@@ -28,7 +22,7 @@ const getDashboardStats = async (req, res) => {
       ocorrencias_por_natureza AS (
         SELECT
           n.descricao AS nome,
-          COUNT(o.id) AS total
+          COUNT(o.id)::int AS total
         FROM ocorrencias o
         JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
         GROUP BY n.descricao
@@ -37,7 +31,7 @@ const getDashboardStats = async (req, res) => {
       ocorrencias_por_obm AS (
         SELECT
           obm.nome AS nome,
-          COUNT(o.id) AS total
+          COUNT(o.id)::int AS total
         FROM ocorrencias o
         JOIN obms obm ON o.obm_id = obm.id
         GROUP BY obm.nome
@@ -46,26 +40,20 @@ const getDashboardStats = async (req, res) => {
       SELECT json_build_object(
         'totalOcorrencias', (SELECT total FROM total_ocorrencias),
         'totalObitos', (SELECT COALESCE(total, 0) FROM total_obitos),
-        'ocorrenciasPorNatureza', (SELECT json_agg(ocorrencias_por_natureza) FROM ocorrencias_por_natureza),
-        'ocorrenciasPorOBM', (SELECT json_agg(ocorrencias_por_obm) FROM ocorrencias_por_obm)
+        'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(ocorrencias_por_natureza) FROM ocorrencias_por_natureza), '[]'::json),
+        'ocorrenciasPorOBM', COALESCE((SELECT json_agg(ocorrencias_por_obm) FROM ocorrencias_por_obm), '[]'::json)
       ) AS stats;
     `;
 
     const { rows } = await db.query(query);
 
     // O resultado da consulta é um único objeto JSON na primeira linha/coluna.
-    // Se não houver dados, alguns campos podem ser nulos, então garantimos que sejam arrays vazios.
     const stats = rows[0].stats;
-    if (!stats.ocorrenciasPorNatureza) {
-      stats.ocorrenciasPorNatureza = [];
-    }
-    if (!stats.ocorrenciasPorOBM) {
-      stats.ocorrenciasPorOBM = [];
-    }
     
     res.status(200).json(stats);
 
   } catch (error) {
+    // Este log é crucial para debugar erros no ambiente de produção (visível nos logs do Render)
     console.error('Erro ao buscar estatísticas do dashboard:', error);
     res.status(500).json({ message: 'Erro interno do servidor ao buscar estatísticas.' });
   }
