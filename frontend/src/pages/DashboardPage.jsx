@@ -1,3 +1,5 @@
+// frontend/src/pages/DashboardPage.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/useAuth';
 import { getDashboardStats, getPlantao } from '../services/api';
@@ -5,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import DestaqueWidget from '../components/DestaqueWidget';
 import PlantaoWidget from '../components/PlantaoWidget';
 
-// --- Componentes Internos (para manter o arquivo autocontido) ---
+// --- Componentes Internos (StatCard, DataTable) permanecem os mesmos ---
 
 function StatCard({ title, value, loading }) {
   const styles = {
@@ -102,6 +104,7 @@ function DashboardPage() {
     button: { padding: '0.5rem 1rem', cursor: 'pointer', border: 'none', borderRadius: '4px' },
     logoutButton: { marginLeft: '1rem', backgroundColor: '#555', color: 'white' },
     manageButton: { backgroundColor: '#3a7ca5', color: 'white' },
+    manageUsersButton: { backgroundColor: '#e9c46a', color: 'black', marginLeft: '1rem' }, // Estilo para o novo botão
     widgetsContainer: { display: 'flex', gap: '1.5rem', marginTop: '2rem', flexWrap: 'wrap' },
     cardsContainer: { display: 'flex', gap: '1.5rem', flexWrap: 'wrap' },
     tablesContainer: { display: 'flex', gap: '1.5rem', marginTop: '2rem', flexWrap: 'wrap' },
@@ -121,9 +124,14 @@ function DashboardPage() {
       <main style={styles.main}>
         {error && <p style={styles.error}>{error}</p>}
 
+        {/* --- CONTAINER DOS BOTÕES DE GERENCIAMENTO --- */}
         <div style={{ marginBottom: '2rem' }}>
           <button onClick={() => navigate('/gestao-ocorrencias')} style={{...styles.button, ...styles.manageButton}}>
             Gerenciar Ocorrências
+          </button>
+          {/* --- NOVO BOTÃO DE GERENCIAR USUÁRIOS --- */}
+          <button onClick={() => navigate('/gestao-usuarios')} style={{...styles.button, ...styles.manageUsersButton}}>
+            Gerenciar Usuários
           </button>
         </div>
 

@@ -1,3 +1,5 @@
+// frontend/src/services/api.js
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -60,12 +62,6 @@ export const getDashboardStats = async () => {
 };
 
 // --- GESTÃO DE OCORRÊNCIAS (CRUD) ---
-
-/**
- * Busca uma lista paginada de ocorrências.
- * @param {number} page - O número da página a ser buscada.
- * @param {number} limit - O número de itens por página.
- */
 export const getOcorrencias = async (page = 1, limit = 10) => {
   try {
     const response = await api.get(`/ocorrencias?page=${page}&limit=${limit}`);
@@ -75,11 +71,6 @@ export const getOcorrencias = async (page = 1, limit = 10) => {
   }
 };
 
-/**
- * Atualiza uma ocorrência existente.
- * @param {number} id - O ID da ocorrência a ser atualizada.
- * @param {object} data - Os novos dados da ocorrência ({ data_ocorrencia, natureza_id, obm_id }).
- */
 export const updateOcorrencia = async (id, data) => {
   try {
     const response = await api.put(`/ocorrencias/${id}`, data);
@@ -89,10 +80,6 @@ export const updateOcorrencia = async (id, data) => {
   }
 };
 
-/**
- * Exclui uma ocorrência.
- * @param {number} id - O ID da ocorrência a ser excluída.
- */
 export const deleteOcorrencia = async (id) => {
   try {
     const response = await api.delete(`/ocorrencias/${id}`);
@@ -102,11 +89,64 @@ export const deleteOcorrencia = async (id) => {
   }
 };
 
-// --- GESTÃO DO PLANTÃO ---
+// ========================================================
+// --- NOVA SEÇÃO: USUÁRIOS (CRUD) ---
+// ========================================================
 
 /**
- * Busca os dados atuais do plantão (destaque e supervisor).
+ * Busca a lista de todos os usuários.
  */
+export const getUsuarios = async () => {
+  try {
+    const response = await api.get('/usuarios');
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+/**
+ * Cria um novo usuário.
+ * @param {object} data - Os dados do novo usuário ({ nome, email, senha }).
+ */
+export const criarUsuario = async (data) => {
+  try {
+    const response = await api.post('/usuarios', data);
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+/**
+ * Atualiza um usuário existente.
+ * @param {number} id - O ID do usuário a ser atualizado.
+ * @param {object} data - Os novos dados do usuário ({ nome, email }).
+ */
+export const updateUsuario = async (id, data) => {
+  try {
+    const response = await api.put(`/usuarios/${id}`, data);
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+/**
+ * Exclui um usuário.
+ * @param {number} id - O ID do usuário a ser excluído.
+ */
+export const deleteUsuario = async (id) => {
+  try {
+    const response = await api.delete(`/usuarios/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+
+// --- GESTÃO DO PLANTÃO ---
 export const getPlantao = async () => {
   try {
     const response = await api.get('/plantao');
@@ -116,9 +156,6 @@ export const getPlantao = async () => {
   }
 };
 
-/**
- * Busca la lista de todos os supervisores (usuários).
- */
 export const getSupervisores = async () => {
   try {
     const response = await api.get('/plantao/supervisores');
@@ -128,10 +165,6 @@ export const getSupervisores = async () => {
   }
 };
 
-/**
- * Define a ocorrência de destaque.
- * @param {number | null} ocorrencia_id - O ID da ocorrência ou null para limpar.
- */
 export const setOcorrenciaDestaque = async (ocorrencia_id) => {
   try {
     const response = await api.post('/plantao/destaque', { ocorrencia_id });
@@ -141,10 +174,6 @@ export const setOcorrenciaDestaque = async (ocorrencia_id) => {
   }
 };
 
-/**
- * Define o supervisor de plantão.
- * @param {number | null} usuario_id - O ID do usuário ou null para limpar.
- */
 export const setSupervisorPlantao = async (usuario_id) => {
   try {
     const response = await api.post('/plantao/supervisor', { usuario_id });
