@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001/api',
+  baseURL: 'https://sistema-ocorrencias-d7rw.onrender.com/api',
 } );
 
 // Interceptor para adicionar o token JWT em todas as requisições
