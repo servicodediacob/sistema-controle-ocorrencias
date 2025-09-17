@@ -1,11 +1,14 @@
+// backend/src/server.js
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
 const authRoutes = require('./routes/authRoutes');
 const dadosRoutes = require('./routes/dadosRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes'); // Já existia
-const plantaoRoutes = require('./routes/plantaoRoutes'); // <-- 1. Importar novas rotas
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const plantaoRoutes = require('./routes/plantaoRoutes');
+const usuarioRoutes = require('./routes/usuarioRoutes'); // <-- 1. IMPORTAR AS NOVAS ROTAS
 
 const app = express();
 
@@ -15,9 +18,10 @@ app.use(express.json());
 
 // Rotas da API
 app.use('/api/auth', authRoutes);
-app.use('/api', dadosRoutes); // Continua como /api para /obms, /naturezas, /ocorrencias
+app.use('/api', dadosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/plantao', plantaoRoutes); // <-- 2. Registrar novas rotas
+app.use('/api/plantao', plantaoRoutes);
+app.use('/api/usuarios', usuarioRoutes); // <-- 2. REGISTRAR AS NOVAS ROTAS
 
 // Rota raiz
 app.get('/', (req, res) => {
