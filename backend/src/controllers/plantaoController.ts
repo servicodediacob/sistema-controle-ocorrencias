@@ -7,12 +7,14 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
       SELECT 
         od.ocorrencia_id,
         o.data_ocorrencia,
-        n.descricao as natureza_descricao,
-        obm.nome as obm_nome
+        CONCAT(n.grupo, ' - ', n.subgrupo) as natureza_descricao,
+        c.nome as cidade_nome,
+        cr.nome as crbm_nome
       FROM ocorrencia_destaque od
       LEFT JOIN ocorrencias o ON od.ocorrencia_id = o.id
       LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      LEFT JOIN obms obm ON o.obm_id = obm.id
+      LEFT JOIN cidades c ON o.cidade_id = c.id -- A linha crucial
+      LEFT JOIN crbms cr ON c.crbm_id = cr.id
       WHERE od.id = 1;
     `;
     
@@ -41,6 +43,7 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
   }
 };
 
+// O resto do arquivo (getSupervisores, setOcorrenciaDestaque, etc.) permanece o mesmo.
 export const getSupervisores = async (_req: Request, res: Response): Promise<void> => {
   try {
     const { rows } = await db.query('SELECT id, nome FROM usuarios ORDER BY nome ASC');
@@ -53,7 +56,6 @@ export const getSupervisores = async (_req: Request, res: Response): Promise<voi
 
 export const setOcorrenciaDestaque = async (req: Request, res: Response): Promise<void> => {
   const { ocorrencia_id } = req.body;
-
   try {
     const query = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
     const { rows } = await db.query(query, [ocorrencia_id]);
@@ -66,7 +68,6 @@ export const setOcorrenciaDestaque = async (req: Request, res: Response): Promis
 
 export const setSupervisorPlantao = async (req: Request, res: Response): Promise<void> => {
   const { usuario_id } = req.body;
-
   try {
     const query = 'UPDATE supervisor_plantao SET usuario_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
     const { rows } = await db.query(query, [usuario_id]);

@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
 import db from '../db';
 
-// Definimos a estrutura esperada para as estatísticas do dashboard
 interface DashboardStats {
   totalOcorrencias: number;
   totalObitos: number;
   ocorrenciasPorNatureza: { nome: string; total: number }[];
-  ocorrenciasPorOBM: { nome: string; total: number }[];
+  ocorrenciasPorCrbm: { nome: string; total: number }[];
 }
 
 export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
@@ -20,32 +19,32 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
       ),
       ocorrencias_por_natureza AS (
         SELECT
-          n.descricao AS nome,
+          CONCAT(n.grupo, ' - ', n.subgrupo) AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
         JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-        GROUP BY n.descricao
+        GROUP BY nome
         ORDER BY total DESC
       ),
-      ocorrencias_por_obm AS (
+      ocorrencias_por_crbm AS (
         SELECT
-          obm.nome AS nome,
+          cr.nome AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
-        JOIN obms obm ON o.obm_id = obm.id
-        GROUP BY obm.nome
+        JOIN cidades c ON o.cidade_id = c.id -- A linha crucial
+        JOIN crbms cr ON c.crbm_id = cr.id
+        GROUP BY cr.nome
         ORDER BY total DESC
       )
       SELECT json_build_object(
         'totalOcorrencias', (SELECT total FROM total_ocorrencias),
-        'totalObitos', (SELECT COALESCE(total, 0) FROM total_obitos),
+        'totalObitos', COALESCE((SELECT total FROM total_obitos), 0),
         'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(ocorrencias_por_natureza) FROM ocorrencias_por_natureza), '[]'::json),
-        'ocorrenciasPorOBM', COALESCE((SELECT json_agg(ocorrencias_por_obm) FROM ocorrencias_por_obm), '[]'::json)
+        'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(ocorrencias_por_crbm) FROM ocorrencias_por_crbm), '[]'::json)
       ) AS stats;
     `;
 
     const { rows } = await db.query(query);
-
     const stats: DashboardStats = rows[0].stats;
     
     res.status(200).json(stats);

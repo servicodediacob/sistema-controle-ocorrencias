@@ -10,7 +10,9 @@ export type { IUser };
 export interface IDataApoio {
   id: number;
   nome?: string;
-  descricao?: string;
+  grupo?: string;
+  subgrupo?: string;
+  descricao?: string; 
 }
 
 // Interface para a estrutura de Unidade (Cidade + CRBM)
@@ -158,9 +160,10 @@ export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').t
 
 // --- Funções de Naturezas ---
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
-export const createNatureza = async (data: { descricao: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
-export const updateNatureza = async (id: number, data: { descricao: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
+export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
+export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
 export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);
+
 
 
 // --- Funções de Ocorrências ---

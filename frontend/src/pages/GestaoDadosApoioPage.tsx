@@ -1,5 +1,9 @@
+// frontend/src/pages/GestaoDadosApoioPage.tsx
+
 import { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+// REMOVIDO: A importação do useVirtualizer não é mais necessária.
+// import { useVirtualizer } from '@tanstack/react-virtual'; 
 import {
   getUnidades, createUnidade, updateUnidade, deleteUnidade, getCrbms,
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
@@ -9,7 +13,7 @@ import { useNotification } from '../contexts/NotificationContext';
 
 type DataType = 'unidade' | 'natureza';
 
-// --- Componente do Modal ---
+// --- Componente do Modal (sem alterações) ---
 interface DataModalProps {
   item: IUnidade | IDataApoio | null;
   type: DataType;
@@ -32,7 +36,10 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps) {
       };
     }
     const naturezaItem = item as IDataApoio;
-    return { descricao: naturezaItem?.descricao || '' };
+    return {
+      grupo: naturezaItem?.grupo || '',
+      subgrupo: naturezaItem?.subgrupo || ''
+    };
   };
 
   const [formData, setFormData] = useState(getInitialState);
@@ -67,20 +74,26 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps) {
             <>
               <div style={styles.formGroup}>
                 <label htmlFor="crbm_id" style={styles.label}>CRBM</label>
-                <select id="crbm_id" name="crbm_id" value={formData.crbm_id} onChange={handleChange} style={styles.input}>
+                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} style={styles.input}>
                   {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
                 </select>
               </div>
               <div style={styles.formGroup}>
                 <label htmlFor="cidade_nome" style={styles.label}>Nome da Cidade</label>
-                <input type="text" id="cidade_nome" name="cidade_nome" value={formData.cidade_nome} onChange={handleChange} required style={styles.input} />
+                <input type="text" id="cidade_nome" name="cidade_nome" value={(formData as any).cidade_nome} onChange={handleChange} required style={styles.input} />
               </div>
             </>
           ) : (
-            <div style={styles.formGroup}>
-              <label htmlFor="descricao" style={styles.label}>Descrição da Natureza</label>
-              <input type="text" id="descricao" name="descricao" value={(formData as any).descricao} onChange={handleChange} required style={styles.input} />
-            </div>
+            <>
+              <div style={styles.formGroup}>
+                <label htmlFor="grupo" style={styles.label}>Grupo da Natureza</label>
+                <input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required style={styles.input} />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="subgrupo" style={styles.label}>Subgrupo da Natureza</label>
+                <input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required style={styles.input} />
+              </div>
+            </>
           )}
           <div style={styles.buttonContainer}>
             <button type="button" onClick={onClose} style={{...styles.button, backgroundColor: '#555'}}>Cancelar</button>
@@ -92,6 +105,7 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps) {
   );
 }
 
+
 // --- Componente Principal da Página ---
 function GestaoDadosApoioPage(): ReactElement {
   const [activeTab, setActiveTab] = useState<DataType>('unidade');
@@ -99,16 +113,20 @@ function GestaoDadosApoioPage(): ReactElement {
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [crbms, setCrbms] = useState<ICrbm[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState<IUnidade | IDataApoio | null>(null);
   const { addNotification } = useNotification();
+  
+  // REMOVIDO: Toda a lógica do useVirtualizer foi retirada.
+  // const parentRef = useRef<HTMLDivElement>(null);
+  // const rowVirtualizer = useVirtualizer(...);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [unidadesData, naturezasData, crbmsData] = await Promise.all([
-        getUnidades(), 
+        getUnidades(),
         getNaturezas(),
         getCrbms()
       ]);
@@ -141,13 +159,13 @@ function GestaoDadosApoioPage(): ReactElement {
     const isEditing = !!itemEmEdicao;
     const typeName = activeTab === 'unidade' ? 'Unidade' : 'Natureza';
     const successMessage = `${typeName} ${isEditing ? 'atualizada' : 'criada'} com sucesso!`;
-    
+
     try {
       if (activeTab === 'unidade') {
         const payload = { crbm_id: formData.crbm_id, cidade_nome: formData.cidade_nome };
         isEditing ? await updateUnidade(itemEmEdicao!.id, payload) : await createUnidade(payload);
       } else {
-        const payload = { descricao: formData.descricao };
+        const payload = { grupo: formData.grupo, subgrupo: formData.subgrupo };
         isEditing ? await updateNatureza(itemEmEdicao!.id, payload) : await createNatureza(payload);
       }
       addNotification(successMessage, 'success');
@@ -178,9 +196,11 @@ function GestaoDadosApoioPage(): ReactElement {
     tabContainer: { display: 'flex', gap: '0.5rem', marginBottom: '2rem' },
     tab: { padding: '0.75rem 1.5rem', cursor: 'pointer', border: 'none', backgroundColor: '#2c2c2c', color: 'white', borderBottom: '3px solid transparent' },
     activeTab: { borderBottom: '3px solid #3a7ca5' },
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem' },
-    th: { borderBottom: '1px solid #555', padding: '0.75rem', textAlign: 'left', color: '#aaa' },
-    td: { borderBottom: '1px solid #3a3a3a', padding: '0.75rem' },
+    // ADICIONADO: Estilos para a tabela
+    tableContainer: { marginTop: '1rem', maxHeight: '60vh', overflowY: 'auto', border: '1px solid #3a3a3a', borderRadius: '4px' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    th: { padding: '0.75rem', textAlign: 'left', color: '#aaa', backgroundColor: '#2c2c2c', position: 'sticky', top: 0, zIndex: 1 },
+    td: { padding: '0.75rem', borderBottom: '1px solid #3a3a3a' },
     actionButtons: { display: 'flex', gap: '0.5rem' },
     button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
     backLink: { color: '#8bf', textDecoration: 'none' },
@@ -188,10 +208,10 @@ function GestaoDadosApoioPage(): ReactElement {
 
   const renderTable = () => {
     const isUnidade = activeTab === 'unidade';
-    const data = isUnidade ? unidades : naturezas;
-    const columns = isUnidade 
+    const dataToRender = isUnidade ? unidades : naturezas;
+    const columns = isUnidade
       ? [{ key: 'crbm_nome', header: 'CRBM' }, { key: 'cidade_nome', header: 'Cidade' }]
-      : [{ key: 'id', header: 'ID' }, { key: 'descricao', header: 'Descrição' }];
+      : [{ key: 'grupo', header: 'Grupo' }, { key: 'subgrupo', header: 'Subgrupo' }];
 
     return (
       <>
@@ -199,27 +219,40 @@ function GestaoDadosApoioPage(): ReactElement {
           Adicionar Nov{isUnidade ? 'a Unidade' : 'a Natureza'}
         </button>
         
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              {columns.map(col => <th key={col.key} style={styles.th}>{col.header}</th>)}
-              <th style={styles.th}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(item => (
-              <tr key={item.id}>
-                {columns.map(col => <td key={col.key} style={styles.td}>{(item as any)[col.key]}</td>)}
-                <td style={styles.td}>
-                  <div style={styles.actionButtons}>
-                    <button onClick={() => handleOpenModal(item)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
-                    <button onClick={() => handleDelete(item.id)} style={{...styles.button, backgroundColor: '#e76f51'}}>Excluir</button>
-                  </div>
-                </td>
+        {/* MODIFICADO: Estrutura de renderização simplificada para uma tabela normal */}
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                {columns.map(col => <th key={col.key} style={styles.th}>{col.header}</th>)}
+                <th style={{...styles.th, textAlign: 'center' }}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {dataToRender.map(item => (
+                <tr key={item.id}>
+                  {isUnidade ? (
+                    <>
+                      <td style={styles.td}>{(item as IUnidade).crbm_nome}</td>
+                      <td style={styles.td}>{(item as IUnidade).cidade_nome}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={styles.td}>{(item as IDataApoio).grupo}</td>
+                      <td style={styles.td}>{(item as IDataApoio).subgrupo}</td>
+                    </>
+                  )}
+                  <td style={{...styles.td, textAlign: 'center' }}>
+                    <div style={styles.actionButtons}>
+                      <button onClick={() => handleOpenModal(item)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
+                      <button onClick={() => handleDelete(item.id)} style={{...styles.button, backgroundColor: '#e76f51'}}>Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </>
     );
   };
