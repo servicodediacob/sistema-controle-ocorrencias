@@ -1,4 +1,6 @@
-import 'dotenv/config';
+// backend/src/server.ts
+
+import 'dotenv/config'; // Garante que as variáveis de ambiente sejam carregadas.
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 
@@ -7,6 +9,8 @@ import dadosRoutes from './routes/dadosRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import usuarioRoutes from './routes/usuarioRoutes';
+
+import './db'; // Importa para inicializar a conexão e exibir o log de diagnóstico.
 
 const app: Express = express();
 

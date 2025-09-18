@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Backend",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "program": "${workspaceFolder}/backend/src/server.ts",
+      "runtimeArgs": [
+        // Usa ts-node para executar o TypeScript diretamente
+        "--require", "ts-node/register",
+        // Carrega as variáveis de ambiente
+        "--require", "dotenv/config"
+      ],
+      "env": {
+        // Aponta para o arquivo de ambiente correto
+        "DOTENV_CONFIG_PATH": "${workspaceFolder}/backend/.env.development"
+      },
+      "outFiles": [
+        "${workspaceFolder}/backend/dist/**/*.js"
+      ],
+      "sourceMaps": true
+    }
+  ]
+}

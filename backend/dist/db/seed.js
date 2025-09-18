@@ -4,9 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const index_1 = __importDefault(require("./index")); // Corrigido: importação padrão
+// CORREÇÃO: Removemos a importação de 'db', pois não é usada neste arquivo.
+const index_1 = require("./index");
 async function seedDatabase() {
-    const client = await index_1.default.pool.connect(); // Corrigido: acessa o pool via 'db.pool'
+    const client = await index_1.pool.connect();
     console.log('Iniciando o processo de seeding...');
     try {
         await client.query('BEGIN');
@@ -60,7 +61,7 @@ async function seedDatabase() {
     finally {
         client.release();
         console.log('Conexão com o banco de dados liberada.');
-        await index_1.default.pool.end(); // Corrigido: acessa o pool via 'db.pool'
+        await index_1.pool.end();
         console.log('Pool de conexões encerrado.');
     }
 }

@@ -1,10 +1,41 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteOcorrencia = exports.updateOcorrencia = exports.getOcorrencias = exports.criarOcorrencia = exports.excluirNatureza = exports.atualizarNatureza = exports.criarNatureza = exports.getNaturezas = exports.excluirObm = exports.atualizarObm = exports.criarObm = exports.getObms = void 0;
-const db_1 = __importDefault(require("../db"));
+// CORREÇÃO: Importa tanto 'db' (default) quanto 'pool' (nomeado)
+const db_1 = __importStar(require("../db"));
 // ===============================================
 // OBMs (Organizações Bombeiro Militar)
 // ===============================================
@@ -14,24 +45,33 @@ const getObms = async (_req, res) => {
         res.status(200).json(rows);
     }
     catch (error) {
-        console.error('Erro ao buscar OBMs:', error);
+        console.error('[DIAGNÓSTICO] Erro ao buscar OBMs:', error);
         res.status(500).json({ message: 'Erro interno do servidor ao buscar OBMs.' });
     }
 };
 exports.getObms = getObms;
 const criarObm = async (req, res) => {
     const { nome, crbm_id } = req.body;
-    if (!nome || !crbm_id) {
+    if (!nome || crbm_id === undefined) {
         res.status(400).json({ message: 'Nome e ID do CRBM são obrigatórios.' });
         return;
     }
     try {
         const query = 'INSERT INTO obms (nome, crbm_id) VALUES ($1, $2) RETURNING *';
-        const { rows } = await db_1.default.query(query, [nome, crbm_id]);
+        const values = [nome, crbm_id];
+        const { rows } = await db_1.default.query(query, values);
         res.status(201).json(rows[0]);
     }
     catch (error) {
-        console.error('Erro ao criar OBM:', error);
+        const dbError = error;
+        if (dbError.code === '23505') {
+            res.status(409).json({ message: `A OBM com o nome "${nome}" já existe.` });
+            return;
+        }
+        if (dbError.code === '23503') {
+            res.status(400).json({ message: `O CRBM com ID ${crbm_id} não é válido.` });
+            return;
+        }
         res.status(500).json({ message: 'Erro interno do servidor ao criar OBM.' });
     }
 };
@@ -127,7 +167,7 @@ const atualizarNatureza = async (req, res) => {
     }
     catch (error) {
         console.error('Erro ao atualizar natureza:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao atualizar natureza.' });
+        res.status(500).json({ message: 'Erro ao atualizar natureza.' });
     }
 };
 exports.atualizarNatureza = atualizarNatureza;
@@ -160,7 +200,8 @@ const criarOcorrencia = async (req, res) => {
         res.status(400).json({ message: 'Dados da ocorrência incompletos. OBM, Natureza e Data são obrigatórios.' });
         return;
     }
-    const client = await db_1.default.pool.connect();
+    // CORREÇÃO: Usa a importação nomeada 'pool' para transações
+    const client = await db_1.pool.connect();
     try {
         await client.query('BEGIN');
         const queryOcorrencia = `

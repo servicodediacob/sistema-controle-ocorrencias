@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.login = void 0;
+// CORREÇÃO: Importa o 'pool' diretamente, que agora é a exportação padrão de '../db'
 const db_1 = __importDefault(require("../db"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -15,6 +16,7 @@ const login = async (req, res) => {
         return;
     }
     try {
+        // CORREÇÃO: Usa 'pool.query' em vez de 'db.query'
         const result = await db_1.default.query('SELECT * FROM usuarios WHERE email = $1', [email]);
         const usuario = result.rows[0];
         if (!usuario) {

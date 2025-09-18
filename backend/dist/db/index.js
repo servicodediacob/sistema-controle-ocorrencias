@@ -1,19 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.pool = void 0;
 const pg_1 = require("pg");
 require("dotenv/config");
-// 1. Determina se estamos em ambiente de produção
-const isProduction = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('neon.tech');
-// 2. Monta o objeto de configuração da conexão, tipando-o com PoolConfig
+const isProduction = process.env.NODE_ENV === 'production' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('neon.tech'));
 const connectionConfig = {
     connectionString: process.env.DATABASE_URL,
-    // 3. Adiciona a configuração SSL APENAS se estiver em produção
     ssl: isProduction ? { rejectUnauthorized: false } : false,
 };
-// 4. Cria o pool com a configuração correta
-const pool = new pg_1.Pool(connectionConfig);
-// 5. Exporta o pool e uma função query para uso no restante da aplicação
-exports.default = {
-    query: (text, params) => pool.query(text, params),
-    pool: pool,
+console.log(`[DIAGNÓSTICO DB] Conectando ao banco de dados. Produção: ${isProduction}. SSL: ${connectionConfig.ssl !== false}.`);
+// CORREÇÃO 1: Exporta a constante 'pool' diretamente.
+exports.pool = new pg_1.Pool(connectionConfig);
+// CORREÇÃO 2: Cria um objeto 'db' para manter a compatibilidade com o resto do código.
+const db = {
+    query: (text, params) => exports.pool.query(text, params),
+    pool: exports.pool,
 };
+// CORREÇÃO 3: Exporta 'db' como default.
+exports.default = db;
