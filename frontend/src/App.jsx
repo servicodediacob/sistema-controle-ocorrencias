@@ -5,7 +5,8 @@ import { useAuth } from './contexts/useAuth.js';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import GestaoOcorrenciasPage from './pages/GestaoOcorrenciasPage';
-import GestaoUsuariosPage from './pages/GestaoUsuariosPage'; // <-- 1. IMPORTAR A NOVA PÁGINA
+import GestaoUsuariosPage from './pages/GestaoUsuariosPage';
+import GestaoDadosApoioPage from './pages/GestaoDadosApoioPage'; // <-- 1. IMPORTAR A NOVA PÁGINA
 
 /**
  * Componente de Rota Privada
@@ -49,12 +50,21 @@ function App() {
           }
         />
 
-        {/* --- 2. ADICIONAR A NOVA ROTA PROTEGIDA PARA GESTÃO DE USUÁRIOS --- */}
         <Route 
           path="/gestao-usuarios"
           element={
             <PrivateRoute>
               <GestaoUsuariosPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* --- 2. ADICIONAR A NOVA ROTA PROTEGIDA PARA DADOS DE APOIO --- */}
+        <Route 
+          path="/gestao-dados"
+          element={
+            <PrivateRoute>
+              <GestaoDadosApoioPage />
             </PrivateRoute>
           }
         />

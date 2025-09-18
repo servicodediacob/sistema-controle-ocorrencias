@@ -30,16 +30,58 @@ export const login = async (email, senha) => {
   }
 };
 
-// --- DADOS DE APOIO ---
+// ===============================================
+// --- DADOS DE APOIO (OBMs e Naturezas) ---
+// ===============================================
+
+// --- OBMs ---
 export const getObms = async () => {
   const response = await api.get('/obms');
   return response.data;
 };
 
+// NOVA FUNÇÃO
+export const createObm = async (data) => {
+  const response = await api.post('/obms', data);
+  return response.data;
+};
+
+// NOVA FUNÇÃO
+export const updateObm = async (id, data) => {
+  const response = await api.put(`/obms/${id}`, data);
+  return response.data;
+};
+
+// NOVA FUNÇÃO
+export const deleteObm = async (id) => {
+  const response = await api.delete(`/obms/${id}`);
+  return response.data;
+};
+
+// --- Naturezas ---
 export const getNaturezas = async () => {
   const response = await api.get('/naturezas');
   return response.data;
 };
+
+// NOVA FUNÇÃO
+export const createNatureza = async (data) => {
+  const response = await api.post('/naturezas', data);
+  return response.data;
+};
+
+// NOVA FUNÇÃO
+export const updateNatureza = async (id, data) => {
+  const response = await api.put(`/naturezas/${id}`, data);
+  return response.data;
+};
+
+// NOVA FUNÇÃO
+export const deleteNatureza = async (id) => {
+  const response = await api.delete(`/naturezas/${id}`);
+  return response.data;
+};
+
 
 // --- OCORRÊNCIAS (Criação) ---
 export const criarOcorrencia = async (payload) => {
@@ -89,13 +131,7 @@ export const deleteOcorrencia = async (id) => {
   }
 };
 
-// ========================================================
-// --- NOVA SEÇÃO: USUÁRIOS (CRUD) ---
-// ========================================================
-
-/**
- * Busca a lista de todos os usuários.
- */
+// --- USUÁRIOS (CRUD) ---
 export const getUsuarios = async () => {
   try {
     const response = await api.get('/usuarios');
@@ -105,10 +141,6 @@ export const getUsuarios = async () => {
   }
 };
 
-/**
- * Cria um novo usuário.
- * @param {object} data - Os dados do novo usuário ({ nome, email, senha }).
- */
 export const criarUsuario = async (data) => {
   try {
     const response = await api.post('/usuarios', data);
@@ -118,11 +150,6 @@ export const criarUsuario = async (data) => {
   }
 };
 
-/**
- * Atualiza um usuário existente.
- * @param {number} id - O ID do usuário a ser atualizado.
- * @param {object} data - Os novos dados do usuário ({ nome, email }).
- */
 export const updateUsuario = async (id, data) => {
   try {
     const response = await api.put(`/usuarios/${id}`, data);
@@ -132,10 +159,6 @@ export const updateUsuario = async (id, data) => {
   }
 };
 
-/**
- * Exclui um usuário.
- * @param {number} id - O ID do usuário a ser excluído.
- */
 export const deleteUsuario = async (id) => {
   try {
     const response = await api.delete(`/usuarios/${id}`);
