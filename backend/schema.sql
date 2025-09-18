@@ -1,15 +1,15 @@
 -- Arquivo: backend/schema.sql
 -- Descrição: Define a estrutura completa do banco de dados para o Sistema de Controle de Ocorrências.
--- Para usar: Execute este script em um banco de dados PostgreSQL para criar todas as tabelas necessárias.
+-- Versão 3.0: Remove a tabela OBMs, simplificando a hierarquia para CRBM -> Cidade.
 
--- Remove as tabelas e TODOS os seus objetos dependentes (constraints, views, etc.)
--- A adição do CASCADE resolve erros de dependência ao recriar o schema.
+-- Remove as tabelas na ordem correta de dependência
 DROP TABLE IF EXISTS supervisor_plantao CASCADE;
 DROP TABLE IF EXISTS ocorrencia_destaque CASCADE;
 DROP TABLE IF EXISTS obitos CASCADE;
 DROP TABLE IF EXISTS ocorrencias CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
-DROP TABLE IF EXISTS obms CASCADE;
+DROP TABLE IF EXISTS obms CASCADE; -- Mantido aqui para garantir a limpeza na primeira execução
+DROP TABLE IF EXISTS cidades CASCADE;
 DROP TABLE IF EXISTS crbms CASCADE;
 DROP TABLE IF EXISTS naturezas_ocorrencia CASCADE;
 
@@ -19,25 +19,25 @@ CREATE TABLE crbms (
     nome VARCHAR(100) NOT NULL UNIQUE
 );
 
--- Tabela para as Organizações Bombeiro Militar (OBMs)
--- Cada OBM pertence a um CRBM.
-CREATE TABLE obms (
+-- Tabela de Cidades
+-- Cada cidade pertence a um CRBM. A cidade agora é a unidade principal.
+CREATE TABLE cidades (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL UNIQUE,
     crbm_id INTEGER NOT NULL,
-    CONSTRAINT fk_crbm
+    CONSTRAINT fk_crbm_cidade
         FOREIGN KEY(crbm_id) 
         REFERENCES crbms(id)
-        ON DELETE RESTRICT -- Impede a exclusão de um CRBM se ele tiver OBMs associadas
+        ON DELETE RESTRICT
 );
 
--- Tabela para as naturezas das ocorrências (ex: Incêndio, APH)
+-- Tabela para as naturezas das ocorrências
 CREATE TABLE naturezas_ocorrencia (
     id SERIAL PRIMARY KEY,
     descricao VARCHAR(255) NOT NULL UNIQUE
 );
 
--- Tabela de usuários (para os supervisores)
+-- Tabela de usuários
 CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
@@ -47,11 +47,12 @@ CREATE TABLE usuarios (
 );
 
 -- Tabela principal de ocorrências
+-- MODIFICADA: Agora se relaciona com 'cidade_id' em vez de 'obm_id'.
 CREATE TABLE ocorrencias (
     id SERIAL PRIMARY KEY,
     data_ocorrencia DATE NOT NULL,
     natureza_id INTEGER NOT NULL,
-    obm_id INTEGER NOT NULL,
+    cidade_id INTEGER NOT NULL, -- Alterado de obm_id para cidade_id
     quantidade_obitos INTEGER NOT NULL DEFAULT 0,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
@@ -59,12 +60,12 @@ CREATE TABLE ocorrencias (
         FOREIGN KEY(natureza_id) 
         REFERENCES naturezas_ocorrencia(id),
         
-    CONSTRAINT fk_obm
-        FOREIGN KEY(obm_id) 
-        REFERENCES obms(id)
+    CONSTRAINT fk_cidade -- Constraint renomeada
+        FOREIGN KEY(cidade_id) 
+        REFERENCES cidades(id)
 );
 
--- Tabela para os registros de óbitos, associados a uma ocorrência
+-- Tabela para os registros de óbitos (sem alterações)
 CREATE TABLE obitos (
     id SERIAL PRIMARY KEY,
     ocorrencia_id INTEGER NOT NULL,
@@ -75,11 +76,10 @@ CREATE TABLE obitos (
     CONSTRAINT fk_ocorrencia
         FOREIGN KEY(ocorrencia_id) 
         REFERENCES ocorrencias(id)
-        ON DELETE CASCADE -- Se uma ocorrência for deletada, seus óbitos também serão.
+        ON DELETE CASCADE
 );
 
--- Tabela para armazenar a Ocorrência de Destaque
--- Terá sempre no máximo uma linha, que será atualizada.
+-- Tabela para armazenar a Ocorrência de Destaque (sem alterações na estrutura)
 CREATE TABLE ocorrencia_destaque (
     id INT PRIMARY KEY DEFAULT 1,
     ocorrencia_id INT UNIQUE,
@@ -87,11 +87,10 @@ CREATE TABLE ocorrencia_destaque (
     CONSTRAINT fk_ocorrencia
         FOREIGN KEY(ocorrencia_id) 
         REFERENCES ocorrencias(id)
-        ON DELETE SET NULL -- Se a ocorrência for deletada, o destaque é removido (fica NULL).
+        ON DELETE SET NULL
 );
 
--- Tabela para armazenar o Supervisor de Plantão
--- Também terá no máximo uma linha.
+-- Tabela para armazenar o Supervisor de Plantão (sem alterações)
 CREATE TABLE supervisor_plantao (
     id INT PRIMARY KEY DEFAULT 1,
     usuario_id INT,
@@ -99,10 +98,9 @@ CREATE TABLE supervisor_plantao (
     CONSTRAINT fk_usuario
         FOREIGN KEY(usuario_id) 
         REFERENCES usuarios(id)
-        ON DELETE SET NULL -- Se o usuário for deletado, o campo fica NULL.
+        ON DELETE SET NULL
 );
 
--- Inserção das linhas de configuração padrão para as tabelas de gestão.
--- A cláusula ON CONFLICT DO NOTHING impede erros se as linhas já existirem.
+-- Inserção das linhas de configuração padrão
 INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
 INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;

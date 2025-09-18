@@ -1,5 +1,3 @@
-// frontend/src/services/api.ts
-
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
 
@@ -13,13 +11,33 @@ export interface IDataApoio {
   id: number;
   nome?: string;
   descricao?: string;
-  crbm_id?: number;
 }
 
-// ... (outras interfaces não precisam de alteração) ...
+// Interface para a estrutura de Unidade (Cidade + CRBM)
+export interface IUnidade {
+  id: number; // ID da Cidade
+  cidade_nome: string;
+  crbm_id: number;
+  crbm_nome: string;
+}
+
+export interface ICrbm {
+  id: number;
+  nome: string;
+}
+
+// NOVA: Interface para Cidade, usada no modal de ocorrência
+export interface ICidade {
+  id: number;
+  cidade_nome: string;
+  crbm_id: number;
+  crbm_nome: string;
+}
+
+// ... (outras interfaces permanecem iguais)
 export interface IOcorrenciaPayload {
   ocorrencia: {
-    obm_id: number;
+    cidade_id: number; // Alterado de obm_id para cidade_id
     natureza_id: number;
     data_ocorrencia: string;
   };
@@ -35,9 +53,9 @@ export interface IOcorrencia {
   data_ocorrencia: string;
   quantidade_obitos: number;
   natureza_id: number;
-  obm_id: number;
+  cidade_id: number; // Alterado de obm_id para cidade_id
   natureza_descricao: string;
-  obm_nome: string;
+  cidade_nome: string; // Alterado de obm_nome para cidade_nome
   crbm_nome: string;
 }
 
@@ -55,7 +73,7 @@ export interface IDashboardStats {
   totalOcorrencias: number;
   totalObitos: number;
   ocorrenciasPorNatureza: { nome: string; total: number }[];
-  ocorrenciasPorOBM: { nome: string; total: number }[];
+  ocorrenciasPorOBM: { nome: string; total: number }[]; // O backend ainda retorna 'OBM', podemos ajustar depois
 }
 
 export interface IPlantao {
@@ -63,7 +81,7 @@ export interface IPlantao {
     ocorrencia_id: number | null;
     data_ocorrencia: string | null;
     natureza_descricao: string | null;
-    obm_nome: string | null;
+    obm_nome: string | null; // Mantido pois o backend pode não ter sido atualizado aqui
   } | null;
   supervisorPlantao: {
     usuario_id: number | null;
@@ -80,23 +98,17 @@ interface ApiError {
   message: string;
 }
 
-
 // ===============================================
-// --- Configuração do Axios (CORRIGIDO) ---
+// --- Configuração do Axios ---
 // ===============================================
 
-// CORREÇÃO: A URL base agora é dinâmica.
-// Em desenvolvimento, usará o valor de .env.development.
-// Em produção (build), usará a URL do Render.com.
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://sistema-ocorrencias-d7rw.onrender.com/api';
-
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` ); // Log para confirmar a URL
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
 
 const api = axios.create({
   baseURL: baseURL,
 });
 
-// O resto do arquivo permanece o mesmo...
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -113,7 +125,6 @@ api.interceptors.request.use(
 const extractErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
-    // CORREÇÃO: Acessa a mensagem de erro de forma mais segura
     return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`;
   }
   if (error instanceof Error) {
@@ -122,9 +133,8 @@ const extractErrorMessage = (error: unknown): string => {
   return 'Ocorreu um erro desconhecido.';
 };
 
-
 // ===============================================
-// --- Funções da API Tipadas (sem alterações de lógica) ---
+// --- Funções da API Tipadas ---
 // ===============================================
 
 export const login = async (email: string, senha: string): Promise<{ usuario: IUser; token: string }> => {
@@ -136,16 +146,24 @@ export const login = async (email: string, senha: string): Promise<{ usuario: IU
   }
 };
 
-export const getObms = async (): Promise<IDataApoio[]> => api.get('/obms').then(res => res.data);
-export const createObm = async (data: { nome: string; crbm_id: number }): Promise<IDataApoio> => api.post('/obms', data).then(res => res.data);
-export const updateObm = async (id: number, data: { nome: string; crbm_id: number }): Promise<IDataApoio> => api.put(`/obms/${id}`, data).then(res => res.data);
-export const deleteObm = async (id: number): Promise<{ message: string }> => api.delete(`/obms/${id}`).then(res => res.data);
+// --- Funções para Unidades (Cidades) e CRBMs ---
+export const getUnidades = async (): Promise<IUnidade[]> => api.get('/unidades').then(res => res.data);
+export const createUnidade = async (data: { crbm_id: number; cidade_nome: string; }): Promise<IUnidade> => api.post('/unidades', data).then(res => res.data);
+export const updateUnidade = async (id: number, data: { crbm_id: number; cidade_nome: string; }): Promise<IUnidade> => api.put(`/unidades/${id}`, data).then(res => res.data);
+export const deleteUnidade = async (id: number): Promise<{ message: string }> => api.delete(`/unidades/${id}`).then(res => res.data);
+export const getCrbms = async (): Promise<ICrbm[]> => api.get('/crbms').then(res => res.data);
+// NOVA: Função para buscar cidades, que na verdade usa o mesmo endpoint de unidades
+export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').then(res => res.data);
 
+
+// --- Funções de Naturezas ---
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
 export const createNatureza = async (data: { descricao: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
 export const updateNatureza = async (id: number, data: { descricao: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
 export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);
 
+
+// --- Funções de Ocorrências ---
 export const criarOcorrencia = async (payload: IOcorrenciaPayload): Promise<{ message: string; ocorrenciaId: number }> => {
   try {
     const response = await api.post('/ocorrencias', payload);
@@ -164,7 +182,7 @@ export const getOcorrencias = async (page = 1, limit = 10): Promise<IPaginatedOc
   }
 };
 
-export const updateOcorrencia = async (id: number, data: { data_ocorrencia: string; natureza_id: number; obm_id: number }): Promise<{ message: string; ocorrencia: IOcorrencia }> => {
+export const updateOcorrencia = async (id: number, data: { data_ocorrencia: string; natureza_id: number; cidade_id: number; }): Promise<{ message: string; ocorrencia: IOcorrencia }> => {
   try {
     const response = await api.put(`/ocorrencias/${id}`, data);
     return response.data;
@@ -182,6 +200,7 @@ export const deleteOcorrencia = async (id: number): Promise<{ message: string }>
   }
 };
 
+// --- Funções de Dashboard, Usuários, Plantão ---
 export const getDashboardStats = async (): Promise<IDashboardStats> => {
   try {
     const response = await api.get('/dashboard/stats');

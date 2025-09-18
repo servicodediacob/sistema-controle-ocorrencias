@@ -1,37 +1,38 @@
 import { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  getObms, createObm, updateObm, deleteObm,
+  getUnidades, createUnidade, updateUnidade, deleteUnidade, getCrbms,
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
-  IDataApoio
+  IUnidade, ICrbm, IDataApoio
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
-type DataType = 'obm' | 'natureza';
+type DataType = 'unidade' | 'natureza';
 
-// --- Componente do Modal (Refatorado para clareza) ---
+// --- Componente do Modal ---
 interface DataModalProps {
-  item: IDataApoio | null;
+  item: IUnidade | IDataApoio | null;
   type: DataType;
   onClose: () => void;
   onSave: (formData: any) => void;
+  crbms: ICrbm[];
 }
 
-function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElement {
+function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps) {
   const isEditing = !!item;
-  const isObm = type === 'obm';
-  const title = `${isEditing ? 'Editar' : 'Adicionar Nova'} ${isObm ? 'OBM' : 'Natureza'}`;
+  const isUnidade = type === 'unidade';
+  const title = `${isEditing ? 'Editar' : 'Adicionar'}`;
 
   const getInitialState = () => {
-    if (isObm) {
+    if (isUnidade) {
+      const unidadeItem = item as IUnidade;
       return {
-        nome: item?.nome || '',
-        crbm_id: item?.crbm_id || 1, // Default para CRBM I
+        cidade_nome: unidadeItem?.cidade_nome || '',
+        crbm_id: unidadeItem?.crbm_id || (crbms.length > 0 ? crbms[0].id : 1),
       };
     }
-    return {
-      descricao: item?.descricao || '',
-    };
+    const naturezaItem = item as IDataApoio;
+    return { descricao: naturezaItem?.descricao || '' };
   };
 
   const [formData, setFormData] = useState(getInitialState);
@@ -60,26 +61,25 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
       <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2>{title}</h2>
+        <h2>{`${title} ${isUnidade ? 'Unidade' : 'Natureza'}`}</h2>
         <form onSubmit={handleSubmit}>
-          {isObm ? (
+          {isUnidade ? (
             <>
-              <div style={styles.formGroup}>
-                <label htmlFor="nome" style={styles.label}>Nome da OBM</label>
-                <input type="text" id="nome" name="nome" value={formData.nome} onChange={handleChange} required style={styles.input} />
-              </div>
               <div style={styles.formGroup}>
                 <label htmlFor="crbm_id" style={styles.label}>CRBM</label>
                 <select id="crbm_id" name="crbm_id" value={formData.crbm_id} onChange={handleChange} style={styles.input}>
-                  <option value={1}>CRBM I</option>
-                  <option value={2}>CRBM II</option>
+                  {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
                 </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="cidade_nome" style={styles.label}>Nome da Cidade</label>
+                <input type="text" id="cidade_nome" name="cidade_nome" value={formData.cidade_nome} onChange={handleChange} required style={styles.input} />
               </div>
             </>
           ) : (
             <div style={styles.formGroup}>
               <label htmlFor="descricao" style={styles.label}>Descrição da Natureza</label>
-              <input type="text" id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} required style={styles.input} />
+              <input type="text" id="descricao" name="descricao" value={(formData as any).descricao} onChange={handleChange} required style={styles.input} />
             </div>
           )}
           <div style={styles.buttonContainer}>
@@ -92,24 +92,29 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
   );
 }
 
-
 // --- Componente Principal da Página ---
 function GestaoDadosApoioPage(): ReactElement {
-  const [activeTab, setActiveTab] = useState<DataType>('obm');
-  const [obms, setObms] = useState<IDataApoio[]>([]);
+  const [activeTab, setActiveTab] = useState<DataType>('unidade');
+  const [unidades, setUnidades] = useState<IUnidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
+  const [crbms, setCrbms] = useState<ICrbm[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [itemEmEdicao, setItemEmEdicao] = useState<IDataApoio | null>(null);
+  const [itemEmEdicao, setItemEmEdicao] = useState<IUnidade | IDataApoio | null>(null);
   const { addNotification } = useNotification();
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [obmsData, naturezasData] = await Promise.all([getObms(), getNaturezas()]);
-      setObms(obmsData);
+      const [unidadesData, naturezasData, crbmsData] = await Promise.all([
+        getUnidades(), 
+        getNaturezas(),
+        getCrbms()
+      ]);
+      setUnidades(unidadesData);
       setNaturezas(naturezasData);
+      setCrbms(crbmsData);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Falha ao buscar dados de apoio.';
       addNotification(message, 'error');
@@ -122,7 +127,7 @@ function GestaoDadosApoioPage(): ReactElement {
     fetchData();
   }, [fetchData]);
 
-  const handleOpenModal = (item: IDataApoio | null = null) => {
+  const handleOpenModal = (item: IUnidade | IDataApoio | null = null) => {
     setItemEmEdicao(item);
     setIsModalOpen(true);
   };
@@ -134,14 +139,13 @@ function GestaoDadosApoioPage(): ReactElement {
 
   const handleSave = async (formData: any) => {
     const isEditing = !!itemEmEdicao;
-    const typeName = activeTab === 'obm' ? 'OBM' : 'Natureza';
-    const actionName = isEditing ? 'atualizada' : 'criada';
-    const successMessage = `${typeName} ${actionName} com sucesso!`;
+    const typeName = activeTab === 'unidade' ? 'Unidade' : 'Natureza';
+    const successMessage = `${typeName} ${isEditing ? 'atualizada' : 'criada'} com sucesso!`;
     
     try {
-      if (activeTab === 'obm') {
-        const payload = { nome: formData.nome, crbm_id: formData.crbm_id };
-        isEditing ? await updateObm(itemEmEdicao!.id, payload) : await createObm(payload);
+      if (activeTab === 'unidade') {
+        const payload = { crbm_id: formData.crbm_id, cidade_nome: formData.cidade_nome };
+        isEditing ? await updateUnidade(itemEmEdicao!.id, payload) : await createUnidade(payload);
       } else {
         const payload = { descricao: formData.descricao };
         isEditing ? await updateNatureza(itemEmEdicao!.id, payload) : await createNatureza(payload);
@@ -158,7 +162,7 @@ function GestaoDadosApoioPage(): ReactElement {
   const handleDelete = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.')) {
       try {
-        activeTab === 'obm' ? await deleteObm(id) : await deleteNatureza(id);
+        activeTab === 'unidade' ? await deleteUnidade(id) : await deleteNatureza(id);
         addNotification('Item excluído com sucesso!', 'success');
         fetchData();
       } catch (err: unknown) {
@@ -183,16 +187,16 @@ function GestaoDadosApoioPage(): ReactElement {
   };
 
   const renderTable = () => {
-    const isObm = activeTab === 'obm';
-    const data = isObm ? obms : naturezas;
-    const columns = isObm 
-      ? [{ key: 'id', header: 'ID' }, { key: 'nome', header: 'Nome' }, { key: 'crbm_id', header: 'CRBM ID' }]
+    const isUnidade = activeTab === 'unidade';
+    const data = isUnidade ? unidades : naturezas;
+    const columns = isUnidade 
+      ? [{ key: 'crbm_nome', header: 'CRBM' }, { key: 'cidade_nome', header: 'Cidade' }]
       : [{ key: 'id', header: 'ID' }, { key: 'descricao', header: 'Descrição' }];
 
     return (
       <>
         <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f'}}>
-          Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
+          Adicionar Nov{isUnidade ? 'a Unidade' : 'a Natureza'}
         </button>
         
         <table style={styles.table}>
@@ -205,7 +209,7 @@ function GestaoDadosApoioPage(): ReactElement {
           <tbody>
             {data.map(item => (
               <tr key={item.id}>
-                {columns.map(col => <td key={col.key} style={styles.td}>{item[col.key as keyof IDataApoio]}</td>)}
+                {columns.map(col => <td key={col.key} style={styles.td}>{(item as any)[col.key]}</td>)}
                 <td style={styles.td}>
                   <div style={styles.actionButtons}>
                     <button onClick={() => handleOpenModal(item)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
@@ -228,8 +232,8 @@ function GestaoDadosApoioPage(): ReactElement {
       </header>
 
       <div style={styles.tabContainer}>
-        <button onClick={() => setActiveTab('obm')} style={{...styles.tab, ...(activeTab === 'obm' && styles.activeTab)}}>
-          OBMs
+        <button onClick={() => setActiveTab('unidade')} style={{...styles.tab, ...(activeTab === 'unidade' && styles.activeTab)}}>
+          Gestão de Unidades
         </button>
         <button onClick={() => setActiveTab('natureza')} style={{...styles.tab, ...(activeTab === 'natureza' && styles.activeTab)}}>
           Naturezas de Ocorrência
@@ -244,6 +248,7 @@ function GestaoDadosApoioPage(): ReactElement {
           type={activeTab}
           onClose={handleCloseModal}
           onSave={handleSave}
+          crbms={crbms}
         />
       )}
     </div>

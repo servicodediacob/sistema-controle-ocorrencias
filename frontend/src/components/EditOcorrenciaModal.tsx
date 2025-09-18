@@ -1,9 +1,7 @@
-// frontend/src/components/EditOcorrenciaModal.tsx
-
 import React, { useState, useEffect, ReactElement } from 'react';
-import { IOcorrencia, IDataApoio, getObms, getNaturezas } from '../services/api';
+import { IOcorrencia, IDataApoio, getNaturezas, getCidades, ICidade } from '../services/api';
 
-// 1. Define a interface para as props do modal
+// Define a interface para as props do modal
 interface EditOcorrenciaModalProps {
   ocorrencia: IOcorrencia | null;
   onClose: () => void;
@@ -11,9 +9,8 @@ interface EditOcorrenciaModalProps {
 }
 
 function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModalProps): ReactElement | null {
-  // 2. Tipos para os estados
   const [formData, setFormData] = useState<IOcorrencia | null>(ocorrencia);
-  const [obms, setObms] = useState<IDataApoio[]>([]);
+  const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,11 +18,11 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [obmsData, naturezasData] = await Promise.all([getObms(), getNaturezas()]);
-        setObms(obmsData);
+        const [cidadesData, naturezasData] = await Promise.all([getCidades(), getNaturezas()]);
+        setCidades(cidadesData);
         setNaturezas(naturezasData);
       } catch (error) {
-        console.error("Erro ao buscar dados de apoio para o modal", error);
+        console.error("Erro ao buscar dados de apoio para o modal de ocorrência", error);
       } finally {
         setLoading(false);
       }
@@ -33,12 +30,11 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
     fetchData();
   }, []);
 
-  // 3. Tipos para os eventos de change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (formData) {
-      // Converte para número se for um dos IDs
-      const finalValue = (name === 'obm_id' || name === 'natureza_id') ? parseInt(value, 10) : value;
+      // CORREÇÃO: O nome do campo no formulário da ocorrência agora é 'cidade_id'
+      const finalValue = (name === 'cidade_id' || name === 'natureza_id') ? parseInt(value, 10) : value;
       setFormData({ ...formData, [name]: finalValue });
     }
   };
@@ -54,6 +50,7 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
     return null;
   }
 
+  // Estilos (sem alteração)
   const styles: { [key: string]: React.CSSProperties } = {
     modalBackdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
     modalContent: { backgroundColor: '#2c2c2c', padding: '2rem', borderRadius: '8px', width: '450px', color: 'white' },
@@ -72,7 +69,6 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
           <form onSubmit={handleSubmit}>
             <div style={styles.formGroup}>
               <label htmlFor="data_ocorrencia" style={styles.label}>Data da Ocorrência</label>
-              {/* Formata a data para o formato YYYY-MM-DD esperado pelo input type="date" */}
               <input
                 type="date"
                 id="data_ocorrencia"
@@ -90,9 +86,15 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
               </select>
             </div>
             <div style={styles.formGroup}>
-              <label htmlFor="obm_id" style={styles.label}>OBM</label>
-              <select id="obm_id" name="obm_id" value={formData?.obm_id} onChange={handleChange} required style={styles.input}>
-                {obms.map(obm => <option key={obm.id} value={obm.id}>{obm.nome}</option>)}
+              {/* CORREÇÃO: O campo agora é 'cidade_id' */}
+              <label htmlFor="cidade_id" style={styles.label}>Cidade</label>
+              <select id="cidade_id" name="cidade_id" value={formData?.cidade_id} onChange={handleChange} required style={styles.input}>
+                {cidades.map(cidade => (
+                  // CORREÇÃO: Acessando 'cidade.cidade_nome'
+                  <option key={cidade.id} value={cidade.id}>
+                    {cidade.cidade_nome}
+                  </option>
+                ))}
               </select>
             </div>
             <div style={styles.buttonContainer}>

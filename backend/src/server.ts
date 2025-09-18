@@ -1,16 +1,15 @@
-// backend/src/server.ts
-
-import 'dotenv/config'; // Garante que as variáveis de ambiente sejam carregadas.
+import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 
 import authRoutes from './routes/authRoutes';
-import dadosRoutes from './routes/dadosRoutes';
+import dadosRoutes from './routes/dadosRoutes'; // Manteremos para as 'naturezas'
+import unidadesRoutes from './routes/unidadesRoutes'; // <-- IMPORTAR AS NOVAS ROTAS
 import dashboardRoutes from './routes/dashboardRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import usuarioRoutes from './routes/usuarioRoutes';
 
-import './db'; // Importa para inicializar a conexão e exibir o log de diagnóstico.
+import './db';
 
 const app: Express = express();
 
@@ -20,7 +19,8 @@ app.use(express.json());
 
 // Rotas da API
 app.use('/api/auth', authRoutes);
-app.use('/api', dadosRoutes);
+app.use('/api', dadosRoutes); // Continua usando para /api/naturezas
+app.use('/api', unidadesRoutes); // <-- USAR AS NOVAS ROTAS
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
