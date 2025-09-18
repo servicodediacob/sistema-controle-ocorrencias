@@ -5,10 +5,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-swc src/server.ts",
-    "migrate:dev": "dotenv -e .env.development -- ts-node-swc src/scripts/migrate.ts",
-    "migrate:prod": "dotenv -e .env.production -- ts-node-swc src/scripts/migrate.ts",
-    "seed:dev": "dotenv -e .env.development -- ts-node-swc src/db/seed.ts",
+    "dev": "dotenv -e .env.development -- npx ts-node --swc src/server.ts",
+    "migrate:dev": "dotenv -e .env.development -- npx ts-node --swc src/scripts/migrate.ts",
+    "migrate:prod": "dotenv -e .env.production -- npx ts-node --swc src/scripts/migrate.ts",
+    "seed:dev": "dotenv -e .env.development -- npx ts-node --swc src/db/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

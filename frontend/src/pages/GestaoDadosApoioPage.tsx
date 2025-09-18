@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { 
+import {
   getObms, createObm, updateObm, deleteObm,
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
   IDataApoio
 } from '../services/api';
+import { useNotification } from '../contexts/NotificationContext'; // Usar o sistema de notificação
 
 type DataType = 'obm' | 'natureza';
 
+// --- Componente do Modal (Refatorado para clareza) ---
 interface DataModalProps {
   item: IDataApoio | null;
   type: DataType;
@@ -20,13 +22,22 @@ interface DataModalProps {
 function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElement {
   const isEditing = !!item;
   const isObm = type === 'obm';
-  
-  const [formData, setFormData] = useState(isObm ? {
-    nome: item?.nome || '',
-    crbm_id: item?.crbm_id || 1,
-  } : {
-    descricao: item?.descricao || '',
-  });
+  const title = `${isEditing ? 'Editar' : 'Adicionar Nova'} ${isObm ? 'OBM' : 'Natureza'}`;
+
+  // Estado inicial baseado no tipo e se é edição ou criação
+  const getInitialState = () => {
+    if (isObm) {
+      return {
+        nome: item?.nome || '',
+        crbm_id: item?.crbm_id || 1, // Default para CRBM I
+      };
+    }
+    return {
+      descricao: item?.descricao || '',
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialState);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -39,6 +50,7 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
     onSave(formData);
   };
 
+  // Estilos (sem alteração)
   const styles: { [key: string]: CSSProperties } = {
     modalBackdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
     modalContent: { backgroundColor: '#2c2c2c', padding: '2rem', borderRadius: '8px', width: '400px', color: 'white' },
@@ -52,7 +64,7 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
       <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2>{isEditing ? `Editar ${isObm ? 'OBM' : 'Natureza'}` : `Adicionar Nova ${isObm ? 'OBM' : 'Natureza'}`}</h2>
+        <h2>{title}</h2>
         <form onSubmit={handleSubmit}>
           {isObm ? (
             <>
@@ -71,7 +83,7 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
           ) : (
             <div style={styles.formGroup}>
               <label htmlFor="descricao" style={styles.label}>Descrição da Natureza</label>
-              <input type="text" id="descricao" name="descricao" value={formData.descricao || ''} onChange={handleChange} required style={styles.input} />
+              <input type="text" id="descricao" name="descricao" value={formData.descricao} onChange={handleChange} required style={styles.input} />
             </div>
           )}
           <div style={styles.buttonContainer}>
@@ -84,33 +96,31 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
   );
 }
 
+
+// --- Componente Principal da Página (com as correções) ---
 function GestaoDadosApoioPage(): ReactElement {
-  const [activeTab, setActiveTab] = useState('obms');
+  const [activeTab, setActiveTab] = useState<DataType>('obm'); // Tipo explícito
   const [obms, setObms] = useState<IDataApoio[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState<IDataApoio | null>(null);
+  const { addNotification } = useNotification(); // Hook de notificação
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
       const [obmsData, naturezasData] = await Promise.all([getObms(), getNaturezas()]);
       setObms(obmsData);
       setNaturezas(naturezasData);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Falha ao buscar dados de apoio.');
-      }
+      const message = err instanceof Error ? err.message : 'Falha ao buscar dados de apoio.';
+      addNotification(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => {
     fetchData();
@@ -127,42 +137,40 @@ function GestaoDadosApoioPage(): ReactElement {
   };
 
   const handleSave = async (formData: any) => {
+    const isEditing = !!itemEmEdicao;
+    const successMessage = `${activeTab === 'obm' ? 'OBM' : 'Natureza'} ${isEditing ? 'atualizada' : 'criada'} com sucesso!`;
+    
     try {
-      if (activeTab === 'obms') {
+      if (activeTab === 'obm') {
         const payload = { nome: formData.nome, crbm_id: formData.crbm_id };
-        itemEmEdicao ? await updateObm(itemEmEdicao.id, payload) : await createObm(payload);
+        isEditing ? await updateObm(itemEmEdicao!.id, payload) : await createObm(payload);
       } else {
         const payload = { descricao: formData.descricao };
-        itemEmEdicao ? await updateNatureza(itemEmEdicao.id, payload) : await createNatureza(payload);
+        isEditing ? await updateNatureza(itemEmEdicao!.id, payload) : await createNatureza(payload);
       }
-      alert('Dados salvos com sucesso!');
+      addNotification(successMessage, 'success');
       handleCloseModal();
       fetchData();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Erro: ${err.message}`);
-      } else {
-        alert('Falha ao salvar dados.');
-      }
+      const message = err instanceof Error ? err.message : 'Falha ao salvar dados.';
+      addNotification(message, 'error');
     }
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.')) {
       try {
-        activeTab === 'obms' ? await deleteObm(id) : await deleteNatureza(id);
-        alert('Item excluído com sucesso!');
+        activeTab === 'obm' ? await deleteObm(id) : await deleteNatureza(id);
+        addNotification('Item excluído com sucesso!', 'success');
         fetchData();
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          alert(`Erro: ${err.message}`);
-        } else {
-          alert('Falha ao excluir item.');
-        }
+        const message = err instanceof Error ? err.message : 'Falha ao excluir item.';
+        addNotification(message, 'error');
       }
     }
   };
 
+  // Estilos (sem alteração)
   const styles: { [key: string]: CSSProperties } = {
     container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '1rem', marginBottom: '1rem' },
@@ -174,12 +182,12 @@ function GestaoDadosApoioPage(): ReactElement {
     td: { borderBottom: '1px solid #3a3a3a', padding: '0.75rem' },
     actionButtons: { display: 'flex', gap: '0.5rem' },
     button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
-    error: { color: 'red', marginTop: '1rem' },
     backLink: { color: '#8bf', textDecoration: 'none' },
   };
 
+  // --- Função de Renderização da Tabela (CORRIGIDA) ---
   const renderTable = () => {
-    const isObm = activeTab === 'obms';
+    const isObm = activeTab === 'obm';
     const data = isObm ? obms : naturezas;
     const columns = isObm 
       ? [{ key: 'id', header: 'ID' }, { key: 'nome', header: 'Nome' }, { key: 'crbm_id', header: 'CRBM ID' }]
@@ -187,9 +195,11 @@ function GestaoDadosApoioPage(): ReactElement {
 
     return (
       <>
+        {/* CORREÇÃO: O texto do botão agora é dinâmico */}
         <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f'}}>
-          Adicionar Nova {isObm ? 'OBM' : 'Natureza'}
+          Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
         </button>
+        
         <table style={styles.table}>
           <thead>
             <tr>
@@ -223,21 +233,20 @@ function GestaoDadosApoioPage(): ReactElement {
       </header>
 
       <div style={styles.tabContainer}>
-        <button onClick={() => setActiveTab('obms')} style={{...styles.tab, ...(activeTab === 'obms' && styles.activeTab)}}>
+        <button onClick={() => setActiveTab('obm')} style={{...styles.tab, ...(activeTab === 'obm' && styles.activeTab)}}>
           OBMs
         </button>
-        <button onClick={() => setActiveTab('naturezas')} style={{...styles.tab, ...(activeTab === 'naturezas' && styles.activeTab)}}>
+        <button onClick={() => setActiveTab('natureza')} style={{...styles.tab, ...(activeTab === 'natureza' && styles.activeTab)}}>
           Naturezas de Ocorrência
         </button>
       </div>
 
-      {error && <p style={styles.error}>{error}</p>}
       {loading ? <p>Carregando...</p> : renderTable()}
 
       {isModalOpen && (
         <DataModal
           item={itemEmEdicao}
-          type={activeTab as DataType}
+          type={activeTab} // Passa a aba ativa para o modal saber o que renderizar
           onClose={handleCloseModal}
           onSave={handleSave}
         />

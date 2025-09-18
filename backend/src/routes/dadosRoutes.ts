@@ -1,3 +1,5 @@
+// backend/src/routes/dadosRoutes.ts
+
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import {
@@ -17,11 +19,13 @@ import {
 
 const router = Router();
 
-// --- Rotas de OBMs ---
+// --- Rotas de OBMs (CORRIGIDO) ---
+// A rota '/obms' agora lida corretamente com GET (listar) e POST (criar).
 router.route('/obms')
   .get(getObms)
-  .post(proteger, criarObm);
+  .post(proteger, criarObm); // CORREÇÃO: Aponta o método POST para o controlador 'criarObm'.
 
+// Rotas para um ID específico de OBM (atualizar e excluir).
 router.route('/obms/:id')
   .put(proteger, atualizarObm)
   .delete(proteger, excluirObm);

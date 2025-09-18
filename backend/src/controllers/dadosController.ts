@@ -1,3 +1,5 @@
+// backend/src/controllers/dadosController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -10,26 +12,60 @@ export const getObms = async (_req: Request, res: Response): Promise<void> => {
     const { rows } = await db.query('SELECT * FROM obms ORDER BY nome ASC');
     res.status(200).json(rows);
   } catch (error) {
-    console.error('Erro ao buscar OBMs:', error);
+    console.error('[DIAGNÓSTICO] Erro ao buscar OBMs:', error);
     res.status(500).json({ message: 'Erro interno do servidor ao buscar OBMs.' });
   }
 };
 
+// --- FUNÇÃO CORRIGIDA E COM DIAGNÓSTICO ---
 export const criarObm = async (req: Request, res: Response): Promise<void> => {
   const { nome, crbm_id } = req.body;
-  if (!nome || !crbm_id) {
+
+  // --- Início do Diagnóstico ---
+  console.log('[DIAGNÓSTICO] Recebida requisição para criar OBM.');
+  console.log('[DIAGNÓSTICO] Dados recebidos (req.body):', req.body);
+  // --- Fim do Diagnóstico ---
+
+  if (!nome || crbm_id === undefined) { // Verificação mais segura para crbm_id
+    console.error('[DIAGNÓSTICO] Erro de validação: Nome ou crbm_id ausentes.');
     res.status(400).json({ message: 'Nome e ID do CRBM são obrigatórios.' });
     return;
   }
+
   try {
     const query = 'INSERT INTO obms (nome, crbm_id) VALUES ($1, $2) RETURNING *';
-    const { rows } = await db.query(query, [nome, crbm_id]);
+    const values = [nome, crbm_id];
+    
+    console.log('[DIAGNÓSTICO] Executando query:', query);
+    console.log('[DIAGNÓSTICO] Com os valores:', values);
+
+    const { rows } = await db.query(query, values);
+    
+    console.log('[DIAGNÓSTICO] OBM criada com sucesso:', rows[0]);
     res.status(201).json(rows[0]);
+
   } catch (error) {
-    console.error('Erro ao criar OBM:', error);
+    // --- Diagnóstico de Erro ---
+    console.error('[DIAGNÓSTICO] FALHA AO CRIAR OBM. Erro capturado:', error);
+    
+    const dbError = error as any;
+    if (dbError.code === '23505') { // Erro de chave única (nome duplicado)
+      console.error('[DIAGNÓSTICO] Causa: Violação de chave única (nome duplicado).');
+      res.status(409).json({ message: `A OBM com o nome "${nome}" já existe.` });
+      return;
+    }
+    if (dbError.code === '23503') { // Erro de chave estrangeira
+        console.error(`[DIAGNÓSTICO] Causa: Violação de chave estrangeira. O crbm_id "${crbm_id}" não existe na tabela 'crbms'.`);
+        res.status(400).json({ message: `O CRBM com ID ${crbm_id} não é válido.` });
+        return;
+    }
+    // --- Fim do Diagnóstico de Erro ---
+    
     res.status(500).json({ message: 'Erro interno do servidor ao criar OBM.' });
   }
 };
+
+// ... (O restante do arquivo permanece o mesmo) ...
 
 export const atualizarObm = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;

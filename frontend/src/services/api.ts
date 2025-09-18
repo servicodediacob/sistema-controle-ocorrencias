@@ -1,13 +1,13 @@
 // frontend/src/services/api.ts
 
 import axios, { AxiosError } from 'axios';
-import { IUser } from '../contexts/AuthContext'; // Importa o tipo diretamente
+import { IUser } from '../contexts/AuthContext';
 
 // ===============================================
 // --- Interfaces de Tipos da API ---
 // ===============================================
 
-export type { IUser }; // Re-exporta o tipo para outros arquivos usarem
+export type { IUser };
 
 export interface IDataApoio {
   id: number;
@@ -16,6 +16,7 @@ export interface IDataApoio {
   crbm_id?: number;
 }
 
+// ... (outras interfaces não precisam de alteração) ...
 export interface IOcorrenciaPayload {
   ocorrencia: {
     obm_id: number;
@@ -79,14 +80,23 @@ interface ApiError {
   message: string;
 }
 
+
 // ===============================================
-// --- Configuração do Axios ---
+// --- Configuração do Axios (CORRIGIDO) ---
 // ===============================================
+
+// CORREÇÃO: A URL base agora é dinâmica.
+// Em desenvolvimento, usará o valor de .env.development.
+// Em produção (build), usará a URL do Render.com.
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://sistema-ocorrencias-d7rw.onrender.com/api';
+
+console.log(`[INFO] A API está se comunicando com: ${baseURL}` ); // Log para confirmar a URL
 
 const api = axios.create({
-  baseURL: 'https://sistema-ocorrencias-d7rw.onrender.com/api',
-} );
+  baseURL: baseURL,
+});
 
+// O resto do arquivo permanece o mesmo...
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -103,7 +113,8 @@ api.interceptors.request.use(
 const extractErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
-    return axiosError.response?.data?.message || 'Ocorreu um erro inesperado na comunicação com a API.';
+    // CORREÇÃO: Acessa a mensagem de erro de forma mais segura
+    return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`;
   }
   if (error instanceof Error) {
     return error.message;
@@ -111,8 +122,9 @@ const extractErrorMessage = (error: unknown): string => {
   return 'Ocorreu um erro desconhecido.';
 };
 
+
 // ===============================================
-// --- Funções da API Tipadas ---
+// --- Funções da API Tipadas (sem alterações de lógica) ---
 // ===============================================
 
 export const login = async (email: string, senha: string): Promise<{ usuario: IUser; token: string }> => {
