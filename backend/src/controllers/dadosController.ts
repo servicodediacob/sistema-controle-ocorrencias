@@ -1,5 +1,3 @@
-// backend/src/controllers/dadosController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -17,7 +15,6 @@ export const getObms = async (_req: Request, res: Response): Promise<void> => {
   }
 };
 
-// --- FUNÇÃO CORRIGIDA E COM DIAGNÓSTICO ---
 export const criarObm = async (req: Request, res: Response): Promise<void> => {
   const { nome, crbm_id } = req.body;
 
@@ -45,7 +42,7 @@ export const criarObm = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json(rows[0]);
 
   } catch (error) {
-    // --- Diagnóstico de Erro ---
+    // --- Diagnóstico de Erro Detalhado ---
     console.error('[DIAGNÓSTICO] FALHA AO CRIAR OBM. Erro capturado:', error);
     
     const dbError = error as any;
@@ -64,8 +61,6 @@ export const criarObm = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: 'Erro interno do servidor ao criar OBM.' });
   }
 };
-
-// ... (O restante do arquivo permanece o mesmo) ...
 
 export const atualizarObm = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
@@ -100,7 +95,7 @@ export const excluirObm = async (req: Request, res: Response): Promise<void> => 
   } catch (error) {
     console.error('Erro ao excluir OBM:', error);
     if ((error as any).code === '23503') {
-      res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a ocorrências existentes.' });
+      res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a registros existentes.' });
       return;
     }
     res.status(500).json({ message: 'Erro interno do servidor ao excluir OBM.' });

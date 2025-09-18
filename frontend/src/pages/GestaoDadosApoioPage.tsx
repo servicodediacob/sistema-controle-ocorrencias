@@ -1,5 +1,3 @@
-// frontend/src/pages/GestaoDadosApoioPage.tsx
-
 import { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -7,7 +5,7 @@ import {
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
   IDataApoio
 } from '../services/api';
-import { useNotification } from '../contexts/NotificationContext'; // Usar o sistema de notificação
+import { useNotification } from '../contexts/NotificationContext';
 
 type DataType = 'obm' | 'natureza';
 
@@ -24,7 +22,6 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
   const isObm = type === 'obm';
   const title = `${isEditing ? 'Editar' : 'Adicionar Nova'} ${isObm ? 'OBM' : 'Natureza'}`;
 
-  // Estado inicial baseado no tipo e se é edição ou criação
   const getInitialState = () => {
     if (isObm) {
       return {
@@ -50,7 +47,6 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
     onSave(formData);
   };
 
-  // Estilos (sem alteração)
   const styles: { [key: string]: CSSProperties } = {
     modalBackdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
     modalContent: { backgroundColor: '#2c2c2c', padding: '2rem', borderRadius: '8px', width: '400px', color: 'white' },
@@ -97,16 +93,16 @@ function DataModal({ item, type, onClose, onSave }: DataModalProps): ReactElemen
 }
 
 
-// --- Componente Principal da Página (com as correções) ---
+// --- Componente Principal da Página ---
 function GestaoDadosApoioPage(): ReactElement {
-  const [activeTab, setActiveTab] = useState<DataType>('obm'); // Tipo explícito
+  const [activeTab, setActiveTab] = useState<DataType>('obm');
   const [obms, setObms] = useState<IDataApoio[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState<IDataApoio | null>(null);
-  const { addNotification } = useNotification(); // Hook de notificação
+  const { addNotification } = useNotification();
 
   const fetchData = useCallback(async () => {
     try {
@@ -138,7 +134,9 @@ function GestaoDadosApoioPage(): ReactElement {
 
   const handleSave = async (formData: any) => {
     const isEditing = !!itemEmEdicao;
-    const successMessage = `${activeTab === 'obm' ? 'OBM' : 'Natureza'} ${isEditing ? 'atualizada' : 'criada'} com sucesso!`;
+    const typeName = activeTab === 'obm' ? 'OBM' : 'Natureza';
+    const actionName = isEditing ? 'atualizada' : 'criada';
+    const successMessage = `${typeName} ${actionName} com sucesso!`;
     
     try {
       if (activeTab === 'obm') {
@@ -170,7 +168,6 @@ function GestaoDadosApoioPage(): ReactElement {
     }
   };
 
-  // Estilos (sem alteração)
   const styles: { [key: string]: CSSProperties } = {
     container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '1rem', marginBottom: '1rem' },
@@ -185,7 +182,6 @@ function GestaoDadosApoioPage(): ReactElement {
     backLink: { color: '#8bf', textDecoration: 'none' },
   };
 
-  // --- Função de Renderização da Tabela (CORRIGIDA) ---
   const renderTable = () => {
     const isObm = activeTab === 'obm';
     const data = isObm ? obms : naturezas;
@@ -195,7 +191,6 @@ function GestaoDadosApoioPage(): ReactElement {
 
     return (
       <>
-        {/* CORREÇÃO: O texto do botão agora é dinâmico */}
         <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f'}}>
           Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
         </button>
@@ -246,7 +241,7 @@ function GestaoDadosApoioPage(): ReactElement {
       {isModalOpen && (
         <DataModal
           item={itemEmEdicao}
-          type={activeTab} // Passa a aba ativa para o modal saber o que renderizar
+          type={activeTab}
           onClose={handleCloseModal}
           onSave={handleSave}
         />

@@ -1,5 +1,3 @@
-// backend/src/routes/dadosRoutes.ts
-
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import {
@@ -19,18 +17,21 @@ import {
 
 const router = Router();
 
-// --- Rotas de OBMs (CORRIGIDO) ---
-// A rota '/obms' agora lida corretamente com GET (listar) e POST (criar).
+// --- Rotas de OBMs (Organizações Bombeiro Militar) ---
+// A rota '/obms' lida com a coleção de OBMs.
+// GET para listar todas, POST para criar uma nova.
 router.route('/obms')
   .get(getObms)
-  .post(proteger, criarObm); // CORREÇÃO: Aponta o método POST para o controlador 'criarObm'.
+  .post(proteger, criarObm); // CORREÇÃO: 'criarObm' agora está na rota correta.
 
-// Rotas para um ID específico de OBM (atualizar e excluir).
+// A rota '/obms/:id' lida com um recurso específico.
+// PUT para atualizar, DELETE para excluir.
 router.route('/obms/:id')
   .put(proteger, atualizarObm)
   .delete(proteger, excluirObm);
 
 // --- Rotas de Naturezas de Ocorrência ---
+// A mesma lógica RESTful se aplica aqui.
 router.route('/naturezas')
   .get(getNaturezas)
   .post(proteger, criarNatureza);
