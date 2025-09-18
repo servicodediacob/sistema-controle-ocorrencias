@@ -9,7 +9,7 @@
     "migrate:dev": "node run.js .env.development src/scripts/migrate.ts",
     "migrate:prod": "node run.js .env.production src/scripts/migrate.ts",
     "seed:dev": "node run.js .env.development src/db/seed.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
