@@ -18,12 +18,13 @@ app.use(cors());
 app.use(express.json());
 
 // Rotas da API
-app.use('/api/auth', authRoutes);
-app.use('/api', dadosRoutes); // Continua usando para /api/naturezas
-app.use('/api', unidadesRoutes); // <-- USAR AS NOVAS ROTAS
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/plantao', plantaoRoutes);
-app.use('/api/usuarios', usuarioRoutes);
+
+app.use('/auth', authRoutes);
+app.use('/', dadosRoutes); 
+app.use('/', unidadesRoutes); 
+app.use('/dashboard', dashboardRoutes);
+app.use('/plantao', plantaoRoutes);
+app.use('/usuarios', usuarioRoutes);
 
 // Rota raiz
 app.get('/', (_req: Request, res: Response) => {
