@@ -1,83 +1,26 @@
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import styled from 'styled-components';
-import { useAuth } from '../contexts/useAuth';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
-import { useNavigate } from 'react-router-dom';
-import DestaqueWidget from '../components/DestaqueWidget';
-import PlantaoWidget from '../components/PlantaoWidget';
 import { useNotification } from '../contexts/NotificationContext';
 
-// --- Styled Components ---
-const Container = styled.div`
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
+// Importe o novo MainLayout
+import MainLayout from '../components/MainLayout';
 
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #444;
-  padding-bottom: 1rem;
-`;
+import DestaqueWidget from '../components/DestaqueWidget';
+import PlantaoWidget from '../components/PlantaoWidget';
 
-const Main = styled.main`
-  margin-top: 2rem;
-`;
-
-const Button = styled.button`
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
-`;
-
-const LogoutButton = styled(Button)`
-  margin-left: 1rem;
-  background-color: #555;
-  &:hover { background-color: #666; }
-`;
-
-const ReportButton = styled(Button)`
-  background-color: #8338ec; /* Cor roxa para destaque */
-  margin-right: 1rem;
-  &:hover { background-color: #7328d8; }
-`;
-
-const LaunchButton = styled(Button)`
-  background-color: #2a9d8f;
-  margin-right: 1rem;
-  &:hover { background-color: #268c80; }
-`;
-
-const ManageButton = styled(Button)`
-  background-color: #3a7ca5;
-  &:hover { background-color: #326a8d; }
-`;
-
-const ManageUsersButton = styled(Button)`
-  background-color: #e9c46a;
-  color: black;
-  margin-left: 1rem;
-  &:hover { background-color: #d8b55a; }
-`;
-
-const ManageDataButton = styled(Button)`
-  background-color: #f4a261;
-  color: black;
-  margin-left: 1rem;
-  &:hover { background-color: #e39251; }
-`;
+// --- Styled Components (agora específicos para o conteúdo do Dashboard) ---
 
 const FlexContainer = styled.div`
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
   margin-top: 2rem;
+
+  /* O primeiro container não precisa de margem no topo */
+  &:first-of-type {
+    margin-top: 0;
+  }
 `;
 
 const Card = styled.div`
@@ -180,8 +123,6 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
 
 // --- Componente Principal ---
 function DashboardPage(): ReactElement {
-  const { usuario, logout } = useAuth();
-  const navigate = useNavigate();
   const { addNotification } = useNotification();
   
   const [stats, setStats] = useState<IDashboardStats | null>(null);
@@ -210,60 +151,32 @@ function DashboardPage(): ReactElement {
   }, [fetchData]);
 
   return (
-    <Container>
-      <Header>
-        <h1>Dashboard do Supervisor</h1>
-        <div>
-          <span>Olá, {usuario?.nome}</span>
-          <LogoutButton onClick={logout}>Logout</LogoutButton>
-        </div>
-      </Header>
+    <MainLayout pageTitle="Dashboard do Supervisor">
+      <FlexContainer>
+        <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
+        <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
+      </FlexContainer>
 
-      <Main>
-        <div style={{ marginBottom: '2rem' }}>
-          <ReportButton onClick={() => navigate('/relatorio')}>
-            Ver Relatório
-          </ReportButton>
-          <LaunchButton onClick={() => navigate('/lancamento')}>
-            Lançar Ocorrências
-          </LaunchButton>
-          <ManageButton onClick={() => navigate('/gestao-ocorrencias')}>
-            Gerenciar Ocorrências
-          </ManageButton>
-          <ManageUsersButton onClick={() => navigate('/gestao-usuarios')}>
-            Gerenciar Usuários
-          </ManageUsersButton>
-          <ManageDataButton onClick={() => navigate('/gestao-dados')}>
-            Gerenciar Dados de Apoio
-          </ManageDataButton>
-        </div>
+      <FlexContainer>
+        <StatCard title="Total de Ocorrências" value={stats?.totalOcorrencias ?? 0} loading={loading} />
+        <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
+      </FlexContainer>
 
-        <FlexContainer>
-          <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
-          <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
-        </FlexContainer>
-
-        <FlexContainer>
-          <StatCard title="Total de Ocorrências" value={stats?.totalOcorrencias ?? 0} loading={loading} />
-          <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
-        </FlexContainer>
-
-        <FlexContainer>
-          <DataTable
-            title="Ocorrências por Natureza"
-            loading={loading}
-            data={stats?.ocorrenciasPorNatureza}
-            columns={[{ header: 'Natureza', key: 'nome' }, { header: 'Total', key: 'total' }]}
-          />
-          <DataTable
-            title="Ocorrências por CRBM"
-            loading={loading}
-            data={stats?.ocorrenciasPorCrbm}
-            columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
-          />
-        </FlexContainer>
-      </Main>
-    </Container>
+      <FlexContainer>
+        <DataTable
+          title="Ocorrências por Natureza"
+          loading={loading}
+          data={stats?.ocorrenciasPorNatureza}
+          columns={[{ header: 'Natureza', key: 'nome' }, { header: 'Total', key: 'total' }]}
+        />
+        <DataTable
+          title="Ocorrências por CRBM"
+          loading={loading}
+          data={stats?.ocorrenciasPorCrbm}
+          columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
+        />
+      </FlexContainer>
+    </MainLayout>
   );
 }
 
