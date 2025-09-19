@@ -1,5 +1,4 @@
 import React, { useState, ReactNode } from 'react';
-// --- CORREÇÃO: 'css' foi removido da importação ---
 import styled from 'styled-components';
 import { useAuth } from '../contexts/useAuth';
 import Sidebar from './Sidebar';
@@ -14,13 +13,15 @@ const PageWrapper = styled.div`
 `;
 
 interface ContentContainerProps {
-  isSidebarCollapsed: boolean;
+  // CORREÇÃO: Usando transient prop
+  $isSidebarCollapsed: boolean;
 }
 
 const ContentContainer = styled.div<ContentContainerProps>`
   flex-grow: 1;
   transition: margin-left 0.3s ease;
-  margin-left: ${({ isSidebarCollapsed }) => (isSidebarCollapsed ? '80px' : '250px')};
+  // CORREÇÃO: Usando transient prop
+  margin-left: ${({ $isSidebarCollapsed }) => ($isSidebarCollapsed ? '80px' : '250px')};
   
   display: flex;
   flex-direction: column;
@@ -72,7 +73,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
       />
-      <ContentContainer isSidebarCollapsed={isSidebarCollapsed}>
+      {/* CORREÇÃO: Passando a prop como transient */}
+      <ContentContainer $isSidebarCollapsed={isSidebarCollapsed}>
         <TopBar>
           <PageTitle>{pageTitle}</PageTitle>
           <UserName>Olá, {usuario?.nome}</UserName>

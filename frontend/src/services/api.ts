@@ -94,6 +94,51 @@ export interface ISupervisor {
   nome: string;
 }
 
+export interface IRelatorioRow {
+  grupo: string;
+  subgrupo: string;
+  diurno: string;
+  noturno: string;
+  total_capital: string;
+  "1º CRBM": string;
+  "2º CRBM": string;
+  "3º CRBM": string;
+  "4º CRBM": string;
+  "5º CRBM": string;
+  "6º CRBM": string;
+  "7º CRBM": string;
+  "8º CRBM": string;
+  "9º CRBM": string;
+  total_geral: string;
+}
+
+export interface IEstatisticaLotePayload {
+  data_registro: string;
+  cidade_id: number;
+  estatisticas: {
+    natureza_id: number;
+    quantidade: number;
+  }[];
+}
+
+export interface IObitoRegistro {
+  id: number;
+  data_ocorrencia: string;
+  natureza_id: number;
+  natureza_nome: string;
+  numero_ocorrencia: string;
+  obm_responsavel: string;
+  quantidade_vitimas: number;
+}
+
+export interface IObitoRegistroPayload {
+  data_ocorrencia: string;
+  natureza_id: number;
+  numero_ocorrencia: string;
+  obm_responsavel: string;
+  quantidade_vitimas: number;
+}
+
 interface ApiError {
   message: string;
 }
@@ -156,6 +201,16 @@ export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').t
 
 // --- Funções de Naturezas ---
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
+
+export const getNaturezasPorNomes = async (nomes: string[]): Promise<IDataApoio[]> => {
+  try {
+    const response = await api.post('/naturezas/por-nomes', { nomes });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
 export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
 export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
 export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);
@@ -279,22 +334,8 @@ export const setSupervisorPlantao = async (usuario_id: number | null): Promise<a
   }
 };
 
-// ===============================================
-// --- NOVAS FUNÇÕES PARA ESTATÍSTICAS E RELATÓRIO ---
-// ===============================================
+// --- Funções para Estatísticas e Relatórios ---
 
-export interface IEstatisticaLotePayload {
-  data_registro: string;
-  cidade_id: number;
-  estatisticas: {
-    natureza_id: number;
-    quantidade: number;
-  }[];
-}
-
-/**
- * @description Envia um lote de contagens de estatísticas para o backend.
- */
 export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload): Promise<{ message: string }> => {
   try {
     const response = await api.post('/estatisticas/lote', payload);
@@ -304,31 +345,29 @@ export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload
   }
 };
 
-export interface IRelatorioRow {
-  grupo: string;
-  subgrupo: string;
-  diurno: string; // Vem como string do banco, convertemos no frontend se necessário
-  noturno: string;
-  total_capital: string;
-  "1º CRBM": string;
-  "2º CRBM": string;
-  "3º CRBM": string;
-  "4º CRBM": string;
-  "5º CRBM": string;
-  "6º CRBM": string;
-  "7º CRBM": string;
-  "8º CRBM": string;
-  "9º CRBM": string;
-  total_geral: string;
-}
-
-/**
- * @description Busca os dados consolidados para o relatório de estatísticas.
- */
 export const getRelatorio = async (data_inicio: string, data_fim: string): Promise<IRelatorioRow[]> => {
   try {
     const response = await api.get('/relatorio', { params: { data_inicio, data_fim } });
-    // A resposta do backend com SUM() pode vir como strings, o que é ok para exibição.
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+// --- Funções para o CRUD de Registros de Óbitos ---
+
+export const getObitosPorData = async (data: string): Promise<IObitoRegistro[]> => {
+  try {
+    const response = await api.get('/obitos-registros', { params: { data } });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promise<IObitoRegistro> => {
+  try {
+    const response = await api.post('/obitos-registros', payload);
     return response.data;
   } catch (error) {
     throw new Error(extractErrorMessage(error));

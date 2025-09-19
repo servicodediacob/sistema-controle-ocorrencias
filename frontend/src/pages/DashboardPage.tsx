@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, ReactElement } from 'react';
 import styled from 'styled-components';
+// CORREÇÃO: A interface IRelatorioRow foi movida para a API e será importada de lá
 import { getDashboardStats, getPlantao, getRelatorio, IDashboardStats, IPlantao, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -7,7 +8,7 @@ import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
 import PlantaoWidget from '../components/PlantaoWidget';
 
-// --- Styled Components ---
+// --- Styled Components (sem alterações) ---
 const FlexContainer = styled.div`
   display: flex;
   gap: 1.5rem;
@@ -40,13 +41,11 @@ const CardValue = styled.p`
   margin: 0.5rem 0 0 0;
 `;
 
-// --- ALTERAÇÃO: TableWrapper agora só cuida da rolagem horizontal ---
 const TableWrapper = styled.div`
-  overflow-x: auto; /* Permite rolagem horizontal se a tabela for muito larga */
+  overflow-x: auto;
   border: 1px solid #555;
   border-radius: 4px;
   width: 100%;
-  /* A rolagem vertical foi movida para o MainLayout */
 `;
 
 const ReportTable = styled.table`
@@ -65,7 +64,7 @@ const ReportTable = styled.table`
   th {
     background-color: #3a3a3a;
     position: sticky;
-    top: 0; /* Vai "grudar" no topo do PageBody, que agora é o contêiner de rolagem */
+    top: 0;
     z-index: 3;
   }
   
@@ -174,11 +173,13 @@ function RelatorioWidget(): ReactElement {
       try {
         setLoading(true);
         const today = new Date().toISOString().split('T')[0];
+        // CORREÇÃO: Passando os parâmetros como 'data_inicio' e 'data_fim'
         const data = await getRelatorio(today, today);
         setReportData(data);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao carregar relatório diário.';
         addNotification(message, 'error');
+        console.error("Erro ao buscar relatório diário:", error); // Log para depuração
       } finally {
         setLoading(false);
       }
@@ -205,7 +206,7 @@ function RelatorioWidget(): ReactElement {
   return (
     <WidgetContainer>
       <WidgetTitle>Relatório Estatístico do Dia</WidgetTitle>
-      {loading ? <p>Carregando relatório...</p> : (
+      {loading ? <p>Carregando relatório...</p> : reportData.length > 0 ? (
         <TableWrapper>
           <ReportTable>
             <thead>
@@ -216,7 +217,6 @@ function RelatorioWidget(): ReactElement {
                 <th colSpan={9}>ESTATÍSTICA POR CRBM (INTERIOR)</th>
                 <th rowSpan={2}>TOTAL GERAL</th>
               </tr>
-              {/* A segunda linha do cabeçalho também é sticky, mas precisa de um deslocamento para baixo */}
               <tr style={{ top: '40px' }}>
                 <th>DIURNO</th><th>NOTURNO</th><th>TOTAL</th>
                 {crbmHeaders.map(h => <th key={h}>{h}</th>)}
@@ -245,6 +245,8 @@ function RelatorioWidget(): ReactElement {
             </tbody>
           </ReportTable>
         </TableWrapper>
+      ) : (
+        <EmptyState>Nenhum dado para exibir no relatório do dia.</EmptyState>
       )}
     </WidgetContainer>
   );
@@ -310,11 +312,6 @@ function DashboardPage(): ReactElement {
   return (
     <MainLayout pageTitle="Dashboard do Supervisor">
       <FlexContainer>
-        <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
-        <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
-      </FlexContainer>
-
-      <FlexContainer>
         <StatCard title="Total de Ocorrências" value={stats?.totalOcorrencias ?? 0} loading={loading} />
         <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
       </FlexContainer>
@@ -336,6 +333,11 @@ function DashboardPage(): ReactElement {
           data={stats?.ocorrenciasPorCrbm}
           columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
         />
+      </FlexContainer>
+      
+      <FlexContainer>
+        <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
+        <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
       </FlexContainer>
     </MainLayout>
   );

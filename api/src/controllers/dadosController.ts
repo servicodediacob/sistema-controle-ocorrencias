@@ -10,7 +10,6 @@ import db from '../db';
  */
 export const getNaturezas = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Esta consulta agora deve funcionar, pois a coluna 'grupo' existe.
     const { rows } = await db.query('SELECT id, grupo, subgrupo FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
     res.status(200).json(rows);
   } catch (error) {
@@ -20,10 +19,31 @@ export const getNaturezas = async (_req: Request, res: Response): Promise<void> 
 };
 
 /**
+ * @description Busca naturezas específicas com base em uma lista de nomes de subgrupos.
+ */
+export const getNaturezasPorNomes = async (req: Request, res: Response) => {
+  const { nomes } = req.body; // Espera um array de nomes no corpo da requisição
+
+  if (!Array.isArray(nomes) || nomes.length === 0) {
+    return res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
+  }
+
+  try {
+    // A sintaxe '= ANY($1)' permite buscar múltiplos valores em um array
+    const query = 'SELECT id, subgrupo FROM naturezas_ocorrencia WHERE subgrupo = ANY($1)';
+    const { rows } = await db.query(query, [nomes]);
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Erro ao buscar naturezas por nomes:', error);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+
+/**
  * @description Cria uma nova natureza de ocorrência.
  */
 export const criarNatureza = async (req: Request, res: Response): Promise<void> => {
-  // Recebe 'grupo' e 'subgrupo' do corpo da requisição.
   const { grupo, subgrupo } = req.body;
   if (!grupo || !subgrupo) {
     res.status(400).json({ message: 'Os campos Grupo e Subgrupo são obrigatórios.' });
@@ -34,7 +54,6 @@ export const criarNatureza = async (req: Request, res: Response): Promise<void> 
     const { rows } = await db.query(query, [grupo, subgrupo]);
     res.status(201).json(rows[0]);
   } catch (error) {
-    // Trata o erro de violação de chave única (combinação de grupo/subgrupo já existe).
     if ((error as any).code === '23505') {
         res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
         return;
@@ -85,7 +104,6 @@ export const excluirNatureza = async (req: Request, res: Response): Promise<void
     }
     res.status(200).json({ message: 'Natureza excluída com sucesso.' });
   } catch (error) {
-    // Trata o erro de violação de chave estrangeira (natureza em uso por uma ocorrência).
     if ((error as any).code === '23503') {
       res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a ocorrências existentes.' });
       return;
@@ -105,7 +123,6 @@ export const excluirNatureza = async (req: Request, res: Response): Promise<void
 export const criarOcorrencia = async (req: Request, res: Response): Promise<void> => {
   const { ocorrencia, obitos } = req.body;
 
-  // Validação usa 'cidade_id' em vez de 'obm_id'.
   if (!ocorrencia || !ocorrencia.cidade_id || !ocorrencia.natureza_id || !ocorrencia.data_ocorrencia) {
     res.status(400).json({ message: 'Dados da ocorrência incompletos. Cidade, Natureza e Data são obrigatórios.' });
     return;
@@ -174,7 +191,6 @@ export const getOcorrencias = async (req: Request, res: Response): Promise<void>
     const ocorrenciasQuery = `
       SELECT 
         o.id, o.data_ocorrencia, o.quantidade_obitos, o.natureza_id, o.cidade_id,
-        -- Concatena grupo e subgrupo para formar a descrição da natureza.
         CONCAT(n.grupo, ' - ', n.subgrupo) AS natureza_descricao,
         c.nome AS cidade_nome, 
         cr.nome AS crbm_nome
@@ -241,7 +257,6 @@ export const deleteOcorrencia = async (req: Request, res: Response): Promise<voi
   const { id } = req.params;
 
   try {
-    // A exclusão em cascata no banco de dados cuidará dos óbitos associados.
     const result = await db.query('DELETE FROM ocorrencias WHERE id = $1', [id]);
 
     if (result.rowCount === 0) {

@@ -7,8 +7,9 @@ import GestaoUsuariosPage from './pages/GestaoUsuariosPage';
 import GestaoDadosApoioPage from './pages/GestaoDadosApoioPage';
 import LancamentoPage from './pages/LancamentoPage';
 import RelatorioPage from './pages/RelatorioPage';
+// Importa a nova página
+import RelatorioObitosPage from './pages/RelatorioObitosPage';
 
-// Componente para proteger rotas que exigem autenticação
 interface PrivateRouteProps {
   children: React.ReactElement;
 }
@@ -18,14 +19,12 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
-// Componente principal da aplicação
 function App(): React.ReactElement {
   const { isAuthenticated } = useAuth();
 
   return (
     <Router>
       <Routes>
-        {/* Rotas Públicas e de Redirecionamento */}
         <Route 
           path="/login" 
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
@@ -35,7 +34,6 @@ function App(): React.ReactElement {
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
         />
 
-        {/* Rotas Privadas (Protegidas) */}
         <Route 
           path="/dashboard"
           element={<PrivateRoute><DashboardPage /></PrivateRoute>}
@@ -47,6 +45,11 @@ function App(): React.ReactElement {
         <Route 
           path="/relatorio"
           element={<PrivateRoute><RelatorioPage /></PrivateRoute>}
+        />
+        {/* NOVA ROTA */}
+        <Route 
+          path="/relatorio-obitos"
+          element={<PrivateRoute><RelatorioObitosPage /></PrivateRoute>}
         />
         <Route 
           path="/gestao-ocorrencias"
