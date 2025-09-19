@@ -1,5 +1,6 @@
 import React, { useState, ReactNode } from 'react';
-import styled, { css } from 'styled-components';
+// --- CORREÇÃO: 'css' foi removido da importação ---
+import styled from 'styled-components';
 import { useAuth } from '../contexts/useAuth';
 import Sidebar from './Sidebar';
 
@@ -7,6 +8,8 @@ import Sidebar from './Sidebar';
 
 const PageWrapper = styled.div`
   display: flex;
+  height: 100vh;
+  overflow: hidden;
   background-color: #242424;
 `;
 
@@ -14,14 +17,14 @@ interface ContentContainerProps {
   isSidebarCollapsed: boolean;
 }
 
-// --- MUDANÇA 2: O ContentContainer volta a ser o elemento principal ao lado da Sidebar ---
 const ContentContainer = styled.div<ContentContainerProps>`
   flex-grow: 1;
   transition: margin-left 0.3s ease;
+  margin-left: ${({ isSidebarCollapsed }) => (isSidebarCollapsed ? '80px' : '250px')};
   
-  ${({ isSidebarCollapsed }) => css`
-    margin-left: ${isSidebarCollapsed ? '80px' : '250px'};
-  `}
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 `;
 
 const TopBar = styled.div`
@@ -29,11 +32,10 @@ const TopBar = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 2.5rem;
-  height: 73px; /* Altura fixa para alinhar com a Sidebar */
+  height: 73px;
   box-sizing: border-box;
-  
-  /* A divisória principal fica aqui */
-  border-bottom: 1px solid #444; 
+  border-bottom: 1px solid #444;
+  flex-shrink: 0;
 `;
 
 const PageTitle = styled.h1`
@@ -48,6 +50,8 @@ const UserName = styled.span`
 
 const PageBody = styled.main`
   padding: 2rem 2.5rem;
+  flex-grow: 1;
+  overflow-y: auto;
 `;
 
 // --- Componente Principal do Layout ---
@@ -63,7 +67,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
 
   return (
     <PageWrapper>
-      {/* --- MUDANÇA 3: A Sidebar é o único componente de navegação fixo --- */}
       <Sidebar 
         onLogout={logout}
         isCollapsed={isSidebarCollapsed}

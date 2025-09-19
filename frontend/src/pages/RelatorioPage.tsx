@@ -2,23 +2,13 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { getRelatorio, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth';
-import Header from '../components/Header'; // Importe o novo Header
+
+// Importa o layout principal para padronizar a página
+import MainLayout from '../components/MainLayout';
 
 // --- Styled Components ---
-
-const PageWrapper = styled.div`
-  background-color: #242424;
-`;
-
-// O conteúdo principal agora tem uma margem no TOPO
-const MainContent = styled.main`
-  padding: 2rem 2.5rem;
-  margin-top: 125px; /* Altura aproximada do Header. Ajuste se necessário. */
-`;
-
-// O antigo componente Header da página pode ser removido ou simplificado
-// pois o título agora está no Header global.
+// A estrutura da página (PageWrapper, MainContent) é removida,
+// pois o MainLayout já controla isso.
 
 const FilterControls = styled.div`
   display: flex;
@@ -28,9 +18,9 @@ const FilterControls = styled.div`
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 2rem;
+  flex-wrap: wrap; /* Permite que os controles quebrem a linha em telas menores */
 `;
 
-// ... (O resto dos seus Styled Components não precisa de alteração)
 const ControlGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -66,9 +56,10 @@ const GenerateButton = styled.button`
 `;
 
 const TableWrapper = styled.div`
-  overflow-x: auto;
+  overflow-x: auto; /* Rolagem horizontal para a tabela */
   border: 1px solid #555;
   border-radius: 4px;
+  /* A rolagem vertical é controlada pelo MainLayout */
 `;
 
 const ReportTable = styled.table`
@@ -87,7 +78,7 @@ const ReportTable = styled.table`
   th {
     background-color: #3a3a3a;
     position: sticky;
-    top: 0;
+    top: 0; /* Fixa o cabeçalho no topo do contêiner rolável (PageBody) */
     z-index: 3;
   }
   
@@ -114,15 +105,14 @@ const ReportTable = styled.table`
     font-weight: bold;
     color: white;
     position: sticky;
-    bottom: 0;
+    bottom: 0; /* Fixa a linha de total na parte inferior */
     z-index: 1;
   }
 `;
 
+// --- Componente Principal da Página ---
 
 function RelatorioPage() {
-  const { usuario, logout } = useAuth();
-  
   const today = new Date().toISOString().split('T')[0];
   const [dataInicio, setDataInicio] = useState(today);
   const [dataFim, setDataFim] = useState(today);
@@ -148,9 +138,7 @@ function RelatorioPage() {
 
   const groupedData = reportData.reduce((acc, row) => {
     const grupo = row.grupo;
-    if (!acc[grupo]) {
-      acc[grupo] = [];
-    }
+    if (!acc[grupo]) acc[grupo] = [];
     acc[grupo].push(row);
     return acc;
   }, {} as Record<string, IRelatorioRow[]>);
@@ -173,81 +161,74 @@ function RelatorioPage() {
   const totals = calculateTotals();
 
   return (
-    <PageWrapper>
-      <Header 
-        pageTitle="Relatório Estatístico de Ocorrências"
-        userName={usuario?.nome}
-        onLogout={logout}
-      />
-      <MainContent>
-        <FilterControls>
-          <ControlGroup>
-            <Label htmlFor="data-inicio">Data de Início</Label>
-            <InputDate id="data-inicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
-          </ControlGroup>
-          <ControlGroup>
-            <Label htmlFor="data-fim">Data de Fim</Label>
-            <InputDate id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
-          </ControlGroup>
-          <GenerateButton onClick={handleGenerateReport} disabled={loading}>
-            {loading ? 'Gerando...' : 'Gerar Relatório'}
-          </GenerateButton>
-        </FilterControls>
+    <MainLayout pageTitle="Relatório Estatístico de Ocorrências">
+      <FilterControls>
+        <ControlGroup>
+          <Label htmlFor="data-inicio">Data de Início</Label>
+          <InputDate id="data-inicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+        </ControlGroup>
+        <ControlGroup>
+          <Label htmlFor="data-fim">Data de Fim</Label>
+          <InputDate id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
+        </ControlGroup>
+        <GenerateButton onClick={handleGenerateReport} disabled={loading}>
+          {loading ? 'Gerando...' : 'Gerar Relatório'}
+        </GenerateButton>
+      </FilterControls>
 
-        {loading && <p>Carregando relatório...</p>}
+      {loading && <p>Carregando relatório...</p>}
 
-        {!loading && reportData.length > 0 && (
-          <TableWrapper>
-            <ReportTable>
-              <thead>
-                <tr>
-                  <th rowSpan={2} style={{width: '180px', left: 0, zIndex: 4, position: 'sticky'}}>GRUPO</th>
-                  <th rowSpan={2} style={{width: '220px', left: 180, zIndex: 4, position: 'sticky'}}>NATUREZA (SUBGRUPO)</th>
-                  <th colSpan={3}>ESTATÍSTICA CAPITAL</th>
-                  <th colSpan={9}>ESTATÍSTICA POR CRBM (INTERIOR)</th>
-                  <th rowSpan={2}>TOTAL GERAL</th>
-                </tr>
-                <tr>
-                  <th>DIURNO</th>
-                  <th>NOTURNO</th>
-                  <th>TOTAL</th>
-                  {crbmHeaders.map(h => <th key={h}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(groupedData).map(([grupo, subgrupos]) => (
-                  <React.Fragment key={grupo}>
-                    {subgrupos.map((row, index) => (
-                      <tr key={`${grupo}-${row.subgrupo}`}>
-                        {index === 0 && (
-                          <td className="group-cell" rowSpan={subgrupos.length}>
-                            {grupo}
-                          </td>
-                        )}
-                        <td className="subgroup-cell">{row.subgrupo}</td>
-                        <td>{row.diurno}</td>
-                        <td>{row.noturno}</td>
-                        <td>{row.total_capital}</td>
-                        {crbmHeaders.map(h => <td key={h}>{row[h as keyof IRelatorioRow]}</td>)}
-                        <td>{row.total_geral}</td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-                <tr className="total-row">
-                  <td colSpan={2} style={{left: 0, zIndex: 2, position: 'sticky'}}>SUB TOTAL</td>
-                  <td>{totals.diurno}</td>
-                  <td>{totals.noturno}</td>
-                  <td>{totals.total_capital}</td>
-                  {crbmHeaders.map(h => <td key={h}>{totals[h]}</td>)}
-                  <td>{totals.total_geral}</td>
-                </tr>
-              </tbody>
-            </ReportTable>
-          </TableWrapper>
-        )}
-      </MainContent>
-    </PageWrapper>
+      {!loading && reportData.length > 0 && (
+        <TableWrapper>
+          <ReportTable>
+            <thead>
+              <tr>
+                <th rowSpan={2} style={{width: '180px', left: 0, zIndex: 4}}>GRUPO</th>
+                <th rowSpan={2} style={{width: '220px', left: 180, zIndex: 4}}>NATUREZA (SUBGRUPO)</th>
+                <th colSpan={3}>ESTATÍSTICA CAPITAL</th>
+                <th colSpan={9}>ESTATÍSTICA POR CRBM (INTERIOR)</th>
+                <th rowSpan={2}>TOTAL GERAL</th>
+              </tr>
+              <tr style={{ top: '40px' }}> {/* Deslocamento para a segunda linha do cabeçalho */}
+                <th>DIURNO</th>
+                <th>NOTURNO</th>
+                <th>TOTAL</th>
+                {crbmHeaders.map(h => <th key={h}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(groupedData).map(([grupo, subgrupos]) => (
+                <React.Fragment key={grupo}>
+                  {subgrupos.map((row, index) => (
+                    <tr key={`${grupo}-${row.subgrupo}`}>
+                      {index === 0 && (
+                        <td className="group-cell" rowSpan={subgrupos.length}>
+                          {grupo}
+                        </td>
+                      )}
+                      <td className="subgroup-cell">{row.subgrupo}</td>
+                      <td>{row.diurno}</td>
+                      <td>{row.noturno}</td>
+                      <td>{row.total_capital}</td>
+                      {crbmHeaders.map(h => <td key={h}>{row[h as keyof IRelatorioRow]}</td>)}
+                      <td>{row.total_geral}</td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+              <tr className="total-row">
+                <td colSpan={2} style={{left: 0, zIndex: 2}}>SUB TOTAL</td>
+                <td>{totals.diurno}</td>
+                <td>{totals.noturno}</td>
+                <td>{totals.total_capital}</td>
+                {crbmHeaders.map(h => <td key={h}>{totals[h]}</td>)}
+                <td>{totals.total_geral}</td>
+              </tr>
+            </tbody>
+          </ReportTable>
+        </TableWrapper>
+      )}
+    </MainLayout>
   );
 }
 

@@ -1,13 +1,17 @@
-// frontend/src/pages/GestaoUsuariosPage.tsx
+// src/pages/GestaoUsuariosPage.tsx
 
-import { useState, useEffect, ReactElement, CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, ReactElement, CSSProperties } from 'react';
 import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser } from '../services/api';
+import { useNotification } from '../contexts/NotificationContext';
 
+// 1. Importar o layout principal
+import MainLayout from '../components/MainLayout';
+
+// --- Componente do Modal (sem alterações) ---
 interface UsuarioModalProps {
   usuario: IUser | null;
   onClose: () => void;
-  onSave: (formData: Omit<IUser, 'id'> & { senha?: string }) => void;
+  onSave: (formData: Omit<IUser, 'id' | 'criado_em'> & { senha?: string }) => void;
 }
 
 function UsuarioModal({ usuario, onClose, onSave }: UsuarioModalProps): ReactElement {
@@ -71,25 +75,22 @@ function UsuarioModal({ usuario, onClose, onSave }: UsuarioModalProps): ReactEle
   );
 }
 
+// --- Componente Principal da Página ---
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState<IUser | null>(null);
+  const { addNotification } = useNotification();
 
   const fetchUsuarios = async () => {
     try {
       setLoading(true);
-      setError('');
       const data = await getUsuarios();
       setUsuarios(data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Falha ao buscar usuários.');
-      }
+      const message = err instanceof Error ? err.message : 'Falha ao buscar usuários.';
+      addNotification(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -113,21 +114,17 @@ function GestaoUsuariosPage(): ReactElement {
     try {
       if (usuarioEmEdicao) {
         await updateUsuario(usuarioEmEdicao.id, { nome: formData.nome, email: formData.email });
-        alert('Usuário atualizado com sucesso!');
+        addNotification('Usuário atualizado com sucesso!', 'success');
       } else {
-        // Garantindo que o payload corresponda ao tipo esperado por criarUsuario
         const payload = { nome: formData.nome, email: formData.email, senha: formData.senha };
         await criarUsuario(payload);
-        alert('Usuário criado com sucesso!');
+        addNotification('Usuário criado com sucesso!', 'success');
       }
       handleCloseModal();
       fetchUsuarios();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Erro: ${err.message}`);
-      } else {
-        alert('Falha ao salvar usuário.');
-      }
+      const message = err instanceof Error ? err.message : 'Falha ao salvar usuário.';
+      addNotification(message, 'error');
     }
   };
 
@@ -135,43 +132,29 @@ function GestaoUsuariosPage(): ReactElement {
     if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
       try {
         await deleteUsuario(id);
-        alert('Usuário excluído com sucesso!');
+        addNotification('Usuário excluído com sucesso!', 'success');
         fetchUsuarios();
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          alert(`Erro: ${err.message}`);
-        } else {
-          alert('Falha ao excluir usuário.');
-        }
+        const message = err instanceof Error ? err.message : 'Falha ao excluir usuário.';
+        addNotification(message, 'error');
       }
     }
   };
 
   const styles: { [key: string]: CSSProperties } = {
-    container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '1rem', marginBottom: '2rem' },
     table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem' },
     th: { borderBottom: '1px solid #555', padding: '0.75rem', textAlign: 'left', color: '#aaa' },
     td: { borderBottom: '1px solid #3a3a3a', padding: '0.75rem' },
     actionButtons: { display: 'flex', gap: '0.5rem' },
     button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
-    error: { color: 'red', marginTop: '1rem' },
-    backLink: { color: '#8bf', textDecoration: 'none' },
   };
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1>Gestão de Usuários</h1>
-        <div>
-          <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f', marginRight: '1rem'}}>
-            Adicionar Usuário
-          </button>
-          <Link to="/dashboard" style={styles.backLink}>Voltar para o Dashboard</Link>
-        </div>
-      </header>
-
-      {error && <p style={styles.error}>{error}</p>}
+    // 2. Envolver o conteúdo com MainLayout
+    <MainLayout pageTitle="Gestão de Usuários">
+      <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f', marginBottom: '1rem'}}>
+        Adicionar Usuário
+      </button>
       
       {loading ? (
         <p>Carregando usuários...</p>
@@ -210,7 +193,7 @@ function GestaoUsuariosPage(): ReactElement {
           onSave={handleSave}
         />
       )}
-    </div>
+    </MainLayout>
   );
 }
 

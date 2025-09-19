@@ -1,9 +1,4 @@
-// frontend/src/pages/GestaoDadosApoioPage.tsx
-
-import { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
-// REMOVIDO: A importação do useVirtualizer não é mais necessária.
-// import { useVirtualizer } from '@tanstack/react-virtual'; 
+import React, { useState, useEffect, useCallback, ReactElement, CSSProperties } from 'react';
 import {
   getUnidades, createUnidade, updateUnidade, deleteUnidade, getCrbms,
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
@@ -11,9 +6,12 @@ import {
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
+// Importa o layout principal para padronizar a página
+import MainLayout from '../components/MainLayout';
+
 type DataType = 'unidade' | 'natureza';
 
-// --- Componente do Modal (sem alterações) ---
+// --- Componente do Modal (para adicionar/editar dados) ---
 interface DataModalProps {
   item: IUnidade | IDataApoio | null;
   type: DataType;
@@ -22,7 +20,7 @@ interface DataModalProps {
   crbms: ICrbm[];
 }
 
-function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps) {
+function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): ReactElement {
   const isEditing = !!item;
   const isUnidade = type === 'unidade';
   const title = `${isEditing ? 'Editar' : 'Adicionar'}`;
@@ -117,10 +115,6 @@ function GestaoDadosApoioPage(): ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState<IUnidade | IDataApoio | null>(null);
   const { addNotification } = useNotification();
-  
-  // REMOVIDO: Toda a lógica do useVirtualizer foi retirada.
-  // const parentRef = useRef<HTMLDivElement>(null);
-  // const rowVirtualizer = useVirtualizer(...);
 
   const fetchData = useCallback(async () => {
     try {
@@ -191,19 +185,15 @@ function GestaoDadosApoioPage(): ReactElement {
   };
 
   const styles: { [key: string]: CSSProperties } = {
-    container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '1rem', marginBottom: '1rem' },
     tabContainer: { display: 'flex', gap: '0.5rem', marginBottom: '2rem' },
     tab: { padding: '0.75rem 1.5rem', cursor: 'pointer', border: 'none', backgroundColor: '#2c2c2c', color: 'white', borderBottom: '3px solid transparent' },
     activeTab: { borderBottom: '3px solid #3a7ca5' },
-    // ADICIONADO: Estilos para a tabela
-    tableContainer: { marginTop: '1rem', maxHeight: '60vh', overflowY: 'auto', border: '1px solid #3a3a3a', borderRadius: '4px' },
+    tableContainer: { marginTop: '1rem', border: '1px solid #3a3a3a', borderRadius: '4px' },
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { padding: '0.75rem', textAlign: 'left', color: '#aaa', backgroundColor: '#2c2c2c', position: 'sticky', top: 0, zIndex: 1 },
     td: { padding: '0.75rem', borderBottom: '1px solid #3a3a3a' },
-    actionButtons: { display: 'flex', gap: '0.5rem' },
+    actionButtons: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
-    backLink: { color: '#8bf', textDecoration: 'none' },
   };
 
   const renderTable = () => {
@@ -219,7 +209,6 @@ function GestaoDadosApoioPage(): ReactElement {
           Adicionar Nov{isUnidade ? 'a Unidade' : 'a Natureza'}
         </button>
         
-        {/* MODIFICADO: Estrutura de renderização simplificada para uma tabela normal */}
         <div style={styles.tableContainer}>
           <table style={styles.table}>
             <thead>
@@ -242,7 +231,7 @@ function GestaoDadosApoioPage(): ReactElement {
                       <td style={styles.td}>{(item as IDataApoio).subgrupo}</td>
                     </>
                   )}
-                  <td style={{...styles.td, textAlign: 'center' }}>
+                  <td style={styles.td}>
                     <div style={styles.actionButtons}>
                       <button onClick={() => handleOpenModal(item)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
                       <button onClick={() => handleDelete(item.id)} style={{...styles.button, backgroundColor: '#e76f51'}}>Excluir</button>
@@ -258,12 +247,7 @@ function GestaoDadosApoioPage(): ReactElement {
   };
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1>Gerenciar Dados de Apoio</h1>
-        <Link to="/dashboard" style={styles.backLink}>Voltar para o Dashboard</Link>
-      </header>
-
+    <MainLayout pageTitle="Gerenciar Dados de Apoio">
       <div style={styles.tabContainer}>
         <button onClick={() => setActiveTab('unidade')} style={{...styles.tab, ...(activeTab === 'unidade' && styles.activeTab)}}>
           Gestão de Unidades
@@ -284,7 +268,7 @@ function GestaoDadosApoioPage(): ReactElement {
           crbms={crbms}
         />
       )}
-    </div>
+    </MainLayout>
   );
 }
 

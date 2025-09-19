@@ -1,29 +1,15 @@
+// src/pages/LancamentoPage.tsx
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { getCidades, getNaturezas, ICidade, IDataApoio, registrarEstatisticasLote } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
-// --- Styled Components para a página ---
-const Container = styled.div`
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
+// 1. Importar o layout principal
+import MainLayout from '../components/MainLayout';
 
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #444;
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
-`;
-
-const BackLink = styled(Link)`
-  color: #8bf;
-  text-decoration: none;
-`;
+// --- Styled Components (sem alterações na estilização interna) ---
+// REMOVIDO: Container, Header, BackLink, pois o MainLayout cuida disso.
 
 const Form = styled.form`
   display: flex;
@@ -156,10 +142,7 @@ function LancamentoPage() {
   }, [addNotification]);
 
   const handleValueChange = (naturezaId: number, valor: string) => {
-    setValores(prev => ({
-      ...prev,
-      [naturezaId]: valor,
-    }));
+    setValores(prev => ({ ...prev, [naturezaId]: valor }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,7 +171,7 @@ function LancamentoPage() {
     try {
       await registrarEstatisticasLote(payload);
       addNotification('Dados enviados com sucesso!', 'success');
-      setValores({}); // Limpa o formulário
+      setValores({});
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao enviar os dados.';
       addNotification(message, 'error');
@@ -202,59 +185,55 @@ function LancamentoPage() {
     return acc;
   }, {} as { [key: string]: IDataApoio[] });
 
-  if (loading) {
-    return <Container><p>Carregando formulário...</p></Container>;
-  }
-
   return (
-    <Container>
-      <Header>
-        <h1>Formulário de Lançamento de Ocorrências</h1>
-        <BackLink to="/dashboard">Voltar para o Dashboard</BackLink>
-      </Header>
+    // 2. Envolver o conteúdo com MainLayout
+    <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
+      {loading ? (
+        <p>Carregando formulário...</p>
+      ) : (
+        <Form onSubmit={handleSubmit}>
+          <TopControls>
+            <ControlGroup>
+              <Label htmlFor="cidade-select">OBM (Obrigatório)</Label>
+              <Select id="cidade-select" value={selectedCidade} onChange={e => setSelectedCidade(e.target.value)} required>
+                <option value="">Selecione uma OBM</option>
+                {cidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
+              </Select>
+            </ControlGroup>
+            <ControlGroup>
+              <Label htmlFor="data-registro">Data de Registro</Label>
+              <InputDate id="data-registro" type="date" value={dataRegistro} onChange={e => setDataRegistro(e.target.value)} required />
+            </ControlGroup>
+          </TopControls>
 
-      <Form onSubmit={handleSubmit}>
-        <TopControls>
-          <ControlGroup>
-            <Label htmlFor="cidade-select">OBM (Obrigatório)</Label>
-            <Select id="cidade-select" value={selectedCidade} onChange={e => setSelectedCidade(e.target.value)} required>
-              <option value="">Selecione uma OBM</option>
-              {cidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
-            </Select>
-          </ControlGroup>
-          <ControlGroup>
-            <Label htmlFor="data-registro">Data de Registro</Label>
-            <InputDate id="data-registro" type="date" value={dataRegistro} onChange={e => setDataRegistro(e.target.value)} required />
-          </ControlGroup>
-        </TopControls>
-
-        {Object.entries(naturezasAgrupadas).map(([grupo, nats]) => (
-          <Fieldset key={grupo}>
-            <Legend>{grupo}</Legend>
-            <FormGrid>
-              {nats.map(nat => (
-                <InputGroup key={nat.id}>
-                  <InputLabel htmlFor={`natureza-${nat.id}`}>{nat.subgrupo}</InputLabel>
-                  <NumberInput
-                    id={`natureza-${nat.id}`}
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={valores[nat.id] || ''}
-                    onChange={e => handleValueChange(nat.id, e.target.value)}
-                  />
-                </InputGroup>
-              ))}
-            </FormGrid>
-          </Fieldset>
-        ))}
-        
-        <ButtonContainer>
-          <SubmitButton type="submit">Enviar Dados</SubmitButton>
-          <ClearButton type="button" onClick={() => setValores({})}>Limpar Formulário</ClearButton>
-        </ButtonContainer>
-      </Form>
-    </Container>
+          {Object.entries(naturezasAgrupadas).map(([grupo, nats]) => (
+            <Fieldset key={grupo}>
+              <Legend>{grupo}</Legend>
+              <FormGrid>
+                {nats.map(nat => (
+                  <InputGroup key={nat.id}>
+                    <InputLabel htmlFor={`natureza-${nat.id}`}>{nat.subgrupo}</InputLabel>
+                    <NumberInput
+                      id={`natureza-${nat.id}`}
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={valores[nat.id] || ''}
+                      onChange={e => handleValueChange(nat.id, e.target.value)}
+                    />
+                  </InputGroup>
+                ))}
+              </FormGrid>
+            </Fieldset>
+          ))}
+          
+          <ButtonContainer>
+            <SubmitButton type="submit">Enviar Dados</SubmitButton>
+            <ClearButton type="button" onClick={() => setValores({})}>Limpar Formulário</ClearButton>
+          </ButtonContainer>
+        </Form>
+      )}
+    </MainLayout>
   );
 }
 
