@@ -148,7 +148,7 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
 
 const api = axios.create({
   baseURL: baseURL,
@@ -368,6 +368,15 @@ export const getObitosPorData = async (data: string): Promise<IObitoRegistro[]> 
 export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promise<IObitoRegistro> => {
   try {
     const response = await api.post('/obitos-registros', payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export const deleteObitoRegistro = async (id: number): Promise<{ message: string }> => {
+  try {
+    const response = await api.delete(`/obitos-registros/${id}`);
     return response.data;
   } catch (error) {
     throw new Error(extractErrorMessage(error));

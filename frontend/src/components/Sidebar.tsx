@@ -10,7 +10,6 @@ const Icon = ({ path, size = 24 }: { path: string; size?: number }) => (
   </svg>
 );
 
-// Mapeamento de ícones para cada item do menu
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -26,11 +25,7 @@ const ICONS = {
 
 // --- Styled Components ---
 
-interface SidebarContainerProps {
-  $isMobileOpen: boolean;
-}
-
-const SidebarContainer = styled.aside<SidebarContainerProps>`
+const SidebarContainer = styled.aside<{ $isMobileOpen: boolean }>`
   background-color: #2c2c2c;
   display: flex;
   flex-direction: column;

@@ -5,9 +5,6 @@ import db from '../db';
 // NATUREZAS DE OCORRÊNCIA
 // ===============================================
 
-/**
- * @description Lista todas as naturezas de ocorrência, ordenadas por grupo e subgrupo.
- */
 export const getNaturezas = async (_req: Request, res: Response): Promise<void> => {
   try {
     const { rows } = await db.query('SELECT id, grupo, subgrupo FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
@@ -18,31 +15,36 @@ export const getNaturezas = async (_req: Request, res: Response): Promise<void> 
   }
 };
 
-/**
- * @description Busca naturezas específicas com base em uma lista de nomes de subgrupos.
- */
-export const getNaturezasPorNomes = async (req: Request, res: Response) => {
-  const { nomes } = req.body; // Espera um array de nomes no corpo da requisição
+export const getNaturezasPorNomes = async (req: Request, res: Response): Promise<void> => {
+  const { nomes } = req.body;
 
   if (!Array.isArray(nomes) || nomes.length === 0) {
-    return res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
+    res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
+    return; // Adiciona um return para clareza
   }
 
   try {
-    // A sintaxe '= ANY($1)' permite buscar múltiplos valores em um array
-    const query = 'SELECT id, subgrupo FROM naturezas_ocorrencia WHERE subgrupo = ANY($1)';
+    const query = `
+      SELECT id, grupo, subgrupo 
+      FROM naturezas_ocorrencia 
+      WHERE LOWER(unaccent(subgrupo)) IN (
+        SELECT LOWER(unaccent(nome)) FROM unnest($1::text[]) AS nome
+      )
+    `;
     const { rows } = await db.query(query, [nomes]);
     res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao buscar naturezas por nomes:', error);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
+    if (error instanceof Error && error.message.includes('function unaccent(text) does not exist')) {
+      res.status(500).json({ message: "Erro de configuração no servidor: a extensão 'unaccent' do PostgreSQL precisa ser instalada." });
+      return; // --- CORREÇÃO APLICADA AQUI ---
+    }
+    // --- E AQUI ---
+    res.status(500).json({ message: 'Erro interno do servidor ao buscar naturezas por nome.' });
   }
 };
 
-
-/**
- * @description Cria uma nova natureza de ocorrência.
- */
+// ... (o restante do arquivo não precisa de alterações, pois já estava correto)
 export const criarNatureza = async (req: Request, res: Response): Promise<void> => {
   const { grupo, subgrupo } = req.body;
   if (!grupo || !subgrupo) {
@@ -63,9 +65,6 @@ export const criarNatureza = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-/**
- * @description Atualiza uma natureza de ocorrência existente.
- */
 export const atualizarNatureza = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { grupo, subgrupo } = req.body;
@@ -91,9 +90,6 @@ export const atualizarNatureza = async (req: Request, res: Response): Promise<vo
   }
 };
 
-/**
- * @description Exclui uma natureza de ocorrência.
- */
 export const excluirNatureza = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   try {
@@ -113,13 +109,6 @@ export const excluirNatureza = async (req: Request, res: Response): Promise<void
   }
 };
 
-// ===============================================
-// OCORRÊNCIAS
-// ===============================================
-
-/**
- * @description Cria uma nova ocorrência, potencialmente com óbitos associados.
- */
 export const criarOcorrencia = async (req: Request, res: Response): Promise<void> => {
   const { ocorrencia, obitos } = req.body;
 
@@ -179,9 +168,6 @@ export const criarOcorrencia = async (req: Request, res: Response): Promise<void
   }
 };
 
-/**
- * @description Lista ocorrências de forma paginada.
- */
 export const getOcorrencias = async (req: Request, res: Response): Promise<void> => {
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
@@ -219,9 +205,6 @@ export const getOcorrencias = async (req: Request, res: Response): Promise<void>
   }
 };
 
-/**
- * @description Atualiza uma ocorrência existente.
- */
 export const updateOcorrencia = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { data_ocorrencia, natureza_id, cidade_id } = req.body;
@@ -250,9 +233,6 @@ export const updateOcorrencia = async (req: Request, res: Response): Promise<voi
   }
 };
 
-/**
- * @description Exclui uma ocorrência.
- */
 export const deleteOcorrencia = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 

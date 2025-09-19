@@ -11,19 +11,14 @@ const PageWrapper = styled.div<{ $isCollapsed: boolean }>`
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  
-  // A largura da coluna do grid agora depende APENAS do estado 'isCollapsed'
   grid-template-columns: ${({ $isCollapsed }) => 
-    $isCollapsed ? sidebar.widthCollapsed : sidebar.width};
-  
+    $isCollapsed ? sidebar.widthCollapsed : sidebar.width} 1fr;
   transition: grid-template-columns 0.3s ease;
 
-  // Em modo tablet, a largura da coluna é FORÇADA para o tamanho recolhido
   @media ${device.tablet} {
     grid-template-columns: ${sidebar.widthCollapsed} 1fr;
   }
   
-  // Em modo mobile, o grid tem apenas uma coluna
   @media ${device.mobileL} {
     grid-template-columns: 1fr;
   }
@@ -122,11 +117,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
 
   return (
     <>
-      {/* O Backdrop fica fora do PageWrapper para não interferir com o layout do grid */}
       <Backdrop $isOpen={isMobileMenuOpen} onClick={() => setMobileMenuOpen(false)} />
       
       <PageWrapper $isCollapsed={isCollapsed}>
-        {/* 1. Sidebar é o PRIMEIRO filho direto do grid */}
         <Sidebar 
           onLogout={logout}
           isCollapsed={isCollapsed}
@@ -136,7 +129,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           userName={usuario?.nome}
         />
         
-        {/* 2. ContentContainer é o SEGUNDO filho direto do grid */}
         <ContentContainer>
           <TopBar>
             <TitleContainer>
