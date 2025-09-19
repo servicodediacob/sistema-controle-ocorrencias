@@ -13,3 +13,10 @@ yarn-error.log*
 # Metadados do sistema operacional
 .DS_Store
 Thumbs.db
+
+# Arquivos de script locais com possíveis segredos
+sync_db.sh
+
+# Arquivos de backup do banco de dados
+*.sql
+*.dump

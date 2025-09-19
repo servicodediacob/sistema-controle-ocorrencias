@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos de script locais com possíveis segredos
+sync_db.sh
+
+# Arquivos de backup do banco de dados
+*.sql
+*.dump
