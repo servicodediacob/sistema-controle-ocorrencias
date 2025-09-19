@@ -32,27 +32,45 @@ const Button = styled.button`
   border: none;
   border-radius: 4px;
   color: white;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
 `;
 
 const LogoutButton = styled(Button)`
   margin-left: 1rem;
   background-color: #555;
+  &:hover { background-color: #666; }
+`;
+
+const ReportButton = styled(Button)`
+  background-color: #8338ec; /* Cor roxa para destaque */
+  margin-right: 1rem;
+  &:hover { background-color: #7328d8; }
+`;
+
+const LaunchButton = styled(Button)`
+  background-color: #2a9d8f;
+  margin-right: 1rem;
+  &:hover { background-color: #268c80; }
 `;
 
 const ManageButton = styled(Button)`
   background-color: #3a7ca5;
+  &:hover { background-color: #326a8d; }
 `;
 
 const ManageUsersButton = styled(Button)`
   background-color: #e9c46a;
   color: black;
   margin-left: 1rem;
+  &:hover { background-color: #d8b55a; }
 `;
 
 const ManageDataButton = styled(Button)`
   background-color: #f4a261;
   color: black;
   margin-left: 1rem;
+  &:hover { background-color: #e39251; }
 `;
 
 const FlexContainer = styled.div`
@@ -61,8 +79,6 @@ const FlexContainer = styled.div`
   flex-wrap: wrap;
   margin-top: 2rem;
 `;
-
-// --- Componentes Internos com Styled Components ---
 
 const Card = styled.div`
   background-color: #2c2c2c;
@@ -103,7 +119,6 @@ const TableContainer = styled.div`
   min-width: 300px;
 `;
 
-// CORRIGIDO: Renomeado para não conflitar com a prop 'title'
 const TableTitle = styled.h3`
   margin-top: 0;
   border-bottom: 1px solid #444;
@@ -138,7 +153,6 @@ interface DataTableProps<T> { title: string; data: T[] | undefined; columns: { h
 function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   return (
     <TableContainer>
-      {/* CORRIGIDO: Usando o componente com o nome correto */}
       <TableTitle>{title}</TableTitle>
       {loading ? (
         <p>Carregando...</p>
@@ -207,6 +221,12 @@ function DashboardPage(): ReactElement {
 
       <Main>
         <div style={{ marginBottom: '2rem' }}>
+          <ReportButton onClick={() => navigate('/relatorio')}>
+            Ver Relatório
+          </ReportButton>
+          <LaunchButton onClick={() => navigate('/lancamento')}>
+            Lançar Ocorrências
+          </LaunchButton>
           <ManageButton onClick={() => navigate('/gestao-ocorrencias')}>
             Gerenciar Ocorrências
           </ManageButton>
@@ -214,7 +234,7 @@ function DashboardPage(): ReactElement {
             Gerenciar Usuários
           </ManageUsersButton>
           <ManageDataButton onClick={() => navigate('/gestao-dados')}>
-            Gerenciar Dados
+            Gerenciar Dados de Apoio
           </ManageDataButton>
         </div>
 
@@ -236,10 +256,10 @@ function DashboardPage(): ReactElement {
             columns={[{ header: 'Natureza', key: 'nome' }, { header: 'Total', key: 'total' }]}
           />
           <DataTable
-            title="Ocorrências por OBM"
+            title="Ocorrências por CRBM"
             loading={loading}
-            data={stats?.ocorrenciasPorOBM}
-            columns={[{ header: 'OBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
+            data={stats?.ocorrenciasPorCrbm}
+            columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
           />
         </FlexContainer>
       </Main>

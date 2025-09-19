@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import {
-  // Funções de OBMs foram removidas
+  // Funções do controller de dados original
   getNaturezas,
   criarNatureza,
   atualizarNatureza,
@@ -12,11 +12,14 @@ import {
   deleteOcorrencia
 } from '../controllers/dadosController';
 
+// Importa as novas funções do controller de estatísticas
+import { registrarEstatisticas, getRelatorioEstatisticas } from '../controllers/estatisticasController';
+
 const router = Router();
 
 // --- Rotas de Naturezas de Ocorrência ---
 router.route('/naturezas')
-  .get(getNaturezas) // Não precisa de proteção para ser usado em formulários
+  .get(getNaturezas)
   .post(proteger, criarNatureza);
 
 router.route('/naturezas/:id')
@@ -31,5 +34,16 @@ router.route('/ocorrencias')
 router.route('/ocorrencias/:id')
   .put(proteger, updateOcorrencia)
   .delete(proteger, deleteOcorrencia);
+
+// --- Novas Rotas para Estatísticas e Relatórios ---
+
+// Rota para o formulário de lançamento em lote
+router.route('/estatisticas/lote')
+  .post(proteger, registrarEstatisticas);
+
+// Rota para buscar os dados do relatório
+router.route('/relatorio')
+  .get(proteger, getRelatorioEstatisticas);
+
 
 export default router;

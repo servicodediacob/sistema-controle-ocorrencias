@@ -12,12 +12,11 @@ export interface IDataApoio {
   nome?: string;
   grupo?: string;
   subgrupo?: string;
-  descricao?: string; 
+  descricao?: string;
 }
 
-// Interface para a estrutura de Unidade (Cidade + CRBM)
 export interface IUnidade {
-  id: number; // ID da Cidade
+  id: number;
   cidade_nome: string;
   crbm_id: number;
   crbm_nome: string;
@@ -28,7 +27,6 @@ export interface ICrbm {
   nome: string;
 }
 
-// NOVA: Interface para Cidade, usada no modal de ocorrência
 export interface ICidade {
   id: number;
   cidade_nome: string;
@@ -36,10 +34,9 @@ export interface ICidade {
   crbm_nome: string;
 }
 
-// ... (outras interfaces permanecem iguais)
 export interface IOcorrenciaPayload {
   ocorrencia: {
-    cidade_id: number; // Alterado de obm_id para cidade_id
+    cidade_id: number;
     natureza_id: number;
     data_ocorrencia: string;
   };
@@ -55,9 +52,9 @@ export interface IOcorrencia {
   data_ocorrencia: string;
   quantidade_obitos: number;
   natureza_id: number;
-  cidade_id: number; // Alterado de obm_id para cidade_id
+  cidade_id: number;
   natureza_descricao: string;
-  cidade_nome: string; // Alterado de obm_nome para cidade_nome
+  cidade_nome: string;
   crbm_nome: string;
 }
 
@@ -75,7 +72,7 @@ export interface IDashboardStats {
   totalOcorrencias: number;
   totalObitos: number;
   ocorrenciasPorNatureza: { nome: string; total: number }[];
-  ocorrenciasPorOBM: { nome: string; total: number }[]; // O backend ainda retorna 'OBM', podemos ajustar depois
+  ocorrenciasPorCrbm: { nome: string; total: number }[];
 }
 
 export interface IPlantao {
@@ -83,7 +80,8 @@ export interface IPlantao {
     ocorrencia_id: number | null;
     data_ocorrencia: string | null;
     natureza_descricao: string | null;
-    obm_nome: string | null; // Mantido pois o backend pode não ter sido atualizado aqui
+    cidade_nome: string | null;
+    crbm_nome: string | null;
   } | null;
   supervisorPlantao: {
     usuario_id: number | null;
@@ -154,17 +152,13 @@ export const createUnidade = async (data: { crbm_id: number; cidade_nome: string
 export const updateUnidade = async (id: number, data: { crbm_id: number; cidade_nome: string; }): Promise<IUnidade> => api.put(`/unidades/${id}`, data).then(res => res.data);
 export const deleteUnidade = async (id: number): Promise<{ message: string }> => api.delete(`/unidades/${id}`).then(res => res.data);
 export const getCrbms = async (): Promise<ICrbm[]> => api.get('/crbms').then(res => res.data);
-// NOVA: Função para buscar cidades, que na verdade usa o mesmo endpoint de unidades
 export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').then(res => res.data);
-
 
 // --- Funções de Naturezas ---
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
 export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
 export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
 export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);
-
-
 
 // --- Funções de Ocorrências ---
 export const criarOcorrencia = async (payload: IOcorrenciaPayload): Promise<{ message: string; ocorrenciaId: number }> => {
@@ -279,6 +273,62 @@ export const setOcorrenciaDestaque = async (ocorrencia_id: number | null): Promi
 export const setSupervisorPlantao = async (usuario_id: number | null): Promise<any> => {
   try {
     const response = await api.post('/plantao/supervisor', { usuario_id });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+// ===============================================
+// --- NOVAS FUNÇÕES PARA ESTATÍSTICAS E RELATÓRIO ---
+// ===============================================
+
+export interface IEstatisticaLotePayload {
+  data_registro: string;
+  cidade_id: number;
+  estatisticas: {
+    natureza_id: number;
+    quantidade: number;
+  }[];
+}
+
+/**
+ * @description Envia um lote de contagens de estatísticas para o backend.
+ */
+export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload): Promise<{ message: string }> => {
+  try {
+    const response = await api.post('/estatisticas/lote', payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export interface IRelatorioRow {
+  grupo: string;
+  subgrupo: string;
+  diurno: string; // Vem como string do banco, convertemos no frontend se necessário
+  noturno: string;
+  total_capital: string;
+  "1º CRBM": string;
+  "2º CRBM": string;
+  "3º CRBM": string;
+  "4º CRBM": string;
+  "5º CRBM": string;
+  "6º CRBM": string;
+  "7º CRBM": string;
+  "8º CRBM": string;
+  "9º CRBM": string;
+  total_geral: string;
+}
+
+/**
+ * @description Busca os dados consolidados para o relatório de estatísticas.
+ */
+export const getRelatorio = async (data_inicio: string, data_fim: string): Promise<IRelatorioRow[]> => {
+  try {
+    const response = await api.get('/relatorio', { params: { data_inicio, data_fim } });
+    // A resposta do backend com SUM() pode vir como strings, o que é ok para exibição.
     return response.data;
   } catch (error) {
     throw new Error(extractErrorMessage(error));
