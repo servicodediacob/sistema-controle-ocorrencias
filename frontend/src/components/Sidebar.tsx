@@ -1,6 +1,7 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { device } from '../styles/theme';
 
 // --- Ícones (SVG como componentes) ---
 const Icon = ({ path, size = 24 }: { path: string; size?: number }) => (
@@ -26,58 +27,69 @@ const ICONS = {
 // --- Styled Components ---
 
 interface SidebarContainerProps {
-  $isCollapsed: boolean;
+  $isMobileOpen: boolean;
 }
 
 const SidebarContainer = styled.aside<SidebarContainerProps>`
-  width: 250px;
   background-color: #2c2c2c;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
   box-sizing: border-box;
-  transition: width 0.3s ease;
-  z-index: 1000;
   border-right: 1px solid #444;
   padding: 0 1rem 1.5rem 1rem;
+  position: static; 
+  width: auto; 
 
-  ${({ $isCollapsed }) => $isCollapsed && css`
-    width: 80px;
-    padding: 0 0.5rem 1.5rem 0.5rem;
-    align-items: center;
-  `}
+  @media ${device.mobileL} {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    transform: translateX(-100%);
+
+    ${({ $isMobileOpen }) => $isMobileOpen && css`
+      transform: translateX(0);
+    `}
+  }
 `;
 
-const SidebarTitle = styled.button<SidebarContainerProps>`
+const SidebarTitle = styled.button<{ $isCollapsed: boolean }>`
   color: #e9c46a;
   font-size: 1.5rem;
   font-weight: bold;
   background: none;
   border: none;
   cursor: pointer;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
   height: 73px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid #444;
-  transition: opacity 0.3s ease, font-size 0.3s ease;
-
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  transition: all 0.3s ease;
+  
   ${({ $isCollapsed }) => $isCollapsed && css`
     opacity: 0;
-    font-size: 0;
-    border-bottom-color: transparent;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
   `}
+
+  @media ${device.mobileL} {
+    opacity: 1;
+    height: 73px;
+    border-bottom: 1px solid #444;
+  }
 `;
 
 const NavItemsContainer = styled.div`
-  margin-top: 73px;
   padding-top: 1.5rem;
 `;
 
@@ -99,7 +111,7 @@ const NavButton = styled.button<{ $isCollapsed: boolean; $isActive: boolean }>`
   overflow: hidden;
 
   span {
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease, width 0.3s ease;
     opacity: 1;
     white-space: nowrap;
   }
@@ -120,13 +132,75 @@ const NavButton = styled.button<{ $isCollapsed: boolean; $isActive: boolean }>`
   &:hover {
     background-color: #4a4a4a;
   }
+
+  @media ${device.tablet} {
+    justify-content: center;
+    padding: 0.8rem;
+    span {
+      opacity: 0;
+      width: 0;
+    }
+  }
+
+  @media ${device.mobileL} {
+    justify-content: flex-start;
+    padding: 0.8rem 1rem;
+    span {
+      opacity: 1;
+      width: auto;
+    }
+  }
 `;
 
 const Spacer = styled.div`
   flex-grow: 1;
 `;
 
-const CollapseButton = styled(NavButton)``;
+const UserInfo = styled.div<{ $isCollapsed: boolean }>`
+  padding: 1rem;
+  text-align: center;
+  color: #ccc;
+  border-top: 1px solid #444;
+  margin-top: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+
+  strong {
+    font-weight: 600;
+    color: white;
+  }
+
+  ${({ $isCollapsed }) => $isCollapsed && css`
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+  `}
+  
+  @media ${device.tablet} {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+  }
+
+  @media ${device.mobileL} {
+    opacity: 1;
+    height: auto;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid #444;
+  }
+`;
+
+const CollapseButton = styled(NavButton)`
+  @media ${device.tablet} {
+    display: none;
+  }
+`;
 
 // --- Componente Principal ---
 
@@ -134,9 +208,19 @@ interface SidebarProps {
   onLogout: () => void;
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
+  isMobileOpen: boolean;
+  closeMobileMenu: () => void;
+  userName?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  onLogout, 
+  isCollapsed, 
+  setIsCollapsed, 
+  isMobileOpen, 
+  closeMobileMenu, 
+  userName 
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -150,11 +234,21 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
     { path: '/gestao-dados', label: 'Gerenciar Dados', icon: ICONS.data },
   ];
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    closeMobileMenu();
+  };
+
+  const handleLogout = () => {
+    onLogout();
+    closeMobileMenu();
+  };
+
   return (
-    <SidebarContainer $isCollapsed={isCollapsed}>
+    <SidebarContainer $isMobileOpen={isMobileOpen}>
       <SidebarTitle 
         $isCollapsed={isCollapsed} 
-        onClick={() => navigate('/dashboard')}
+        onClick={() => handleNavigate('/dashboard')}
         title="Ir para o Dashboard Principal"
       >
         COCB
@@ -164,10 +258,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
         {navItems.map(item => (
           <NavButton
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={() => handleNavigate(item.path)}
             $isCollapsed={isCollapsed}
             $isActive={location.pathname === item.path}
-            title={isCollapsed ? item.label : ''}
+            title={item.label}
           >
             <Icon path={item.icon} />
             <span>{item.label}</span>
@@ -176,6 +270,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
       </NavItemsContainer>
 
       <Spacer />
+
+      <UserInfo $isCollapsed={isCollapsed}>
+        Olá, <strong>{userName?.split(' ')[0].toUpperCase() || 'UTILIZADOR'}</strong>
+      </UserInfo>
 
       <CollapseButton 
         onClick={() => setIsCollapsed(!isCollapsed)} 
@@ -188,7 +286,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
       </CollapseButton>
 
       <NavButton 
-        onClick={onLogout} 
+        onClick={handleLogout} 
         $isCollapsed={isCollapsed}
         $isActive={false}
         title={isCollapsed ? 'Sair' : ''}

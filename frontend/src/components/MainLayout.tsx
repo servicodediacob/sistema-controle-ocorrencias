@@ -1,58 +1,111 @@
-import React, { useState, ReactNode } from 'react';
+import { useState, ReactNode } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/useAuth';
 import Sidebar from './Sidebar';
+import { device, sidebar } from '../styles/theme';
 
-// --- Styled Components para o Layout ---
+// --- Styled Components ---
 
-const PageWrapper = styled.div`
-  display: flex;
+const PageWrapper = styled.div<{ $isCollapsed: boolean }>`
+  display: grid;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
-  background-color: #242424;
+  
+  // A largura da coluna do grid agora depende APENAS do estado 'isCollapsed'
+  grid-template-columns: ${({ $isCollapsed }) => 
+    $isCollapsed ? sidebar.widthCollapsed : sidebar.width};
+  
+  transition: grid-template-columns 0.3s ease;
+
+  // Em modo tablet, a largura da coluna é FORÇADA para o tamanho recolhido
+  @media ${device.tablet} {
+    grid-template-columns: ${sidebar.widthCollapsed} 1fr;
+  }
+  
+  // Em modo mobile, o grid tem apenas uma coluna
+  @media ${device.mobileL} {
+    grid-template-columns: 1fr;
+  }
 `;
 
-interface ContentContainerProps {
-  // CORREÇÃO: Usando transient prop
-  $isSidebarCollapsed: boolean;
-}
-
-const ContentContainer = styled.div<ContentContainerProps>`
-  flex-grow: 1;
-  transition: margin-left 0.3s ease;
-  // CORREÇÃO: Usando transient prop
-  margin-left: ${({ $isSidebarCollapsed }) => ($isSidebarCollapsed ? '80px' : '250px')};
-  
+const ContentContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  overflow: hidden;
 `;
 
-const TopBar = styled.div`
+const TopBar = styled.header`
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; 
   align-items: center;
   padding: 1.25rem 2.5rem;
   height: 73px;
   box-sizing: border-box;
   border-bottom: 1px solid #444;
   flex-shrink: 0;
+
+  @media ${device.tablet} {
+    padding: 1.25rem 1.5rem;
+  }
+`;
+
+const HamburgerButton = styled.button<{ $isMobileMenuOpen: boolean }>`
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 1rem;
+  z-index: 1100;
+  transition: opacity 0.3s ease;
+
+  @media ${device.mobileL} {
+    display: block;
+    opacity: ${({ $isMobileMenuOpen }) => ($isMobileMenuOpen ? '0' : '1')};
+    pointer-events: ${({ $isMobileMenuOpen }) => ($isMobileMenuOpen ? 'none' : 'auto')};
+  }
+`;
+
+const Backdrop = styled.div<{ $isOpen: boolean }>`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+
+  @media ${device.mobileL} {
+    display: ${({ $isOpen }) => ($isOpen ? 'block' : 'none')};
+  }
+`;
+
+const TitleContainer = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 const PageTitle = styled.h1`
   font-size: 1.8rem;
   color: #e0e0e0;
   margin: 0;
-`;
 
-const UserName = styled.span`
-  color: #ccc;
+  @media ${device.tablet} {
+    font-size: 1.5rem;
+  }
 `;
 
 const PageBody = styled.main`
-  padding: 2rem 2.5rem;
   flex-grow: 1;
+  padding: 2rem 2.5rem;
   overflow-y: auto;
+
+  @media ${device.tablet} {
+    padding: 1.5rem;
+  }
 `;
 
 // --- Componente Principal do Layout ---
@@ -64,26 +117,46 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
   const { usuario, logout } = useAuth();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <PageWrapper>
-      <Sidebar 
-        onLogout={logout}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
-      {/* CORREÇÃO: Passando a prop como transient */}
-      <ContentContainer $isSidebarCollapsed={isSidebarCollapsed}>
-        <TopBar>
-          <PageTitle>{pageTitle}</PageTitle>
-          <UserName>Olá, {usuario?.nome}</UserName>
-        </TopBar>
-        <PageBody>
-          {children}
-        </PageBody>
-      </ContentContainer>
-    </PageWrapper>
+    <>
+      {/* O Backdrop fica fora do PageWrapper para não interferir com o layout do grid */}
+      <Backdrop $isOpen={isMobileMenuOpen} onClick={() => setMobileMenuOpen(false)} />
+      
+      <PageWrapper $isCollapsed={isCollapsed}>
+        {/* 1. Sidebar é o PRIMEIRO filho direto do grid */}
+        <Sidebar 
+          onLogout={logout}
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+          isMobileOpen={isMobileMenuOpen}
+          closeMobileMenu={() => setMobileMenuOpen(false)}
+          userName={usuario?.nome}
+        />
+        
+        {/* 2. ContentContainer é o SEGUNDO filho direto do grid */}
+        <ContentContainer>
+          <TopBar>
+            <TitleContainer>
+              <HamburgerButton 
+                onClick={() => setMobileMenuOpen(true)}
+                $isMobileMenuOpen={isMobileMenuOpen}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
+                </svg>
+              </HamburgerButton>
+              <PageTitle>{pageTitle}</PageTitle>
+            </TitleContainer>
+          </TopBar>
+          <PageBody>
+            {children}
+          </PageBody>
+        </ContentContainer>
+      </PageWrapper>
+    </>
   );
 };
 

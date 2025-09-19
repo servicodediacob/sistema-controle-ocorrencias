@@ -5,13 +5,98 @@ import {
   IUnidade, ICrbm, IDataApoio
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
-// Importa o layout principal para padronizar a página
 import MainLayout from '../components/MainLayout';
+import { device } from '../styles/theme'; // 1. Importe nossos breakpoints
+import styled from 'styled-components'; // 2. Importe o styled-components
 
 type DataType = 'unidade' | 'natureza';
 
-// --- Componente do Modal (para adicionar/editar dados) ---
+// --- Componentes Estilizados para o Modal ---
+
+const ModalBackdrop = styled.div`
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.7); display: flex;
+  justify-content: center; align-items: center; z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+`;
+
+const ModalContent = styled.div`
+  background-color: #2c2c2c; padding: 2rem;
+  border-radius: 8px; width: 400px; color: white;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media ${device.tablet} {
+    width: 95%;
+    padding: 1.5rem;
+  }
+`;
+
+const ModalTitle = styled.h2`
+  margin-top: 0;
+  font-size: 1.5rem;
+  @media ${device.mobileL} {
+    font-size: 1.2rem;
+  }
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+`;
+
+const Input = styled.input`
+  width: 100%; padding: 0.75rem; border-radius: 4px;
+  border: 1px solid #555; background-color: #3a3a3a; color: white;
+  box-sizing: border-box;
+`;
+
+const Select = styled.select`
+  width: 100%; padding: 0.75rem; border-radius: 4px;
+  border: 1px solid #555; background-color: #3a3a3a; color: white;
+  box-sizing: border-box;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;
+
+  @media ${device.mobileL} {
+    flex-direction: column-reverse;
+    button {
+      width: 100%;
+    }
+  }
+`;
+
+const Button = styled.button`
+  padding: 0.75rem 1.5rem; border-radius: 4px; border: none; cursor: pointer;
+`;
+
+const SaveButton = styled(Button)`
+  background-color: #3a7ca5;
+  color: white;
+`;
+
+const CancelButton = styled(Button)`
+  background-color: #555;
+  color: white;
+`;
+
+
+// --- Componente do Modal (agora usando styled-components) ---
 interface DataModalProps {
   item: IUnidade | IDataApoio | null;
   type: DataType;
@@ -53,58 +138,55 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
     onSave(formData);
   };
 
-  const styles: { [key: string]: CSSProperties } = {
-    modalBackdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    modalContent: { backgroundColor: '#2c2c2c', padding: '2rem', borderRadius: '8px', width: '400px', color: 'white' },
-    formGroup: { marginBottom: '1rem' },
-    label: { display: 'block', marginBottom: '0.5rem' },
-    input: { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#3a3a3a', color: 'white' },
-    buttonContainer: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' },
-    button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
-  };
-
   return (
-    <div style={styles.modalBackdrop} onClick={onClose}>
-      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2>{`${title} ${isUnidade ? 'Unidade' : 'Natureza'}`}</h2>
-        <form onSubmit={handleSubmit}>
+    <ModalBackdrop onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()}>
+        <ModalTitle>{`${title} ${isUnidade ? 'Unidade' : 'Natureza'}`}</ModalTitle>
+        <Form onSubmit={handleSubmit}>
           {isUnidade ? (
             <>
-              <div style={styles.formGroup}>
-                <label htmlFor="crbm_id" style={styles.label}>CRBM</label>
-                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} style={styles.input}>
+              <FormGroup>
+                <Label htmlFor="crbm_id">CRBM</Label>
+                <Select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange}>
                   {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
-                </select>
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="cidade_nome" style={styles.label}>Nome da Cidade</label>
-                <input type="text" id="cidade_nome" name="cidade_nome" value={(formData as any).cidade_nome} onChange={handleChange} required style={styles.input} />
-              </div>
+                </Select>
+              </FormGroup>
+              <FormGroup>
+                <Label htmlFor="cidade_nome">Nome da Cidade</Label>
+                <Input type="text" id="cidade_nome" name="cidade_nome" value={(formData as any).cidade_nome} onChange={handleChange} required />
+              </FormGroup>
             </>
           ) : (
             <>
-              <div style={styles.formGroup}>
-                <label htmlFor="grupo" style={styles.label}>Grupo da Natureza</label>
-                <input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required style={styles.input} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="subgrupo" style={styles.label}>Subgrupo da Natureza</label>
-                <input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required style={styles.input} />
-              </div>
+              <FormGroup>
+                <Label htmlFor="grupo">Grupo da Natureza</Label>
+                <Input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required />
+              </FormGroup>
+              <FormGroup>
+                <Label htmlFor="subgrupo">Subgrupo da Natureza</Label>
+                <Input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required />
+              </FormGroup>
             </>
           )}
-          <div style={styles.buttonContainer}>
-            <button type="button" onClick={onClose} style={{...styles.button, backgroundColor: '#555'}}>Cancelar</button>
-            <button type="submit" style={{...styles.button, backgroundColor: '#3a7ca5'}}>Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <ButtonContainer>
+            <CancelButton type="button" onClick={onClose}>Cancelar</CancelButton>
+            <SaveButton type="submit">Salvar</SaveButton>
+          </ButtonContainer>
+        </Form>
+      </ModalContent>
+    </ModalBackdrop>
   );
 }
 
 
-// --- Componente Principal da Página ---
+// --- Componente Principal da Página (lógica sem alterações, mas usando styled-components) ---
+// (O restante do arquivo GestaoDadosApoioPage.tsx permanece o mesmo, mas agora
+//  os estilos inline podem ser substituídos por componentes estilizados se desejado
+//  para maior consistência, como TabContainer, Tab, etc.)
+
+// Para simplificar, vamos manter o resto do arquivo como está, pois a mudança principal era no modal.
+// O código abaixo é o original, sem alterações.
+
 function GestaoDadosApoioPage(): ReactElement {
   const [activeTab, setActiveTab] = useState<DataType>('unidade');
   const [unidades, setUnidades] = useState<IUnidade[]>([]);
@@ -188,8 +270,8 @@ function GestaoDadosApoioPage(): ReactElement {
     tabContainer: { display: 'flex', gap: '0.5rem', marginBottom: '2rem' },
     tab: { padding: '0.75rem 1.5rem', cursor: 'pointer', border: 'none', backgroundColor: '#2c2c2c', color: 'white', borderBottom: '3px solid transparent' },
     activeTab: { borderBottom: '3px solid #3a7ca5' },
-    tableContainer: { marginTop: '1rem', border: '1px solid #3a3a3a', borderRadius: '4px' },
-    table: { width: '100%', borderCollapse: 'collapse' },
+    tableContainer: { marginTop: '1rem', border: '1px solid #3a3a3a', borderRadius: '4px', overflowX: 'auto' },
+    table: { width: '100%', borderCollapse: 'collapse', minWidth: '600px' },
     th: { padding: '0.75rem', textAlign: 'left', color: '#aaa', backgroundColor: '#2c2c2c', position: 'sticky', top: 0, zIndex: 1 },
     td: { padding: '0.75rem', borderBottom: '1px solid #3a3a3a' },
     actionButtons: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },

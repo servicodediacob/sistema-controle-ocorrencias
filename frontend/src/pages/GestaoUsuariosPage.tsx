@@ -1,13 +1,90 @@
-// src/pages/GestaoUsuariosPage.tsx
-
-import React, { useState, useEffect, ReactElement, CSSProperties } from 'react';
+import React, { useState, useEffect, ReactElement } from 'react';
 import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
-// 1. Importar o layout principal
 import MainLayout from '../components/MainLayout';
+import { device } from '../styles/theme'; // 1. Importe
+import styled from 'styled-components'; // 1. Importe
 
-// --- Componente do Modal (sem alterações) ---
+// --- Componentes Estilizados para o Modal ---
+
+const ModalBackdrop = styled.div`
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.7); display: flex;
+  justify-content: center; align-items: center; z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+`;
+
+const ModalContent = styled.div`
+  background-color: #2c2c2c; padding: 2rem;
+  border-radius: 8px; width: 400px; color: white;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  @media ${device.tablet} {
+    width: 95%;
+    padding: 1.5rem;
+  }
+`;
+
+const ModalTitle = styled.h2`
+  margin-top: 0;
+  font-size: 1.5rem;
+  @media ${device.mobileL} {
+    font-size: 1.2rem;
+  }
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+`;
+
+const Input = styled.input`
+  width: 100%; padding: 0.75rem; border-radius: 4px;
+  border: 1px solid #555; background-color: #3a3a3a; color: white;
+  box-sizing: border-box;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;
+
+  @media ${device.mobileL} {
+    flex-direction: column-reverse;
+    button {
+      width: 100%;
+    }
+  }
+`;
+
+const Button = styled.button`
+  padding: 0.75rem 1.5rem; border-radius: 4px; border: none; cursor: pointer;
+`;
+
+const SaveButton = styled(Button)`
+  background-color: #3a7ca5;
+  color: white;
+`;
+
+const CancelButton = styled(Button)`
+  background-color: #555;
+  color: white;
+`;
+
+
+// --- Componente do Modal ---
 interface UsuarioModalProps {
   usuario: IUser | null;
   onClose: () => void;
@@ -36,46 +113,38 @@ function UsuarioModal({ usuario, onClose, onSave }: UsuarioModalProps): ReactEle
     onSave(formData);
   };
 
-  const styles: { [key: string]: CSSProperties } = {
-    modalBackdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    modalContent: { backgroundColor: '#2c2c2c', padding: '2rem', borderRadius: '8px', width: '400px', color: 'white' },
-    formGroup: { marginBottom: '1rem' },
-    label: { display: 'block', marginBottom: '0.5rem' },
-    input: { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#3a3a3a', color: 'white' },
-    buttonContainer: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' },
-    button: { padding: '0.5rem 1rem', borderRadius: '4px', border: 'none', cursor: 'pointer' },
-  };
-
   return (
-    <div style={styles.modalBackdrop} onClick={onClose}>
-      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2>{isEditing ? 'Editar Usuário' : 'Adicionar Novo Usuário'}</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={styles.formGroup}>
-            <label htmlFor="nome" style={styles.label}>Nome</label>
-            <input type="text" id="nome" name="nome" value={formData.nome} onChange={handleChange} required style={styles.input} />
-          </div>
-          <div style={styles.formGroup}>
-            <label htmlFor="email" style={styles.label}>Email</label>
-            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required style={styles.input} />
-          </div>
+    <ModalBackdrop onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()}>
+        <ModalTitle>{isEditing ? 'Editar Usuário' : 'Adicionar Novo Usuário'}</ModalTitle>
+        <Form onSubmit={handleSubmit}>
+          <FormGroup>
+            <Label htmlFor="nome">Nome</Label>
+            <Input type="text" id="nome" name="nome" value={formData.nome} onChange={handleChange} required />
+          </FormGroup>
+          <FormGroup>
+            <Label htmlFor="email">Email</Label>
+            <Input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required />
+          </FormGroup>
           {!isEditing && (
-            <div style={styles.formGroup}>
-              <label htmlFor="senha" style={styles.label}>Senha</label>
-              <input type="password" id="senha" name="senha" value={formData.senha} onChange={handleChange} required style={styles.input} />
-            </div>
+            <FormGroup>
+              <Label htmlFor="senha">Senha</Label>
+              <Input type="password" id="senha" name="senha" value={formData.senha} onChange={handleChange} required />
+            </FormGroup>
           )}
-          <div style={styles.buttonContainer}>
-            <button type="button" onClick={onClose} style={{...styles.button, backgroundColor: '#555'}}>Cancelar</button>
-            <button type="submit" style={{...styles.button, backgroundColor: '#3a7ca5'}}>Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <ButtonContainer>
+            <CancelButton type="button" onClick={onClose}>Cancelar</CancelButton>
+            <SaveButton type="submit">Salvar</SaveButton>
+          </ButtonContainer>
+        </Form>
+      </ModalContent>
+    </ModalBackdrop>
   );
 }
 
-// --- Componente Principal da Página ---
+// --- Componente Principal da Página (sem alterações na lógica) ---
+// O restante do código permanece o mesmo.
+
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,8 +210,9 @@ function GestaoUsuariosPage(): ReactElement {
     }
   };
 
-  const styles: { [key: string]: CSSProperties } = {
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem' },
+  const styles: { [key: string]: React.CSSProperties } = {
+    tableContainer: { overflowX: 'auto' },
+    table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem', minWidth: '600px' },
     th: { borderBottom: '1px solid #555', padding: '0.75rem', textAlign: 'left', color: '#aaa' },
     td: { borderBottom: '1px solid #3a3a3a', padding: '0.75rem' },
     actionButtons: { display: 'flex', gap: '0.5rem' },
@@ -150,7 +220,6 @@ function GestaoUsuariosPage(): ReactElement {
   };
 
   return (
-    // 2. Envolver o conteúdo com MainLayout
     <MainLayout pageTitle="Gestão de Usuários">
       <button onClick={() => handleOpenModal()} style={{...styles.button, backgroundColor: '#2a9d8f', marginBottom: '1rem'}}>
         Adicionar Usuário
@@ -159,31 +228,33 @@ function GestaoUsuariosPage(): ReactElement {
       {loading ? (
         <p>Carregando usuários...</p>
       ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>ID</th>
-              <th style={styles.th}>Nome</th>
-              <th style={styles.th}>Email</th>
-              <th style={styles.th}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map(user => (
-              <tr key={user.id}>
-                <td style={styles.td}>{user.id}</td>
-                <td style={styles.td}>{user.nome}</td>
-                <td style={styles.td}>{user.email}</td>
-                <td style={styles.td}>
-                  <div style={styles.actionButtons}>
-                    <button onClick={() => handleOpenModal(user)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
-                    <button onClick={() => handleDelete(user.id)} style={{...styles.button, backgroundColor: '#e76f51'}}>Excluir</button>
-                  </div>
-                </td>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>ID</th>
+                <th style={styles.th}>Nome</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {usuarios.map(user => (
+                <tr key={user.id}>
+                  <td style={styles.td}>{user.id}</td>
+                  <td style={styles.td}>{user.nome}</td>
+                  <td style={styles.td}>{user.email}</td>
+                  <td style={styles.td}>
+                    <div style={styles.actionButtons}>
+                      <button onClick={() => handleOpenModal(user)} style={{...styles.button, backgroundColor: '#e9c46a', color: 'black'}}>Editar</button>
+                      <button onClick={() => handleDelete(user.id)} style={{...styles.button, backgroundColor: '#e76f51'}}>Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {isModalOpen && (

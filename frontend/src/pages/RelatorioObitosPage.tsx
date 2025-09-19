@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { 
   getObitosPorData, 
   criarObitoRegistro, 
-  // Importa a nova função
   getNaturezasPorNomes,
   IObitoRegistro, 
   IObitoRegistroPayload,
@@ -12,8 +11,9 @@ import {
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import RegistroObitoModal from '../components/RegistroObitoModal';
+import { device } from '../styles/theme'; // 1. Importe nossos breakpoints
 
-// --- Styled Components (sem alterações) ---
+// --- Styled Components ---
 const ControlsContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -22,30 +22,93 @@ const ControlsContainer = styled.div`
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
-`;
-const ControlGroup = styled.div` display: flex; flex-direction: column; gap: 0.5rem; `;
-const Label = styled.label` font-size: 0.9rem; color: #aaa; `;
-const InputDate = styled.input`
-  padding: 0.75rem; background-color: #3a3a3a;
-  border: 1px solid #555; color: white; border-radius: 4px;
-`;
-const AddButton = styled.button`
-  padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
-  background-color: #2a9d8f; color: white; font-size: 1rem; cursor: pointer;
-`;
-const Table = styled.table`
-  width: 100%; border-collapse: collapse; margin-top: 1rem;
-  background-color: #2c2c2c; border-radius: 8px; overflow: hidden;
-`;
-const Th = styled.th`
-  padding: 1rem; text-align: left; background-color: #e53935;
-  color: white; font-weight: bold;
-`;
-const Td = styled.td` padding: 1rem; border-top: 1px solid #444; `;
-const TotalRow = styled.tr` background-color: #c62828; font-weight: bold; color: white; `;
-const EmptyState = styled.div` text-align: center; padding: 3rem; color: #888; `;
+  gap: 1rem; // Adiciona um espaçamento entre os itens
 
-// --- Componente Principal ---
+  // 2. Media query para telas de tablet e menores
+  @media ${device.tablet} {
+    flex-direction: column; // Empilha os controles verticalmente
+    align-items: stretch; // Faz os controles ocuparem a largura total
+  }
+`;
+
+const ControlGroup = styled.div` 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.5rem; 
+`;
+
+const Label = styled.label` 
+  font-size: 0.9rem; 
+  color: #aaa; 
+`;
+
+const InputDate = styled.input`
+  padding: 0.75rem; 
+  background-color: #3a3a3a;
+  border: 1px solid #555; 
+  color: white; 
+  border-radius: 4px;
+`;
+
+const AddButton = styled.button`
+  padding: 0.75rem 1.5rem; 
+  border: none; 
+  border-radius: 4px;
+  background-color: #2a9d8f; 
+  color: white; 
+  font-size: 1rem; 
+  cursor: pointer;
+`;
+
+// 3. Adiciona um wrapper para a tabela para permitir rolagem horizontal
+const TableWrapper = styled.div`
+  overflow-x: auto;
+  width: 100%;
+`;
+
+const Table = styled.table`
+  width: 100%; 
+  border-collapse: collapse; 
+  margin-top: 1rem;
+  background-color: #2c2c2c; 
+  border-radius: 8px; 
+  overflow: hidden;
+  min-width: 600px; // Garante que a tabela tenha uma largura mínima
+`;
+
+const Th = styled.th`
+  padding: 1rem; 
+  text-align: left; 
+  background-color: #e53935;
+  color: white; 
+  font-weight: bold;
+  white-space: nowrap; // Evita que o texto do cabeçalho quebre
+`;
+
+const Td = styled.td` 
+  padding: 1rem; 
+  border-top: 1px solid #444; 
+  
+  // 4. Permite que o conteúdo da célula de detalhes quebre a linha se necessário
+  &:last-child {
+    white-space: pre-wrap; // Quebra a linha em ';'
+    word-break: break-word; // Força a quebra de palavras longas
+  }
+`;
+
+const TotalRow = styled.tr` 
+  background-color: #c62828; 
+  font-weight: bold; 
+  color: white; 
+`;
+
+const EmptyState = styled.div` 
+  text-align: center; 
+  padding: 3rem; 
+  color: #888; 
+`;
+
+// --- Componente Principal (lógica sem alterações) ---
 
 const NATUREZAS_FIXAS_NOMES = [
   'Acidente de Trânsito',
@@ -65,7 +128,6 @@ function RelatorioObitosPage(): ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addNotification } = useNotification();
 
-  // CORREÇÃO: Busca os IDs das naturezas fixas na inicialização.
   useEffect(() => {
     setLoading(true);
     getNaturezasPorNomes(NATUREZAS_FIXAS_NOMES)
@@ -103,7 +165,6 @@ function RelatorioObitosPage(): ReactElement {
     }
   };
 
-  // A lógica de mesclagem agora usa a lista de naturezas que veio da API (com IDs).
   const dadosTabela = naturezasDoRelatorio.map(natureza => {
     const registrosDaNatureza = registrosDoDia.filter(r => r.natureza_id === natureza.id);
     const quantidade = registrosDaNatureza.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
@@ -140,29 +201,32 @@ function RelatorioObitosPage(): ReactElement {
       {loading ? (
         <EmptyState>Carregando...</EmptyState>
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>NATUREZA</Th>
-              <Th>QTE</Th>
-              <Th>NÚMERO RAI E OBM RESPONSÁVEL</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {dadosTabela.map((item) => (
-              <tr key={item.nome}>
-                <Td>{item.nome}</Td>
-                <Td>{item.quantidade}</Td>
-                <Td>{item.detalhes}</Td>
+        // 5. Envolve a tabela com o TableWrapper
+        <TableWrapper>
+          <Table>
+            <thead>
+              <tr>
+                <Th>NATUREZA</Th>
+                <Th>QTE</Th>
+                <Th>NÚMERO RAI E OBM RESPONSÁVEL</Th>
               </tr>
-            ))}
-            <TotalRow>
-              <Td>TOTAL</Td>
-              <Td>{totalGeral}</Td>
-              <Td></Td>
-            </TotalRow>
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {dadosTabela.map((item) => (
+                <tr key={item.nome}>
+                  <Td>{item.nome}</Td>
+                  <Td>{item.quantidade}</Td>
+                  <Td>{item.detalhes}</Td>
+                </tr>
+              ))}
+              <TotalRow>
+                <Td>TOTAL</Td>
+                <Td>{totalGeral}</Td>
+                <Td></Td>
+              </TotalRow>
+            </tbody>
+          </Table>
+        </TableWrapper>
       )}
 
       {isModalOpen && (

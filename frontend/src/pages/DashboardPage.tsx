@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback, ReactElement } from 'react';
 import styled from 'styled-components';
-// CORREÇÃO: A interface IRelatorioRow foi movida para a API e será importada de lá
 import { getDashboardStats, getPlantao, getRelatorio, IDashboardStats, IPlantao, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import { device } from '../styles/theme';
 
 import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
 import PlantaoWidget from '../components/PlantaoWidget';
 
-// --- Styled Components (sem alterações) ---
+// --- Styled Components ---
+
 const FlexContainer = styled.div`
   display: flex;
   gap: 1.5rem;
@@ -17,6 +18,13 @@ const FlexContainer = styled.div`
 
   &:first-of-type {
     margin-top: 0;
+  }
+
+  @media ${device.tablet} {
+    flex-direction: column;
+    gap: 1rem;
+    /* IMPORTANTE: Remove o flex-wrap quando em coluna para evitar comportamentos inesperados */
+    flex-wrap: nowrap; 
   }
 `;
 
@@ -27,6 +35,10 @@ const Card = styled.div`
   text-align: center;
   flex: 1;
   min-width: 200px;
+
+  @media ${device.tablet} {
+    flex: 1 0 auto; // Permite que cresça horizontalmente, mas não verticalmente
+  }
 `;
 
 const CardTitle = styled.h3`
@@ -39,6 +51,10 @@ const CardValue = styled.p`
   font-size: 2.5rem;
   font-weight: bold;
   margin: 0.5rem 0 0 0;
+
+  @media ${device.mobileL} {
+    font-size: 2rem;
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -59,6 +75,11 @@ const ReportTable = styled.table`
     padding: 0.6rem;
     text-align: center;
     white-space: nowrap;
+
+    @media ${device.laptop} {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
   }
 
   th {
@@ -76,14 +97,16 @@ const ReportTable = styled.table`
     position: sticky;
     left: 0;
     z-index: 2;
+    width: 150px; 
   }
 
   .subgroup-cell {
     text-align: left;
     position: sticky;
-    left: 180px;
+    left: 150px; 
     background-color: #2c2c2c;
     z-index: 2;
+    width: 200px;
   }
 
   .total-row td {
@@ -96,18 +119,19 @@ const ReportTable = styled.table`
   }
 `;
 
+// --- CORREÇÃO PRINCIPAL AQUI ---
+
 const WidgetContainer = styled.div`
   background-color: #2c2c2c;
   border-radius: 8px;
   padding: 1.5rem;
   flex: 1;
   width: 100%;
-`;
 
-const WidgetTitle = styled.h3`
-  margin-top: 0;
-  border-bottom: 1px solid #444;
-  padding-bottom: 1rem;
+  @media ${device.tablet} {
+    padding: 1rem;
+    flex-grow: 0; // Impede que o widget cresça verticalmente
+  }
 `;
 
 const TableContainer = styled.div`
@@ -116,6 +140,19 @@ const TableContainer = styled.div`
   padding: 1.5rem;
   flex: 1;
   min-width: 300px;
+
+  @media ${device.tablet} {
+    padding: 1rem;
+    flex-grow: 0; // Impede que a tabela cresça verticalmente
+  }
+`;
+
+// --- FIM DA CORREÇÃO PRINCIPAL ---
+
+const WidgetTitle = styled.h3`
+  margin-top: 0;
+  border-bottom: 1px solid #444;
+  padding-bottom: 1rem;
 `;
 
 const TableTitle = styled.h3`
@@ -149,7 +186,8 @@ const EmptyState = styled.p`
 `;
 
 
-// --- Componentes Funcionais ---
+// --- Componentes Funcionais (A lógica permanece a mesma) ---
+// O restante do arquivo não precisa de alterações.
 
 interface StatCardProps { title: string; value: number | string; loading: boolean; }
 function StatCard({ title, value, loading }: StatCardProps) {
@@ -173,13 +211,12 @@ function RelatorioWidget(): ReactElement {
       try {
         setLoading(true);
         const today = new Date().toISOString().split('T')[0];
-        // CORREÇÃO: Passando os parâmetros como 'data_inicio' e 'data_fim'
         const data = await getRelatorio(today, today);
         setReportData(data);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao carregar relatório diário.';
         addNotification(message, 'error');
-        console.error("Erro ao buscar relatório diário:", error); // Log para depuração
+        console.error("Erro ao buscar relatório diário:", error);
       } finally {
         setLoading(false);
       }
@@ -211,8 +248,8 @@ function RelatorioWidget(): ReactElement {
           <ReportTable>
             <thead>
               <tr>
-                <th rowSpan={2} style={{width: '180px', left: 0, zIndex: 4}}>GRUPO</th>
-                <th rowSpan={2} style={{width: '220px', left: 180, zIndex: 4}}>NATUREZA (SUBGRUPO)</th>
+                <th rowSpan={2} style={{width: '150px', left: 0, zIndex: 4}}>GRUPO</th>
+                <th rowSpan={2} style={{width: '200px', left: 150, zIndex: 4}}>NATUREZA (SUBGRUPO)</th>
                 <th colSpan={3}>ESTATÍSTICA CAPITAL</th>
                 <th colSpan={9}>ESTATÍSTICA POR CRBM (INTERIOR)</th>
                 <th rowSpan={2}>TOTAL GERAL</th>
