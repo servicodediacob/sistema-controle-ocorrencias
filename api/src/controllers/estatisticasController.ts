@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import db from '../db';
 
-// Interface para definir o formato dos dados que esperamos receber do formulário
+// A interface do payload recebido do frontend não precisa mudar.
 interface EstatisticaPayload {
   data_registro: string;
   cidade_id: number;
@@ -9,13 +9,15 @@ interface EstatisticaPayload {
 }
 
 /**
- * @description Registra um lote de estatísticas, usando uma transação para garantir a integridade dos dados.
+ * @description Registra um lote de ocorrências na tabela 'ocorrencias',
+ *              criando um registro para cada unidade de 'quantidade' informada.
+ *              Isso alimenta diretamente o Dashboard.
+ *              Usa uma transação para garantir a integridade dos dados.
  */
 export const registrarEstatisticas = async (req: Request, res: Response): Promise<void> => {
   const { data_registro, cidade_id, estatisticas } = req.body as EstatisticaPayload;
-  // A propriedade 'usuario' é adicionada pelo nosso middleware 'proteger'
-  const usuario_id = req.usuario?.id;
 
+  // Validação inicial dos dados recebidos.
   if (!data_registro || !cidade_id || !estatisticas) {
     res.status(400).json({ message: 'Dados incompletos. data_registro, cidade_id e estatisticas são obrigatórios.' });
     return;
@@ -24,42 +26,65 @@ export const registrarEstatisticas = async (req: Request, res: Response): Promis
   const client = await db.pool.connect();
 
   try {
+    // Inicia uma transação. Ou tudo funciona, ou nada é salvo.
     await client.query('BEGIN');
 
+    // Query base para inserir um novo registro na tabela principal 'ocorrencias'.
+    // Assumimos 0 óbitos para lançamentos em lote, pois o formulário não tem campo para isso.
+    const query = `
+      INSERT INTO ocorrencias (data_ocorrencia, cidade_id, natureza_id, quantidade_obitos)
+      VALUES ($1, $2, $3, 0);
+    `;
+
+    let totalOcorrenciasCriadas = 0;
+
+    // Itera sobre cada tipo de estatística enviada do formulário.
+    // Ex: { natureza_id: 5, quantidade: 3 }
     for (const stat of estatisticas) {
-      if (!stat.quantidade || stat.quantidade <= 0) {
-        continue;
+      // Converte a quantidade para número e valida se é um valor positivo.
+      const quantidade = Number(stat.quantidade);
+      if (!quantidade || quantidade <= 0) {
+        continue; // Pula para a próxima estatística se a quantidade for zero ou inválida.
       }
 
-      const query = `
-        INSERT INTO estatisticas_diarias (data_registro, cidade_id, natureza_id, quantidade, usuario_id)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (data_registro, cidade_id, natureza_id)
-        DO UPDATE SET 
-          quantidade = EXCLUDED.quantidade, 
-          usuario_id = EXCLUDED.usuario_id,
-          criado_em = CURRENT_TIMESTAMP;
-      `;
-      
-      const values = [data_registro, cidade_id, stat.natureza_id, stat.quantidade, usuario_id];
-      await client.query(query, values);
+      // Cria um loop para executar a query de inserção 'N' vezes,
+      // onde 'N' é a quantidade informada pelo usuário.
+      for (let i = 0; i < quantidade; i++) {
+        const values = [data_registro, cidade_id, stat.natureza_id];
+        await client.query(query, values);
+        totalOcorrenciasCriadas++;
+      }
     }
 
+    // Se, após iterar por tudo, nenhum registro foi criado (ex: todas as quantidades eram 0),
+    // informamos o usuário e revertemos a transação.
+    if (totalOcorrenciasCriadas === 0) {
+        await client.query('ROLLBACK');
+        res.status(400).json({ message: 'Nenhuma ocorrência para registrar. As quantidades devem ser maiores que zero.' });
+        return;
+    }
+
+    // Se tudo deu certo, efetiva as alterações no banco de dados.
     await client.query('COMMIT');
-    res.status(201).json({ message: 'Estatísticas registradas com sucesso!' });
+    res.status(201).json({ message: `${totalOcorrenciasCriadas} ocorrência(s) registrada(s) com sucesso!` });
 
   } catch (error) {
+    // Em caso de qualquer erro no meio do processo, desfaz todas as alterações.
     await client.query('ROLLBACK');
-    console.error('Erro ao registrar estatísticas (transação revertida):', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao registrar as estatísticas.' });
+    console.error('Erro ao registrar ocorrências em lote (transação revertida):', error);
+    res.status(500).json({ message: 'Erro interno do servidor ao registrar as ocorrências.' });
 
   } finally {
+    // Libera a conexão com o banco de dados de volta para o pool.
     client.release();
   }
 };
 
+
 /**
  * @description Gera um relatório de estatísticas agrupado por natureza e CRBM para um intervalo de datas.
+ * @note Esta função ainda lê da tabela 'estatisticas_diarias'. Se essa tabela não for mais usada,
+ *       esta função precisará ser adaptada para ler da tabela 'ocorrencias'.
  */
 export const getRelatorioEstatisticas = async (req: Request, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
@@ -70,6 +95,7 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
   }
 
   try {
+    // ATENÇÃO: Esta query ainda usa a tabela 'estatisticas_diarias'.
     const query = `
       SELECT
         n.grupo,
