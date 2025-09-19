@@ -19,16 +19,22 @@ app.use(express.json());
 
 // Rotas da API
 
-app.use('/auth', authRoutes);
-app.use('/', dadosRoutes); 
-app.use('/', unidadesRoutes); 
-app.use('/dashboard', dashboardRoutes);
-app.use('/plantao', plantaoRoutes);
-app.use('/usuarios', usuarioRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api', dadosRoutes); // Para /api/naturezas, /api/ocorrencias, etc.
+app.use('/api', unidadesRoutes); // Para /api/unidades, /api/crbms
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/plantao', plantaoRoutes);
+app.use('/api/usuarios', usuarioRoutes);
 
 // Rota raiz
 app.get('/', (_req: Request, res: Response) => {
   res.send('API do Sistema de Controle de Ocorrências está no ar!');
 });
 
-export default app;
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  // Usamos 0.0.0.0 para garantir que o servidor seja acessível de fora do container
+  console.log(`Servidor rodando em http://0.0.0.0:${PORT}` );
+});
+
