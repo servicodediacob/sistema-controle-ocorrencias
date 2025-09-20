@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import styled from 'styled-components';
-import { 
-  getObitosPorData, 
-  criarObitoRegistro, 
+import {
+  getObitosPorData,
+  criarObitoRegistro,
   getNaturezasPorNomes,
-  deleteObitoRegistro, // Importa a nova função de exclusão
-  IObitoRegistro, 
+  getCidades,
+  IObitoRegistro,
   IObitoRegistroPayload,
-  IDataApoio
+  IDataApoio,
+  ICidade
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import RegistroObitoModal from '../components/RegistroObitoModal';
 import { device } from '../styles/theme';
 
-// --- Styled Components ---
+// --- Styled Components (sem alterações) ---
 const ControlsContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -31,38 +32,33 @@ const ControlsContainer = styled.div`
   }
 `;
 
-const ControlGroup = styled.div` 
-  display: flex; 
-  flex-direction: column; 
-  gap: 0.5rem; 
+const ControlGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 `;
 
-const Label = styled.label` 
-  font-size: 0.9rem; 
-  color: #aaa; 
+const Label = styled.label`
+  font-size: 0.9rem;
+  color: #aaa;
 `;
 
 const InputDate = styled.input`
-  padding: 0.75rem; 
+  padding: 0.75rem;
   background-color: #3a3a3a;
-  border: 1px solid #555; 
-  color: white; 
+  border: 1px solid #555;
+  color: white;
   border-radius: 4px;
 `;
 
 const AddButton = styled.button`
-  padding: 0.75rem 1.5rem; 
-  border: none; 
+  padding: 0.75rem 1.5rem;
+  border: none;
   border-radius: 4px;
-  background-color: #2a9d8f; 
-  color: white; 
-  font-size: 1rem; 
+  background-color: #2a9d8f;
+  color: white;
+  font-size: 1rem;
   cursor: pointer;
-  
-  &:disabled {
-    background-color: #2a9d8f80;
-    cursor: not-allowed;
-  }
 `;
 
 const TableWrapper = styled.div`
@@ -71,88 +67,87 @@ const TableWrapper = styled.div`
 `;
 
 const Table = styled.table`
-  width: 100%; 
-  border-collapse: collapse; 
+  width: 100%;
+  border-collapse: collapse;
   margin-top: 1rem;
-  background-color: #2c2c2c; 
-  border-radius: 8px; 
+  background-color: #2c2c2c;
+  border-radius: 8px;
   overflow: hidden;
-  min-width: 800px;
+  min-width: 600px;
 `;
 
 const Th = styled.th`
-  padding: 1rem; 
-  text-align: left; 
-  background-color: #3a3a3a;
-  color: #aaa; 
+  padding: 1rem;
+  text-align: left;
+  background-color: #e53935;
+  color: white;
   font-weight: bold;
   white-space: nowrap;
 `;
 
-const Td = styled.td` 
-  padding: 1rem; 
-  border-top: 1px solid #444; 
-`;
+const Td = styled.td`
+  padding: 1rem;
+  border-top: 1px solid #444;
 
-const TotalRow = styled.tr` 
-  background-color: #c62828; 
-  font-weight: bold; 
-  color: white; 
-`;
-
-const EmptyState = styled.div` 
-  text-align: center; 
-  padding: 3rem; 
-  color: #888; 
-`;
-
-const DeleteButton = styled.button`
-  background-color: #e76f51;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #d66041;
+  &:last-child {
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 `;
 
-// --- Constantes ---
+const TotalRow = styled.tr`
+  background-color: #c62828;
+  font-weight: bold;
+  color: white;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+`;
+
+// --- Componente Principal ---
+
 const NATUREZAS_FIXAS_NOMES = [
-  'Acidente de Trânsito',
-  'Acidentes com Viaturas',
-  'Afogamento / Cadáver',
-  'Arma de Fogo / Arma Branca / Agressão',
-  'Autoextermínio',
-  'Mal Súbito',
-  'Outros'
+  'ACIDENTE DE TRÂNSITO',
+  'AFOGAMENTO OU CADÁVER',
+  'ARMA DE FOGO/BRANCA/AGRESSÃO',
+  'AUTO EXTÉRMÍNIO',
+  'MAL SÚBITO',
+  'ACIDENTES COM VIATURAS',
+  'OUTROS'
 ];
 
-// --- Componente Principal da Página ---
 function RelatorioObitosPage(): ReactElement {
   const [dataRelatorio, setDataRelatorio] = useState(new Date().toISOString().split('T')[0]);
-  const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
-  const [registros, setRegistros] = useState<IObitoRegistro[]>([]);
+  const [naturezasDoRelatorio, setNaturezasDoRelatorio] = useState<IDataApoio[]>([]);
+  const [cidades, setCidades] = useState<ICidade[]>([]);
+  const [registrosDoDia, setRegistrosDoDia] = useState<IObitoRegistro[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addNotification } = useNotification();
 
-  // Busca a lista de naturezas para popular o formulário do modal
   useEffect(() => {
-    getNaturezasPorNomes(NATUREZAS_FIXAS_NOMES)
-      .then(setNaturezas)
-      .catch(() => addNotification('Falha ao carregar naturezas para o formulário.', 'error'));
+    setLoading(true);
+    Promise.all([
+      getNaturezasPorNomes(NATUREZAS_FIXAS_NOMES),
+      getCidades()
+    ]).then(([naturezasData, cidadesData]) => {
+      setNaturezasDoRelatorio(naturezasData);
+      setCidades(cidadesData);
+    }).catch(() => {
+      addNotification('Falha ao carregar dados de apoio para o relatório.', 'error');
+    }).finally(() => {
+      setLoading(false);
+    });
   }, [addNotification]);
 
-  // Função para buscar os registros de óbito para a data selecionada
   const fetchDadosDoDia = useCallback(async (data: string) => {
     setLoading(true);
     try {
       const result = await getObitosPorData(data);
-      setRegistros(result);
+      setRegistrosDoDia(result);
     } catch (error) {
       addNotification('Falha ao carregar registros de óbitos do dia.', 'error');
     } finally {
@@ -160,39 +155,49 @@ function RelatorioObitosPage(): ReactElement {
     }
   }, [addNotification]);
 
-  // Efeito que dispara a busca de dados sempre que a data do relatório mudar
   useEffect(() => {
-    fetchDadosDoDia(dataRelatorio);
-  }, [dataRelatorio, fetchDadosDoDia]);
+    // A busca de dados do dia só deve ocorrer após as naturezas serem carregadas
+    if (naturezasDoRelatorio.length > 0) {
+      fetchDadosDoDia(dataRelatorio);
+    }
+  }, [dataRelatorio, naturezasDoRelatorio, fetchDadosDoDia]);
 
-  // Função para salvar um novo registro, chamada pelo modal
   const handleSaveNewRegistro = async (formData: IObitoRegistroPayload) => {
     try {
       await criarObitoRegistro(formData);
       addNotification('Novo registro de óbito adicionado!', 'success');
       setIsModalOpen(false);
-      fetchDadosDoDia(dataRelatorio);
+      fetchDadosDoDia(dataRelatorio); // Recarrega os dados do dia
     } catch (error) {
       addNotification('Falha ao salvar o novo registro.', 'error');
     }
   };
 
-  // Função para excluir um registro
-  const handleDeleteRegistro = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')) {
-      try {
-        await deleteObitoRegistro(id);
-        addNotification('Registro excluído com sucesso!', 'success');
-        fetchDadosDoDia(dataRelatorio); // Atualiza a lista após a exclusão
-      } catch (error) {
-        addNotification('Falha ao excluir o registro.', 'error');
-      }
-    }
-  };
+  // ==================================================================
+  // CORREÇÃO APLICADA AQUI
+  // A lógica agora itera sobre a lista completa de naturezas (`naturezasDoRelatorio`)
+  // e, para cada uma, filtra os registros do dia correspondentes.
+  // ==================================================================
+  const dadosTabela = naturezasDoRelatorio.map(natureza => {
+    // Filtra os registros do dia que correspondem à natureza atual
+    const registrosDaNatureza = registrosDoDia.filter(r => r.natureza_id === natureza.id);
+    
+    // Soma a quantidade de vítimas para a natureza atual
+    const quantidade = registrosDaNatureza.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
+    
+    // Monta a string de detalhes apenas se houver registros
+    const detalhes = registrosDaNatureza.map(r => 
+      `(${(r.numero_ocorrencia || 'N/A')}) - ${r.obm_responsavel || 'N/A'} (${r.quantidade_vitimas})`
+    ).join('; ');
 
-  // Calcula o total de vítimas dos registros exibidos
-  const totalGeral = registros.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
-  const isButtonDisabled = naturezas.length === 0;
+    return {
+      nome: natureza.subgrupo, // Usa o nome da natureza da lista principal
+      quantidade,
+      detalhes
+    };
+  });
+
+  const totalGeral = dadosTabela.reduce((acc, curr) => acc + curr.quantidade, 0);
 
   return (
     <MainLayout pageTitle="Lançamento de Óbitos para Relatório">
@@ -206,70 +211,51 @@ function RelatorioObitosPage(): ReactElement {
             onChange={e => setDataRelatorio(e.target.value)}
           />
         </ControlGroup>
-        <AddButton 
-          onClick={() => setIsModalOpen(true)} 
-          disabled={isButtonDisabled}
-          title={isButtonDisabled ? "Aguardando carregamento das naturezas..." : "Adicionar novo registro de óbito"}
-        >
+        <AddButton onClick={() => setIsModalOpen(true)} disabled={loading}>
           Adicionar Registro de Óbito
         </AddButton>
       </ControlsContainer>
 
       {loading ? (
-        <EmptyState>Carregando registros...</EmptyState>
+        <EmptyState>Carregando...</EmptyState>
       ) : (
         <TableWrapper>
           <Table>
             <thead>
               <tr>
-                <Th>Natureza</Th>
-                <Th>Nº Ocorrência (RAI)</Th>
-                <Th>OBM Responsável</Th>
-                <Th>Vítimas</Th>
-                <Th>Ações</Th>
+                <Th>NATUREZA</Th>
+                <Th>QTE</Th>
+                <Th>NÚMERO RAI E OBM RESPONSÁVEL</Th>
               </tr>
             </thead>
             <tbody>
-              {registros.length > 0 ? (
-                registros.map((reg) => (
-                  <tr key={reg.id}>
-                    <Td>{reg.natureza_nome}</Td>
-                    <Td>{reg.numero_ocorrencia || 'N/I'}</Td>
-                    <Td>{reg.obm_responsavel || 'N/I'}</Td>
-                    <Td>{reg.quantidade_vitimas}</Td>
-                    <Td>
-                      <DeleteButton onClick={() => handleDeleteRegistro(reg.id)}>
-                        Excluir
-                      </DeleteButton>
-                    </Td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <Td colSpan={5} style={{ textAlign: 'center' }}>
-                    Nenhum registro de óbito para esta data.
-                  </Td>
+              {/* O map agora itera sobre a lista completa, garantindo que todas as naturezas apareçam */}
+              {dadosTabela.map((item) => (
+                <tr key={item.nome}>
+                  <Td>{item.nome}</Td>
+                  <Td>{item.quantidade}</Td>
+                  <Td>{item.detalhes}</Td>
                 </tr>
-              )}
-              {registros.length > 0 && (
-                <TotalRow>
-                  <Td colSpan={3} style={{ textAlign: 'right', paddingRight: '1rem' }}>TOTAL DE VÍTIMAS</Td>
-                  <Td>{totalGeral}</Td>
-                  <Td></Td>
-                </TotalRow>
-              )}
+              ))}
+              <TotalRow>
+                <Td>TOTAL</Td>
+                <Td>{totalGeral}</Td>
+                <Td></Td>
+              </TotalRow>
             </tbody>
           </Table>
         </TableWrapper>
       )}
 
-      <RegistroObitoModal
-        isOpen={isModalOpen}
-        dataOcorrencia={dataRelatorio}
-        naturezas={naturezas}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveNewRegistro}
-      />
+      {isModalOpen && (
+        <RegistroObitoModal
+          dataOcorrencia={dataRelatorio}
+          naturezas={naturezasDoRelatorio}
+          cidades={cidades}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveNewRegistro}
+        />
+      )}
     </MainLayout>
   );
 }

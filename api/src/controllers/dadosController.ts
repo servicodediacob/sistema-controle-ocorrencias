@@ -1,3 +1,5 @@
+// backend/src/controllers/dadosController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -15,36 +17,48 @@ export const getNaturezas = async (_req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getNaturezasPorNomes = async (req: Request, res: Response): Promise<void> => {
+/**
+ * @description Busca naturezas específicas com base em uma lista de nomes, GARANTINDO A ORDEM.
+ * (VERSÃO CORRIGIDA E FINAL)
+ */
+export const getNaturezasPorNomes = async (req: Request, res: Response) => {
   const { nomes } = req.body;
 
   if (!Array.isArray(nomes) || nomes.length === 0) {
-    res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
-    return; // Adiciona um return para clareza
+    return res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
   }
 
   try {
+    // 1. Cria os placeholders para a cláusula IN (ex: $1, $2, $3)
+    const inPlaceholders = nomes.map((_, index) => `$${index + 1}`).join(', ');
+
+    // 2. Cria os placeholders para a cláusula CASE, começando a contagem após os placeholders do IN
+    const casePlaceholders = nomes.map((_, index) => `WHEN $${nomes.length + index + 1} THEN ${index}`).join(' ');
+
+    // 3. Monta a query final
     const query = `
-      SELECT id, grupo, subgrupo 
+      SELECT id, subgrupo 
       FROM naturezas_ocorrencia 
-      WHERE LOWER(unaccent(subgrupo)) IN (
-        SELECT LOWER(unaccent(nome)) FROM unnest($1::text[]) AS nome
-      )
+      WHERE subgrupo IN (${inPlaceholders})
+      ORDER BY CASE subgrupo ${casePlaceholders} END;
     `;
-    const { rows } = await db.query(query, [nomes]);
+
+    // 4. Monta o array de valores final.
+    // A primeira parte é para o IN, a segunda é para o ORDER BY.
+    const values = [...nomes, ...nomes];
+
+    const { rows } = await db.query(query, values);
+    
     res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao buscar naturezas por nomes:', error);
-    if (error instanceof Error && error.message.includes('function unaccent(text) does not exist')) {
-      res.status(500).json({ message: "Erro de configuração no servidor: a extensão 'unaccent' do PostgreSQL precisa ser instalada." });
-      return; // --- CORREÇÃO APLICADA AQUI ---
-    }
-    // --- E AQUI ---
-    res.status(500).json({ message: 'Erro interno do servidor ao buscar naturezas por nome.' });
+    res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-// ... (o restante do arquivo não precisa de alterações, pois já estava correto)
+
+// --- O restante do arquivo (criarNatureza, atualizarNatureza, etc.) permanece o mesmo ---
+// ... (copie e cole o restante do seu arquivo original aqui)
 export const criarNatureza = async (req: Request, res: Response): Promise<void> => {
   const { grupo, subgrupo } = req.body;
   if (!grupo || !subgrupo) {

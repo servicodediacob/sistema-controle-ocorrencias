@@ -3,12 +3,12 @@ import db from './index';
 
 async function seedDatabase() {
   const client = await db.pool.connect();
-  console.log('🚀 Iniciando o processo de seeding (v4.1 - Naturezas com Grupo/Subgrupo)...');
+  console.log('🚀 Iniciando o processo de seeding (v5.0 - Lista completa de naturezas)...');
 
   try {
     await client.query('BEGIN');
 
-    // Limpar tabelas (o schema.sql já faz isso, mas é uma garantia extra)
+    // Limpar tabelas para evitar duplicatas
     console.log('🧹 Limpando tabelas existentes...');
     await client.query('DELETE FROM supervisor_plantao');
     await client.query('DELETE FROM ocorrencia_destaque');
@@ -20,7 +20,7 @@ async function seedDatabase() {
     await client.query('DELETE FROM naturezas_ocorrencia');
     console.log('✅ Tabelas existentes foram limpas.');
 
-    // 1. Inserir CRBMs
+    // 1. Inserir CRBMs (sem alterações)
     console.log('Inserindo CRBMs...');
     const crbmResult = await client.query(`
       INSERT INTO crbms (nome) VALUES
@@ -31,7 +31,7 @@ async function seedDatabase() {
     const crbmMap = new Map<string, number>(crbmResult.rows.map(r => [r.nome, r.id]));
     console.log('-> CRBMs inseridos.');
 
-    // 2. Inserir Cidades
+    // 2. Inserir Cidades (sem alterações)
     console.log('Inserindo Cidades...');
     const cidadesPorCrbm = {
       '1º CRBM': ['Goiânia Diurno', 'Goiânia Noturno'],
@@ -52,25 +52,39 @@ async function seedDatabase() {
     }
     console.log('-> Cidades inseridas.');
 
-    // 3. Inserir Naturezas de Ocorrência (MODIFICADO)
+    // 3. Inserir Naturezas de Ocorrência (LISTA COMPLETA ADICIONADA AQUI)
     console.log('Inserindo Naturezas de Ocorrência...');
-    await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ('Incêndio', 'Vegetação')");
-    await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ('Atendimento Pré-Hospitalar', 'Clínico')");
-    await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ('Trânsito', 'Colisão Carro x Moto')");
+    const naturezasParaInserir = [
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTE DE TRÂNSITO' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'AFOGAMENTO OU CADÁVER' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ARMA DE FOGO/BRANCA/AGRESSÃO' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'AUTO EXTÉRMÍNIO' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'MAL SÚBITO' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTES COM VIATURAS' },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'OUTROS' },
+      // Adicione outras naturezas gerais aqui se necessário
+      { grupo: 'Incêndio', subgrupo: 'Incêndio em Vegetação' },
+      { grupo: 'Atendimento Pré-Hospitalar', subgrupo: 'Clínico' },
+      { grupo: 'Trânsito', subgrupo: 'Colisão Carro x Moto' }
+    ];
+
+    for (const nat of naturezasParaInserir) {
+      await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ($1, $2) ON CONFLICT (grupo, subgrupo) DO NOTHING", [nat.grupo, nat.subgrupo]);
+    }
     console.log('-> Naturezas de Ocorrência inseridas.');
 
-    // 4. Inserir Usuário Supervisor
+    // 4. Inserir Usuário Supervisor (sem alterações)
     console.log('Inserindo Usuário Supervisor...');
     const senhaPlana = 'supervisor123';
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(senhaPlana, salt);
     await client.query(
-      "INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3)",
+      "INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING",
       ['Supervisor Padrão', 'supervisor@cbm.pe.gov.br', senhaHash]
     );
     console.log('-> Usuário supervisor inserido.');
 
-    // 5. Inserir configurações padrão
+    // 5. Inserir configurações padrão (sem alterações)
     console.log('Inicializando tabelas de gestão...');
     await client.query('INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');
     await client.query('INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');
