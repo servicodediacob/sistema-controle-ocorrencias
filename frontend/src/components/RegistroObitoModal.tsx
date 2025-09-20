@@ -1,14 +1,18 @@
-import { useState, ReactElement } from 'react';
+// frontend/src/components/RegistroObitoModal.tsx
+
+import { useState, useEffect, ReactElement } from 'react';
 import styled from 'styled-components';
 import {
   IDataApoio,
   IObitoRegistroPayload,
-  ICidade
+  ICidade,
+  IObitoRegistro, // Importa o tipo do registro completo
+  deletarObitoRegistro // Importa a função de exclusão da API
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { device } from '../styles/theme';
 
-// --- Styled Components (sem alterações) ---
+// --- Styled Components ---
 const ModalBackdrop = styled.div`
   position: fixed;
   top: 0;
@@ -111,29 +115,69 @@ const CancelButton = styled(Button)`
   color: white;
 `;
 
-// --- Props Interface ---
+// NOVO: Botão de Excluir estilizado
+const DeleteButton = styled(Button)`
+  background-color: #e76f51;
+  color: white;
+  margin-right: auto; // Alinha o botão à esquerda, empurrando os outros para a direita
+`;
+
+
+// --- Props Interface Atualizada ---
 interface RegistroObitoModalProps {
   dataOcorrencia: string;
   naturezas: IDataApoio[];
   cidades: ICidade[];
   onClose: () => void;
-  onSave: (formData: IObitoRegistroPayload) => void;
+  // A função onSave agora pode receber um ID opcional
+  onSave: (formData: IObitoRegistroPayload, id?: number) => void;
+  // Prop opcional para passar o registro a ser editado
+  registroParaEditar?: IObitoRegistro | null;
 }
 
-// --- Componente Principal ---
-function RegistroObitoModal({ dataOcorrencia, naturezas, cidades, onClose, onSave }: RegistroObitoModalProps): ReactElement {
+// --- Componente Principal Atualizado ---
+function RegistroObitoModal({ 
+  dataOcorrencia, 
+  naturezas, 
+  cidades, 
+  onClose, 
+  onSave,
+  registroParaEditar 
+}: RegistroObitoModalProps): ReactElement {
   
-  // CORREÇÃO APLICADA AQUI
-  const [formData, setFormData] = useState<IObitoRegistroPayload>({
-    data_ocorrencia: dataOcorrencia,
-    // O valor inicial deve ser 0 ou uma string vazia para que o placeholder "Selecione" funcione.
-    // A lógica anterior pegava o ID do primeiro item, o que conflitava com o placeholder.
-    natureza_id: 0, 
-    numero_ocorrencia: '',
-    obm_responsavel: '', 
-    quantidade_vitimas: 1,
-  });
+  const isEditing = !!registroParaEditar;
   const { addNotification } = useNotification();
+
+  // Função que define o estado inicial do formulário
+  const getInitialFormData = (): IObitoRegistroPayload => {
+    // Se estiver editando, preenche com os dados do registro
+    if (isEditing && registroParaEditar) {
+      return {
+        data_ocorrencia: registroParaEditar.data_ocorrencia.split('T')[0],
+        natureza_id: registroParaEditar.natureza_id,
+        numero_ocorrencia: registroParaEditar.numero_ocorrencia || '',
+        // Usa o cidade_id que buscamos da API
+        obm_responsavel: registroParaEditar.cidade_id?.toString() || '',
+        quantidade_vitimas: registroParaEditar.quantidade_vitimas,
+      };
+    }
+    // Se for criação, retorna o formulário vazio
+    return {
+      data_ocorrencia: dataOcorrencia,
+      natureza_id: 0, 
+      numero_ocorrencia: '',
+      obm_responsavel: '', 
+      quantidade_vitimas: 1,
+    };
+  };
+
+  const [formData, setFormData] = useState<IObitoRegistroPayload>(getInitialFormData());
+
+  // Efeito para resetar o formulário se a prop de edição mudar
+  useEffect(() => {
+    setFormData(getInitialFormData());
+  }, [registroParaEditar, dataOcorrencia]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -153,22 +197,38 @@ function RegistroObitoModal({ dataOcorrencia, naturezas, cidades, onClose, onSav
       addNotification('Por favor, selecione uma OBM Responsável.', 'error');
       return;
     }
-    onSave(formData);
+    // Chama onSave passando o ID se estiver editando
+    onSave(formData, registroParaEditar?.id);
+  };
+
+  // NOVO: Handler para o botão de exclusão
+  const handleDelete = async () => {
+    if (!registroParaEditar) return;
+
+    if (window.confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')) {
+      try {
+        await deletarObitoRegistro(registroParaEditar.id);
+        addNotification('Registro excluído com sucesso!', 'success');
+        onClose(); // Fecha o modal e aciona a recarga de dados na página principal
+      } catch (error) {
+        addNotification('Falha ao excluir o registro.', 'error');
+      }
+    }
   };
 
   return (
     <ModalBackdrop onClick={onClose}>
       <ModalContent onClick={e => e.stopPropagation()}>
-        <ModalTitle>Registro de Óbitos</ModalTitle>
+        <ModalTitle>{isEditing ? 'Editar Registro de Óbito' : 'Adicionar Registro de Óbito'}</ModalTitle>
         <Form onSubmit={handleSubmit}>
           <FormGroup>
             <Label htmlFor="natureza_id">Natureza</Label>
             <Select id="natureza_id" name="natureza_id" value={formData.natureza_id} onChange={handleChange} required>
-              {/* Esta opção desabilitada agora será exibida corretamente */}
               <option value={0} disabled>Selecione uma natureza</option>
               {naturezas.map(n => <option key={n.id} value={n.id}>{n.subgrupo}</option>)}
             </Select>
           </FormGroup>
+          
           <FormGroup>
             <Label htmlFor="numero_ocorrencia">Número da Ocorrência (RAI)</Label>
             <Input id="numero_ocorrencia" name="numero_ocorrencia" value={formData.numero_ocorrencia} onChange={handleChange} />
@@ -192,9 +252,14 @@ function RegistroObitoModal({ dataOcorrencia, naturezas, cidades, onClose, onSav
             <Label htmlFor="quantidade_vitimas">Quantidade de Vítimas</Label>
             <Input id="quantidade_vitimas" name="quantidade_vitimas" type="number" min="1" value={formData.quantidade_vitimas} onChange={handleChange} />
           </FormGroup>
+
           <ButtonContainer>
+            {/* Botão de excluir só aparece no modo de edição */}
+            {isEditing && (
+              <DeleteButton type="button" onClick={handleDelete}>Excluir</DeleteButton>
+            )}
             <CancelButton type="button" onClick={onClose}>Cancelar</CancelButton>
-            <SaveButton type="submit">Enviar Novo Registro</SaveButton>
+            <SaveButton type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Registro'}</SaveButton>
           </ButtonContainer>
         </Form>
       </ModalContent>

@@ -1,3 +1,5 @@
+// backend/src/routes/dadosRoutes.ts
+
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 
@@ -17,18 +19,18 @@ import {
 // Controller do formulário de lançamento em lote e relatório estatístico
 import { registrarEstatisticas, getRelatorioEstatisticas } from '../controllers/estatisticasController';
 
-// --- IMPORTAÇÃO ADICIONADA ---
-// Importa os novos controllers para a funcionalidade de registro de óbitos.
+// Controller para o novo CRUD de registros de óbitos
 import { 
   getObitosPorData, 
   criarObitoRegistro,
   atualizarObitoRegistro,
-  deletarObitoRegistro
+  deletarObitoRegistro,
+  limparRegistrosPorData // NOVO: Importa a nova função
 } from '../controllers/obitosRegistrosController';
 
 const router = Router();
 
-// --- Rotas de Naturezas de Ocorrência (sem alterações) ---
+// --- Rotas de Naturezas de Ocorrência ---
 router.route('/naturezas')
   .get(getNaturezas)
   .post(proteger, criarNatureza);
@@ -40,7 +42,7 @@ router.route('/naturezas/:id')
   .put(proteger, atualizarNatureza)
   .delete(proteger, excluirNatureza);
 
-// --- Rotas de Ocorrências (CRUD principal, sem alterações) ---
+// --- Rotas de Ocorrências (CRUD principal) ---
 router.route('/ocorrencias')
   .get(proteger, getOcorrencias)
   .post(proteger, criarOcorrencia);
@@ -49,23 +51,25 @@ router.route('/ocorrencias/:id')
   .put(proteger, updateOcorrencia)
   .delete(proteger, deleteOcorrencia);
 
-// --- Rota para o formulário de lançamento em lote (sem alterações) ---
+// --- Rota para o formulário de lançamento em lote ---
 router.route('/estatisticas/lote')
   .post(proteger, registrarEstatisticas);
 
-// --- Rota para buscar os dados do relatório estatístico consolidado (sem alterações) ---
+// --- Rota para buscar os dados do relatório estatístico consolidado ---
 router.route('/relatorio')
   .get(proteger, getRelatorioEstatisticas);
 
-// --- NOVAS ROTAS ADICIONADAS ---
-// Rotas para o CRUD de Registros de Óbitos, usadas pela página "Relatório de Óbitos".
+// --- Rotas para o CRUD de Registros de Óbitos ---
 router.route('/obitos-registros')
-  .get(proteger, getObitosPorData)      // Busca os registros para a tabela.
-  .post(proteger, criarObitoRegistro); // Salva um novo registro do modal.
+  .get(proteger, getObitosPorData)
+  .post(proteger, criarObitoRegistro)
+  // NOVO: Rota para limpar todos os registros de uma data específica
+  .delete(proteger, limparRegistrosPorData);
 
-// Rotas para futuras funcionalidades de edição e exclusão.
 router.route('/obitos-registros/:id')
+  // NOVO: Rota para atualizar um registro específico
   .put(proteger, atualizarObitoRegistro)
+  // NOVO: Rota para deletar um registro específico
   .delete(proteger, deletarObitoRegistro);
 
 

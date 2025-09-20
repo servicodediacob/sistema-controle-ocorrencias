@@ -1,3 +1,5 @@
+// backend/src/controllers/dashboardController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -15,6 +17,7 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
         SELECT COUNT(*) AS total FROM ocorrencias
       ),
       total_obitos AS (
+        -- CORREÇÃO: Usar SUM para somar a quantidade de óbitos de cada ocorrência
         SELECT SUM(quantidade_obitos) AS total FROM ocorrencias
       ),
       ocorrencias_por_natureza AS (
@@ -31,7 +34,8 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
           cr.nome AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
-        JOIN cidades c ON o.cidade_id = c.id -- A linha crucial
+        -- CORREÇÃO CRÍTICA: A junção agora é feita com a tabela 'cidades'
+        JOIN cidades c ON o.cidade_id = c.id
         JOIN crbms cr ON c.crbm_id = cr.id
         GROUP BY cr.nome
         ORDER BY total DESC

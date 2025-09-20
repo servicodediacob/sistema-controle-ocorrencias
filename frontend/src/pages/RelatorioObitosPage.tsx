@@ -1,8 +1,12 @@
-import { useState, useEffect, useCallback, ReactElement } from 'react';
+// frontend/src/pages/RelatorioObitosPage.tsx
+
+import React, { useState, useEffect, useCallback, ReactElement } from 'react';
 import styled from 'styled-components';
 import {
   getObitosPorData,
   criarObitoRegistro,
+  atualizarObitoRegistro,
+  limparRegistrosDoDia,
   getNaturezasPorNomes,
   getCidades,
   IObitoRegistro,
@@ -15,7 +19,7 @@ import MainLayout from '../components/MainLayout';
 import RegistroObitoModal from '../components/RegistroObitoModal';
 import { device } from '../styles/theme';
 
-// --- Styled Components (sem alterações) ---
+// --- Styled Components ---
 const ControlsContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -49,16 +53,6 @@ const InputDate = styled.input`
   border: 1px solid #555;
   color: white;
   border-radius: 4px;
-`;
-
-const AddButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #2a9d8f;
-  color: white;
-  font-size: 1rem;
-  cursor: pointer;
 `;
 
 const TableWrapper = styled.div`
@@ -107,6 +101,48 @@ const EmptyState = styled.div`
   color: #888;
 `;
 
+// NOVO: Container para os botões de ação
+const ActionsContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+`;
+
+const ActionButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const AddButton = styled(ActionButton)`
+  background-color: #2a9d8f;
+`;
+
+// NOVO: Botão para limpar a tabela
+const ClearButton = styled(ActionButton)`
+  background-color: #e76f51;
+`;
+
+// NOVO: Estilo para os detalhes clicáveis
+const DetalheItem = styled.span`
+  cursor: pointer;
+  text-decoration: underline;
+  color: #8bf1ff; // Cor ciano para indicar que é clicável
+  
+  &:hover {
+    color: #aeffff;
+  }
+`;
+
+
 // --- Componente Principal ---
 
 const NATUREZAS_FIXAS_NOMES = [
@@ -126,8 +162,11 @@ function RelatorioObitosPage(): ReactElement {
   const [registrosDoDia, setRegistrosDoDia] = useState<IObitoRegistro[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // NOVO: Estado para guardar o registro que será editado
+  const [registroEmEdicao, setRegistroEmEdicao] = useState<IObitoRegistro | null>(null);
   const { addNotification } = useNotification();
 
+  // useEffect para carregar dados de apoio (naturezas e cidades) - sem alterações
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -156,44 +195,71 @@ function RelatorioObitosPage(): ReactElement {
   }, [addNotification]);
 
   useEffect(() => {
-    // A busca de dados do dia só deve ocorrer após as naturezas serem carregadas
     if (naturezasDoRelatorio.length > 0) {
       fetchDadosDoDia(dataRelatorio);
     }
   }, [dataRelatorio, naturezasDoRelatorio, fetchDadosDoDia]);
 
-  const handleSaveNewRegistro = async (formData: IObitoRegistroPayload) => {
+  // ATUALIZADO: Handler para salvar (criação ou edição)
+  const handleSaveRegistro = async (formData: IObitoRegistroPayload, id?: number) => {
     try {
-      await criarObitoRegistro(formData);
-      addNotification('Novo registro de óbito adicionado!', 'success');
+      if (id) { // Se tem ID, é edição
+        await atualizarObitoRegistro(id, formData);
+        addNotification('Registro atualizado com sucesso!', 'success');
+      } else { // Senão, é criação
+        await criarObitoRegistro(formData);
+        addNotification('Novo registro de óbito adicionado!', 'success');
+      }
       setIsModalOpen(false);
-      fetchDadosDoDia(dataRelatorio); // Recarrega os dados do dia
+      setRegistroEmEdicao(null); // Limpa o registro em edição
+      fetchDadosDoDia(dataRelatorio); // Recarrega os dados
     } catch (error) {
-      addNotification('Falha ao salvar o novo registro.', 'error');
+      addNotification('Falha ao salvar o registro.', 'error');
     }
   };
 
-  // ==================================================================
-  // CORREÇÃO APLICADA AQUI
-  // A lógica agora itera sobre a lista completa de naturezas (`naturezasDoRelatorio`)
-  // e, para cada uma, filtra os registros do dia correspondentes.
-  // ==================================================================
+  // NOVO: Handler para abrir o modal em modo de edição
+  const handleEditClick = (registro: IObitoRegistro) => {
+    setRegistroEmEdicao(registro);
+    setIsModalOpen(true);
+  };
+  
+  // NOVO: Handler para o botão de limpar tabela
+  const handleLimparTabela = async () => {
+    if (registrosDoDia.length === 0) {
+        addNotification('Não há registros para limpar.', 'info');
+        return;
+    }
+    const dataFormatada = new Date(dataRelatorio).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+    if (window.confirm(`Tem certeza que deseja excluir TODOS os ${registrosDoDia.length} registros do dia ${dataFormatada}? Esta ação não pode ser desfeita.`)) {
+      try {
+        setLoading(true);
+        await limparRegistrosDoDia(dataRelatorio);
+        addNotification('Todos os registros do dia foram excluídos.', 'success');
+        fetchDadosDoDia(dataRelatorio); // Recarrega a lista (que agora estará vazia)
+      } catch (error) {
+        addNotification('Falha ao limpar os registros.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setRegistroEmEdicao(null);
+    // Recarrega os dados caso uma exclusão tenha ocorrido dentro do modal
+    fetchDadosDoDia(dataRelatorio);
+  };
+
   const dadosTabela = naturezasDoRelatorio.map(natureza => {
-    // Filtra os registros do dia que correspondem à natureza atual
     const registrosDaNatureza = registrosDoDia.filter(r => r.natureza_id === natureza.id);
-    
-    // Soma a quantidade de vítimas para a natureza atual
     const quantidade = registrosDaNatureza.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
     
-    // Monta a string de detalhes apenas se houver registros
-    const detalhes = registrosDaNatureza.map(r => 
-      `(${(r.numero_ocorrencia || 'N/A')}) - ${r.obm_responsavel || 'N/A'} (${r.quantidade_vitimas})`
-    ).join('; ');
-
     return {
-      nome: natureza.subgrupo, // Usa o nome da natureza da lista principal
+      nome: natureza.subgrupo,
       quantidade,
-      detalhes
+      registros: registrosDaNatureza // Passa a lista completa de registros para o render
     };
   });
 
@@ -211,9 +277,14 @@ function RelatorioObitosPage(): ReactElement {
             onChange={e => setDataRelatorio(e.target.value)}
           />
         </ControlGroup>
-        <AddButton onClick={() => setIsModalOpen(true)} disabled={loading}>
-          Adicionar Registro de Óbito
-        </AddButton>
+        <ActionsContainer>
+            <ClearButton onClick={handleLimparTabela} disabled={loading || registrosDoDia.length === 0}>
+                Limpar Tabela
+            </ClearButton>
+            <AddButton onClick={() => setIsModalOpen(true)} disabled={loading}>
+                Adicionar Registro
+            </AddButton>
+        </ActionsContainer>
       </ControlsContainer>
 
       {loading ? (
@@ -229,12 +300,21 @@ function RelatorioObitosPage(): ReactElement {
               </tr>
             </thead>
             <tbody>
-              {/* O map agora itera sobre a lista completa, garantindo que todas as naturezas apareçam */}
               {dadosTabela.map((item) => (
                 <tr key={item.nome}>
                   <Td>{item.nome}</Td>
                   <Td>{item.quantidade}</Td>
-                  <Td>{item.detalhes}</Td>
+                  <Td>
+                    {/* Mapeia os registros para criar os itens clicáveis */}
+                    {item.registros.map((r, index) => (
+                      <React.Fragment key={r.id}>
+                        <DetalheItem onClick={() => handleEditClick(r)}>
+                          {`(${(r.numero_ocorrencia || 'N/A')}) - ${r.obm_responsavel || 'N/A'} (${r.quantidade_vitimas})`}
+                        </DetalheItem>
+                        {index < item.registros.length - 1 && '; '}
+                      </React.Fragment>
+                    ))}
+                  </Td>
                 </tr>
               ))}
               <TotalRow>
@@ -252,8 +332,9 @@ function RelatorioObitosPage(): ReactElement {
           dataOcorrencia={dataRelatorio}
           naturezas={naturezasDoRelatorio}
           cidades={cidades}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSaveNewRegistro}
+          onClose={handleCloseModal}
+          onSave={handleSaveRegistro}
+          registroParaEditar={registroEmEdicao} // Passa o registro para o modal
         />
       )}
     </MainLayout>

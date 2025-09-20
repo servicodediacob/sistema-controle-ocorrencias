@@ -1,3 +1,5 @@
+// backend/src/controllers/plantaoController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -13,7 +15,8 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
       FROM ocorrencia_destaque od
       LEFT JOIN ocorrencias o ON od.ocorrencia_id = o.id
       LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      LEFT JOIN cidades c ON o.cidade_id = c.id -- A linha crucial
+      -- CORREÇÃO CRÍTICA: A junção agora é feita com a tabela 'cidades'
+      LEFT JOIN cidades c ON o.cidade_id = c.id
       LEFT JOIN crbms cr ON c.crbm_id = cr.id
       WHERE od.id = 1;
     `;

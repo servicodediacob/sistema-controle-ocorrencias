@@ -1,3 +1,4 @@
+// frontend/src/services/api.ts
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
 
@@ -121,6 +122,7 @@ export interface IEstatisticaLotePayload {
   }[];
 }
 
+// AJUSTE: Interface atualizada para incluir cidade_id
 export interface IObitoRegistro {
   id: number;
   data_ocorrencia: string;
@@ -128,6 +130,7 @@ export interface IObitoRegistro {
   natureza_nome: string;
   numero_ocorrencia: string;
   obm_responsavel: string;
+  cidade_id: number; // Essencial para preencher o select na edição
   quantidade_vitimas: number;
 }
 
@@ -135,7 +138,7 @@ export interface IObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
   numero_ocorrencia: string;
-  obm_responsavel: string;
+  obm_responsavel: string; // Será o ID da cidade em formato string
   quantidade_vitimas: number;
 }
 
@@ -182,6 +185,7 @@ const extractErrorMessage = (error: unknown): string => {
 // --- Funções da API Tipadas ---
 // ===============================================
 
+// ... (login, unidades, naturezas, ocorrências, etc. - sem alterações)
 export const login = async (email: string, senha: string): Promise<{ usuario: IUser; token: string }> => {
   try {
     const response = await api.post('/auth/login', { email, senha });
@@ -190,18 +194,13 @@ export const login = async (email: string, senha: string): Promise<{ usuario: IU
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// --- Funções para Unidades (Cidades) e CRBMs ---
 export const getUnidades = async (): Promise<IUnidade[]> => api.get('/unidades').then(res => res.data);
 export const createUnidade = async (data: { crbm_id: number; cidade_nome: string; }): Promise<IUnidade> => api.post('/unidades', data).then(res => res.data);
 export const updateUnidade = async (id: number, data: { crbm_id: number; cidade_nome: string; }): Promise<IUnidade> => api.put(`/unidades/${id}`, data).then(res => res.data);
 export const deleteUnidade = async (id: number): Promise<{ message: string }> => api.delete(`/unidades/${id}`).then(res => res.data);
 export const getCrbms = async (): Promise<ICrbm[]> => api.get('/crbms').then(res => res.data);
 export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').then(res => res.data);
-
-// --- Funções de Naturezas ---
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
-
 export const getNaturezasPorNomes = async (nomes: string[]): Promise<IDataApoio[]> => {
   try {
     const response = await api.post('/naturezas/por-nomes', { nomes });
@@ -210,12 +209,9 @@ export const getNaturezasPorNomes = async (nomes: string[]): Promise<IDataApoio[
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
 export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
 export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);
-
-// --- Funções de Ocorrências ---
 export const criarOcorrencia = async (payload: IOcorrenciaPayload): Promise<{ message: string; ocorrenciaId: number }> => {
   try {
     const response = await api.post('/ocorrencias', payload);
@@ -224,7 +220,6 @@ export const criarOcorrencia = async (payload: IOcorrenciaPayload): Promise<{ me
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const getOcorrencias = async (page = 1, limit = 10): Promise<IPaginatedOcorrencias> => {
   try {
     const response = await api.get(`/ocorrencias?page=${page}&limit=${limit}`);
@@ -233,7 +228,6 @@ export const getOcorrencias = async (page = 1, limit = 10): Promise<IPaginatedOc
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const updateOcorrencia = async (id: number, data: { data_ocorrencia: string; natureza_id: number; cidade_id: number; }): Promise<{ message: string; ocorrencia: IOcorrencia }> => {
   try {
     const response = await api.put(`/ocorrencias/${id}`, data);
@@ -242,7 +236,6 @@ export const updateOcorrencia = async (id: number, data: { data_ocorrencia: stri
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const deleteOcorrencia = async (id: number): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/ocorrencias/${id}`);
@@ -251,8 +244,6 @@ export const deleteOcorrencia = async (id: number): Promise<{ message: string }>
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// --- Funções de Dashboard, Usuários, Plantão ---
 export const getDashboardStats = async (): Promise<IDashboardStats> => {
   try {
     const response = await api.get('/dashboard/stats');
@@ -261,7 +252,6 @@ export const getDashboardStats = async (): Promise<IDashboardStats> => {
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const getUsuarios = async (): Promise<IUser[]> => {
   try {
     const response = await api.get('/usuarios');
@@ -270,7 +260,6 @@ export const getUsuarios = async (): Promise<IUser[]> => {
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const criarUsuario = async (data: Omit<IUser, 'id'> & { senha?: string }): Promise<{ message: string; usuario: IUser }> => {
   try {
     const response = await api.post('/usuarios', data);
@@ -279,7 +268,6 @@ export const criarUsuario = async (data: Omit<IUser, 'id'> & { senha?: string })
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const updateUsuario = async (id: number, data: Partial<IUser>): Promise<{ message: string; usuario: IUser }> => {
   try {
     const response = await api.put(`/usuarios/${id}`, data);
@@ -288,7 +276,6 @@ export const updateUsuario = async (id: number, data: Partial<IUser>): Promise<{
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const deleteUsuario = async (id: number): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/usuarios/${id}`);
@@ -297,7 +284,6 @@ export const deleteUsuario = async (id: number): Promise<{ message: string }> =>
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const getPlantao = async (): Promise<IPlantao> => {
   try {
     const response = await api.get('/plantao');
@@ -306,7 +292,6 @@ export const getPlantao = async (): Promise<IPlantao> => {
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const getSupervisores = async (): Promise<ISupervisor[]> => {
   try {
     const response = await api.get('/plantao/supervisores');
@@ -315,7 +300,6 @@ export const getSupervisores = async (): Promise<ISupervisor[]> => {
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const setOcorrenciaDestaque = async (ocorrencia_id: number | null): Promise<any> => {
   try {
     const response = await api.post('/plantao/destaque', { ocorrencia_id });
@@ -324,7 +308,6 @@ export const setOcorrenciaDestaque = async (ocorrencia_id: number | null): Promi
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const setSupervisorPlantao = async (usuario_id: number | null): Promise<any> => {
   try {
     const response = await api.post('/plantao/supervisor', { usuario_id });
@@ -333,9 +316,6 @@ export const setSupervisorPlantao = async (usuario_id: number | null): Promise<a
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// --- Funções para Estatísticas e Relatórios ---
-
 export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload): Promise<{ message: string }> => {
   try {
     const response = await api.post('/estatisticas/lote', payload);
@@ -344,7 +324,6 @@ export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const getRelatorio = async (data_inicio: string, data_fim: string): Promise<IRelatorioRow[]> => {
   try {
     const response = await api.get('/relatorio', { params: { data_inicio, data_fim } });
@@ -353,6 +332,7 @@ export const getRelatorio = async (data_inicio: string, data_fim: string): Promi
     throw new Error(extractErrorMessage(error));
   }
 };
+
 
 // --- Funções para o CRUD de Registros de Óbitos ---
 
@@ -374,11 +354,38 @@ export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promis
   }
 };
 
-export const deleteObitoRegistro = async (id: number): Promise<{ message: string }> => {
+// ========================================================
+// NOVO: Função para atualizar um registro de óbito
+// ========================================================
+export const atualizarObitoRegistro = async (id: number, payload: IObitoRegistroPayload): Promise<IObitoRegistro> => {
+  try {
+    const response = await api.put(`/obitos-registros/${id}`, payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+// ========================================================
+// NOVO: Função para deletar um registro de óbito
+// ========================================================
+export const deletarObitoRegistro = async (id: number): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/obitos-registros/${id}`);
     return response.data;
   } catch (error) {
     throw new Error(extractErrorMessage(error));
   }
+};
+
+// ========================================================
+// NOVO: Função para limpar todos os registros de uma data
+// ========================================================
+export const limparRegistrosDoDia = async (data: string): Promise<{ message: string }> => {
+    try {
+        const response = await api.delete('/obitos-registros', { params: { data } });
+        return response.data;
+    } catch (error) {
+        throw new Error(extractErrorMessage(error));
+    }
 };

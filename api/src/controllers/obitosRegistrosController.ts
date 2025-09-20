@@ -7,17 +7,18 @@ interface ObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
   numero_ocorrencia: string;
-  obm_responsavel: string;
+  obm_responsavel: string; // ID da cidade
   quantidade_vitimas: number;
 }
 
-// ... (a função getObitosPorData não precisa de alterações)
+/**
+ * @description Busca os registros de óbito para uma data, incluindo o ID da cidade.
+ */
 export const getObitosPorData = async (req: Request, res: Response) => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
     return res.status(400).json({ message: 'A data é obrigatória.' });
   }
-
   try {
     const query = `
       SELECT 
@@ -27,9 +28,11 @@ export const getObitosPorData = async (req: Request, res: Response) => {
         n.subgrupo as natureza_nome,
         obr.numero_ocorrencia,
         obr.obm_responsavel,
+        c.id as cidade_id,
         obr.quantidade_vitimas
       FROM obitos_registros obr
       JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
+      LEFT JOIN cidades c ON obr.obm_responsavel = c.nome
       WHERE obr.data_ocorrencia = $1
       ORDER BY n.subgrupo, obr.id;
     `;
@@ -41,67 +44,161 @@ export const getObitosPorData = async (req: Request, res: Response) => {
   }
 };
 
-
 /**
- * @description Cria um novo registro de óbito.
- * (A LÓGICA DE CORREÇÃO ESTÁ AQUI)
+ * @description Cria um novo registro de óbito, inserindo dados nas tabelas 'ocorrencias' e 'obitos_registros'.
  */
 export const criarObitoRegistro = async (req: Request, res: Response) => {
   const payload = req.body as ObitoRegistroPayload;
-  
-  // 1. OBTENÇÃO SEGURA DO ID DO USUÁRIO
-  // O ID do usuário vem do token decodificado pelo middleware 'proteger'.
-  // Se 'req.usuario' não existir, usamos 'null'.
   const usuario_id = req.usuario?.id || null;
 
-  // 2. VERIFICAÇÃO DE SEGURANÇA (OPCIONAL, MAS RECOMENDADO)
-  // Se o ID do usuário for null, significa que algo está errado com a autenticação.
   if (usuario_id === null) {
-    console.error('ERRO CRÍTICO: Tentativa de criar registro de óbito sem um usuário autenticado.');
-    return res.status(401).json({ message: 'Usuário não autenticado. Faça login novamente.' });
+    return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
 
+  const client = await db.pool.connect();
+
   try {
-    // Busca o nome da cidade usando o ID recebido do frontend
-    const cidadeResult = await db.query('SELECT nome FROM cidades WHERE id = $1', [payload.obm_responsavel]);
-    
+    await client.query('BEGIN');
+
+    // Busca o nome da cidade usando o ID recebido
+    const cidadeResult = await client.query('SELECT nome FROM cidades WHERE id = $1', [payload.obm_responsavel]);
     if (cidadeResult.rows.length === 0) {
-      return res.status(404).json({ message: 'A OBM (Cidade) selecionada não foi encontrada.' });
+      throw new Error('A OBM (Cidade) selecionada não foi encontrada.');
     }
     const nomeCidade = cidadeResult.rows[0].nome;
+    const cidade_id = parseInt(payload.obm_responsavel, 10);
 
-    // Insere o registro usando o nome da cidade e o ID do usuário obtido de forma segura
-    const query = `
+    // Insere na tabela principal 'ocorrencias' para alimentar o Dashboard
+    const ocorrenciaQuery = `
+      INSERT INTO ocorrencias (data_ocorrencia, natureza_id, cidade_id, quantidade_obitos)
+      VALUES ($1, $2, $3, $4);
+    `;
+    const ocorrenciaValues = [
+      payload.data_ocorrencia,
+      payload.natureza_id,
+      cidade_id,
+      payload.quantidade_vitimas
+    ];
+    await client.query(ocorrenciaQuery, ocorrenciaValues);
+
+    // Insere na tabela 'obitos_registros' para alimentar o Relatório de Óbitos
+    const obitoRegistroQuery = `
       INSERT INTO obitos_registros 
         (data_ocorrencia, natureza_id, numero_ocorrencia, obm_responsavel, quantidade_vitimas, usuario_id)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-    const values = [
+    const obitoRegistroValues = [
       payload.data_ocorrencia,
       payload.natureza_id,
       payload.numero_ocorrencia,
-      nomeCidade, // Nome da cidade, como corrigido anteriormente
+      nomeCidade,
       payload.quantidade_vitimas,
-      usuario_id  // ID do usuário obtido do token
+      usuario_id
     ];
-    const { rows } = await db.query(query, values);
+    const { rows } = await client.query(obitoRegistroQuery, obitoRegistroValues);
+
+    // Confirma a transação
+    await client.query('COMMIT');
+    
     return res.status(201).json(rows[0]);
+
   } catch (error) {
-    console.error('Erro ao criar registro de óbito:', error);
-    // Verifica se o erro é o de chave estrangeira que vimos
-    if ((error as any).code === '23503' && (error as any).constraint === 'fk_usuario_obito_registro') {
-      return res.status(400).json({ message: `O usuário com ID ${usuario_id} não foi encontrado no banco de dados. Por favor, faça login novamente.` });
-    }
-    return res.status(500).json({ message: 'Erro interno do servidor.' });
+    // Desfaz a transação em caso de erro
+    await client.query('ROLLBACK');
+    console.error('Erro ao criar registro de óbito (transação revertida):', error);
+    const message = error instanceof Error ? error.message : 'Erro interno do servidor.';
+    return res.status(500).json({ message });
+  } finally {
+    // Libera a conexão
+    client.release();
   }
 };
 
-// ... (as funções 'atualizarObitoRegistro' e 'deletarObitoRegistro' permanecem as mesmas)
-export const atualizarObitoRegistro = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Não implementado.' });
+/**
+ * @description Atualiza um registro de óbito existente.
+ */
+export const atualizarObitoRegistro = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const payload = req.body as ObitoRegistroPayload;
+    const usuario_id = req.usuario?.id || null;
+
+    if (usuario_id === null) {
+        return res.status(401).json({ message: 'Usuário não autenticado.' });
+    }
+
+    try {
+        const cidadeResult = await db.query('SELECT nome FROM cidades WHERE id = $1', [payload.obm_responsavel]);
+        if (cidadeResult.rows.length === 0) {
+            return res.status(404).json({ message: 'A OBM (Cidade) selecionada não foi encontrada.' });
+        }
+        const nomeCidade = cidadeResult.rows[0].nome;
+
+        const query = `
+            UPDATE obitos_registros SET
+                data_ocorrencia = $1,
+                natureza_id = $2,
+                numero_ocorrencia = $3,
+                obm_responsavel = $4,
+                quantidade_vitimas = $5,
+                usuario_id = $6
+            WHERE id = $7
+            RETURNING *;
+        `;
+        const values = [
+            payload.data_ocorrencia,
+            payload.natureza_id,
+            payload.numero_ocorrencia,
+            nomeCidade,
+            payload.quantidade_vitimas,
+            usuario_id,
+            id
+        ];
+
+        const { rows } = await db.query(query, values);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Registro de óbito não encontrado.' });
+        }
+        return res.status(200).json(rows[0]);
+
+    } catch (error) {
+        console.error('Erro ao atualizar registro de óbito:', error);
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
 };
 
-export const deletarObitoRegistro = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Não implementado.' });
+/**
+ * @description Deleta um registro de óbito específico.
+ */
+export const deletarObitoRegistro = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const result = await db.query('DELETE FROM obitos_registros WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Registro de óbito não encontrado.' });
+        }
+        return res.status(200).json({ message: 'Registro excluído com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao excluir registro de óbito:', error);
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+};
+
+/**
+ * @description Limpa todos os registros de óbito de uma data específica.
+ */
+export const limparRegistrosPorData = async (req: Request, res: Response) => {
+    const { data } = req.query;
+    if (!data || typeof data !== 'string') {
+        return res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
+    }
+
+    try {
+        const result = await db.query('DELETE FROM obitos_registros WHERE data_ocorrencia = $1', [data]);
+        return res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros foram excluídos.` });
+    } catch (error) {
+        console.error('Erro ao limpar registros de óbito por data:', error);
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
 };
