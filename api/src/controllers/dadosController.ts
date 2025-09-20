@@ -1,5 +1,3 @@
-// backend/src/controllers/dadosController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -170,6 +168,7 @@ export const getOcorrencias = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   try {
+    // CORREÇÃO: Adicionada a cláusula WHERE para filtrar os registros de óbito
     const ocorrenciasQuery = `
       SELECT 
         o.id, o.data_ocorrencia, o.quantidade_obitos, o.natureza_id, o.cidade_id,
@@ -180,13 +179,15 @@ export const getOcorrencias = async (req: Request, res: Response) => {
       JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
       JOIN cidades c ON o.cidade_id = c.id
       JOIN crbms cr ON c.crbm_id = cr.id
+      WHERE n.grupo != 'Relatório de Óbitos'
       ORDER BY o.data_ocorrencia DESC, o.id DESC
       LIMIT $1 OFFSET $2;
     `;
     
     const { rows: ocorrencias } = await db.query(ocorrenciasQuery, [limit, offset]);
 
-    const totalQuery = 'SELECT COUNT(*) FROM ocorrencias;';
+    // CORREÇÃO: A contagem total também deve aplicar o filtro
+    const totalQuery = "SELECT COUNT(*) FROM ocorrencias o JOIN naturezas_ocorrencia n ON o.natureza_id = n.id WHERE n.grupo != 'Relatório de Óbitos';";
     const { rows: totalRows } = await db.query(totalQuery);
     const total = parseInt(totalRows[0].count, 10);
 
@@ -243,5 +244,3 @@ export const deleteOcorrencia = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Erro interno do servidor ao excluir a ocorrência.' });
   }
 };
-
-// -- FIM -- //
