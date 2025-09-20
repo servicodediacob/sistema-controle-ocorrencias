@@ -9,6 +9,7 @@
     "migrate:dev": "node run.js .env.development src/scripts/migrate.ts",
     "migrate:prod": "node run.js .env.production src/scripts/migrate.ts",
     "seed:dev": "node run.js .env.development src/db/seed.ts",
+    "seed:prod": "node run.js .env.production src/db/seed.ts",
     "test": "jest --runInBand"
   },
   "dependencies": {
