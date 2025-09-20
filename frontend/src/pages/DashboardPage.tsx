@@ -7,8 +7,9 @@ import { device } from '../styles/theme';
 import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
 import PlantaoWidget from '../components/PlantaoWidget';
+import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 
-// --- Styled Components ---
+// --- Styled Components (sem alterações) ---
 
 const FlexContainer = styled.div`
   display: flex;
@@ -23,7 +24,6 @@ const FlexContainer = styled.div`
   @media ${device.tablet} {
     flex-direction: column;
     gap: 1rem;
-    /* IMPORTANTE: Remove o flex-wrap quando em coluna para evitar comportamentos inesperados */
     flex-wrap: nowrap; 
   }
 `;
@@ -37,7 +37,7 @@ const Card = styled.div`
   min-width: 200px;
 
   @media ${device.tablet} {
-    flex: 1 0 auto; // Permite que cresça horizontalmente, mas não verticalmente
+    flex: 1 0 auto;
   }
 `;
 
@@ -119,8 +119,6 @@ const ReportTable = styled.table`
   }
 `;
 
-// --- CORREÇÃO PRINCIPAL AQUI ---
-
 const WidgetContainer = styled.div`
   background-color: #2c2c2c;
   border-radius: 8px;
@@ -130,7 +128,7 @@ const WidgetContainer = styled.div`
 
   @media ${device.tablet} {
     padding: 1rem;
-    flex-grow: 0; // Impede que o widget cresça verticalmente
+    flex-grow: 0;
   }
 `;
 
@@ -143,11 +141,9 @@ const TableContainer = styled.div`
 
   @media ${device.tablet} {
     padding: 1rem;
-    flex-grow: 0; // Impede que a tabela cresça verticalmente
+    flex-grow: 0;
   }
 `;
-
-// --- FIM DA CORREÇÃO PRINCIPAL ---
 
 const WidgetTitle = styled.h3`
   margin-top: 0;
@@ -185,9 +181,7 @@ const EmptyState = styled.p`
   color: #888;
 `;
 
-
-// --- Componentes Funcionais (A lógica permanece a mesma) ---
-// O restante do arquivo não precisa de alterações.
+// --- Componentes Funcionais (sem alterações na lógica interna) ---
 
 interface StatCardProps { title: string; value: number | string; loading: boolean; }
 function StatCard({ title, value, loading }: StatCardProps) {
@@ -353,9 +347,12 @@ function DashboardPage(): ReactElement {
         <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
       </FlexContainer>
 
+      {/* ORDEM CORRIGIDA */}
       <FlexContainer>
         <RelatorioWidget />
       </FlexContainer>
+
+      <ObitosDoDiaWidget />
 
       <FlexContainer>
         <DataTable
