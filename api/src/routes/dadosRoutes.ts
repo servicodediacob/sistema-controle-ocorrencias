@@ -1,5 +1,3 @@
-// backend/src/routes/dadosRoutes.ts
-
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 
@@ -25,7 +23,7 @@ import {
   criarObitoRegistro,
   atualizarObitoRegistro,
   deletarObitoRegistro,
-  limparRegistrosPorData // NOVO: Importa a nova função
+  limparRegistrosPorData
 } from '../controllers/obitosRegistrosController';
 
 const router = Router();
@@ -63,14 +61,15 @@ router.route('/relatorio')
 router.route('/obitos-registros')
   .get(proteger, getObitosPorData)
   .post(proteger, criarObitoRegistro)
-  // NOVO: Rota para limpar todos os registros de uma data específica
   .delete(proteger, limparRegistrosPorData);
 
 router.route('/obitos-registros/:id')
-  // NOVO: Rota para atualizar um registro específico
   .put(proteger, atualizarObitoRegistro)
-  // NOVO: Rota para deletar um registro específico
   .delete(proteger, deletarObitoRegistro);
+
+// --- Rota para o widget de óbitos do dia no Dashboard ---
+router.route('/dashboard/obitos-do-dia')
+  .get(proteger, getObitosPorData);
 
 
 export default router;

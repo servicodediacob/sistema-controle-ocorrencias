@@ -1,5 +1,3 @@
-// backend/src/controllers/obitosRegistrosController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -45,7 +43,7 @@ export const getObitosPorData = async (req: Request, res: Response) => {
 };
 
 /**
- * @description Cria um novo registro de óbito, inserindo dados nas tabelas 'ocorrencias' e 'obitos_registros'.
+ * @description Cria um novo registro de óbito, inserindo dados APENAS na tabela 'obitos_registros'.
  */
 export const criarObitoRegistro = async (req: Request, res: Response) => {
   const payload = req.body as ObitoRegistroPayload;
@@ -55,33 +53,15 @@ export const criarObitoRegistro = async (req: Request, res: Response) => {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
 
-  const client = await db.pool.connect();
-
   try {
-    await client.query('BEGIN');
-
     // Busca o nome da cidade usando o ID recebido
-    const cidadeResult = await client.query('SELECT nome FROM cidades WHERE id = $1', [payload.obm_responsavel]);
+    const cidadeResult = await db.query('SELECT nome FROM cidades WHERE id = $1', [payload.obm_responsavel]);
     if (cidadeResult.rows.length === 0) {
-      throw new Error('A OBM (Cidade) selecionada não foi encontrada.');
+      return res.status(404).json({ message: 'A OBM (Cidade) selecionada não foi encontrada.' });
     }
     const nomeCidade = cidadeResult.rows[0].nome;
-    const cidade_id = parseInt(payload.obm_responsavel, 10);
 
-    // Insere na tabela principal 'ocorrencias' para alimentar o Dashboard
-    const ocorrenciaQuery = `
-      INSERT INTO ocorrencias (data_ocorrencia, natureza_id, cidade_id, quantidade_obitos)
-      VALUES ($1, $2, $3, $4);
-    `;
-    const ocorrenciaValues = [
-      payload.data_ocorrencia,
-      payload.natureza_id,
-      cidade_id,
-      payload.quantidade_vitimas
-    ];
-    await client.query(ocorrenciaQuery, ocorrenciaValues);
-
-    // Insere na tabela 'obitos_registros' para alimentar o Relatório de Óbitos
+    // Insere APENAS na tabela 'obitos_registros'
     const obitoRegistroQuery = `
       INSERT INTO obitos_registros 
         (data_ocorrencia, natureza_id, numero_ocorrencia, obm_responsavel, quantidade_vitimas, usuario_id)
@@ -96,22 +76,14 @@ export const criarObitoRegistro = async (req: Request, res: Response) => {
       payload.quantidade_vitimas,
       usuario_id
     ];
-    const { rows } = await client.query(obitoRegistroQuery, obitoRegistroValues);
-
-    // Confirma a transação
-    await client.query('COMMIT');
+    const { rows } = await db.query(obitoRegistroQuery, obitoRegistroValues);
     
     return res.status(201).json(rows[0]);
 
   } catch (error) {
-    // Desfaz a transação em caso de erro
-    await client.query('ROLLBACK');
-    console.error('Erro ao criar registro de óbito (transação revertida):', error);
+    console.error('Erro ao criar registro de óbito:', error);
     const message = error instanceof Error ? error.message : 'Erro interno do servidor.';
     return res.status(500).json({ message });
-  } finally {
-    // Libera a conexão
-    client.release();
   }
 };
 

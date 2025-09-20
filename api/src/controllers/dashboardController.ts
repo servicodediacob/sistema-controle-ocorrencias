@@ -1,5 +1,3 @@
-// backend/src/controllers/dashboardController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -12,20 +10,30 @@ interface DashboardStats {
 
 export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
   try {
+    // CORREÇÃO: A query foi reestruturada para somar óbitos de ambas as tabelas
     const query = `
-      WITH total_ocorrencias AS (
-        SELECT COUNT(*) AS total FROM ocorrencias
+      WITH total_ocorrencias_gerais AS (
+        -- Conta apenas as ocorrências que NÃO são do relatório de óbitos
+        SELECT COUNT(o.id) AS total 
+        FROM ocorrencias o
+        LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
+        WHERE n.grupo != 'Relatório de Óbitos'
       ),
-      total_obitos AS (
-        -- CORREÇÃO: Usar SUM para somar a quantidade de óbitos de cada ocorrência
+      total_obitos_registros AS (
+        -- Soma as vítimas da tabela específica de óbitos
+        SELECT SUM(quantidade_vitimas) AS total FROM obitos_registros
+      ),
+      total_obitos_ocorrencias AS (
+        -- Soma os óbitos da tabela geral (caso existam)
         SELECT SUM(quantidade_obitos) AS total FROM ocorrencias
       ),
       ocorrencias_por_natureza AS (
         SELECT
-          CONCAT(n.grupo, ' - ', n.subgrupo) AS nome,
+          n.subgrupo AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
         JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
+        WHERE n.grupo != 'Relatório de Óbitos' -- Exclui os óbitos da contagem por natureza
         GROUP BY nome
         ORDER BY total DESC
       ),
@@ -34,15 +42,15 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
           cr.nome AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
-        -- CORREÇÃO CRÍTICA: A junção agora é feita com a tabela 'cidades'
         JOIN cidades c ON o.cidade_id = c.id
         JOIN crbms cr ON c.crbm_id = cr.id
+        WHERE o.natureza_id NOT IN (SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos') -- Exclui os óbitos da contagem por CRBM
         GROUP BY cr.nome
         ORDER BY total DESC
       )
       SELECT json_build_object(
-        'totalOcorrencias', (SELECT total FROM total_ocorrencias),
-        'totalObitos', COALESCE((SELECT total FROM total_obitos), 0),
+        'totalOcorrencias', COALESCE((SELECT total FROM total_ocorrencias_gerais), 0),
+        'totalObitos', COALESCE((SELECT total FROM total_obitos_registros), 0) + COALESCE((SELECT total FROM total_obitos_ocorrencias), 0),
         'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(ocorrencias_por_natureza) FROM ocorrencias_por_natureza), '[]'::json),
         'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(ocorrencias_por_crbm) FROM ocorrencias_por_crbm), '[]'::json)
       ) AS stats;
