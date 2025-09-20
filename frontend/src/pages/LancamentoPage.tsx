@@ -1,29 +1,33 @@
-// src/pages/LancamentoPage.tsx
+// Caminho: frontend/src/pages/LancamentoPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { getCidades, getNaturezas, ICidade, IDataApoio, registrarEstatisticasLote } from '../services/api';
+import { 
+  getCidades, 
+  getNaturezas, 
+  ICidade, 
+  IDataApoio, 
+  registrarEstatisticasLote,
+  getEstatisticasAgrupadasPorData,
+  IEstatisticaAgrupada,
+  limparEstatisticasDoDia // <-- Importa a nova função
+} from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
-// 1. Importar o layout principal
 import MainLayout from '../components/MainLayout';
+import LancamentoModal from '../components/LancamentoModal';
+import LancamentoTabela from '../components/LancamentoTabela';
 
-// --- Styled Components (sem alterações na estilização interna) ---
-// REMOVIDO: Container, Header, BackLink, pois o MainLayout cuida disso.
-
-const Form = styled.form`
+// --- Styled Components ---
+const ControlsContainer = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
-`;
-
-const TopControls = styled.div`
-  display: flex;
-  gap: 2rem;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-end;
   background-color: #2c2c2c;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 8px;
+  margin-bottom: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 `;
 
 const ControlGroup = styled.div`
@@ -37,201 +41,198 @@ const Label = styled.label`
   color: #aaa;
 `;
 
-const Select = styled.select`
-  padding: 0.75rem;
-  background-color: #3a3a3a;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 4px;
-  min-width: 250px;
-`;
-
 const InputDate = styled.input`
-  padding: 0.65rem;
-  background-color: #3a3a3a;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 4px;
-`;
-
-const Fieldset = styled.fieldset`
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 1.5rem;
-`;
-
-const Legend = styled.legend`
-  padding: 0 0.5rem;
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: #e9c46a;
-`;
-
-const FormGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-`;
-
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const InputLabel = styled.label`
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-`;
-
-const NumberInput = styled.input`
   padding: 0.75rem;
   background-color: #3a3a3a;
   border: 1px solid #555;
   color: white;
   border-radius: 4px;
-  font-size: 1rem;
-  width: 100%;
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+const ActionsGroup = styled.div`
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
 `;
 
-const SubmitButton = styled.button`
+const ActionButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;
-  background-color: #3a7ca5;
-  color: white;
   font-size: 1rem;
   cursor: pointer;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
-const ClearButton = styled(SubmitButton)`
+const AddButton = styled(ActionButton)`
+  background-color: #2a9d8f;
+  color: white;
+`;
+
+const ClearButton = styled(ActionButton)`
   background-color: #e76f51;
+  color: white;
 `;
 
+const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
+    { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
+    { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
+    { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
+    { subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
+    { subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
+    { subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
+    { subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
+    { subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
+    { subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
+    { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
+    { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
+    { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
+    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
+    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
+    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+];
 
 function LancamentoPage() {
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [selectedCidade, setSelectedCidade] = useState<string>('');
+  const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
+  const colunasNatureza = ORDEM_COLUNAS;
+
   const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0]);
-  const [valores, setValores] = useState<{ [key: number]: string }>({});
-  
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
   const { addNotification } = useNotification();
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchApoio = async () => {
       try {
-        setLoading(true);
         const [cidadesData, naturezasData] = await Promise.all([getCidades(), getNaturezas()]);
         setCidades(cidadesData);
         setNaturezas(naturezasData);
       } catch (error) {
-        addNotification('Erro ao carregar dados para o formulário.', 'error');
-      } finally {
-        setLoading(false);
+        addNotification('Erro ao carregar dados de apoio.', 'error');
       }
-    }
-    fetchData();
+    };
+    fetchApoio();
   }, [addNotification]);
 
-  const handleValueChange = (naturezaId: number, valor: string) => {
-    setValores(prev => ({ ...prev, [naturezaId]: valor }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCidade) {
-      addNotification('Por favor, selecione uma OBM (Cidade).', 'error');
-      return;
+  const fetchDadosTabela = useCallback(async () => {
+    if (!dataRegistro) return;
+    setLoading(true);
+    try {
+      const dados = await getEstatisticasAgrupadasPorData(dataRegistro);
+      setDadosTabela(dados);
+    } catch (error) {
+      addNotification('Falha ao carregar lançamentos do dia.', 'error');
+    } finally {
+      setLoading(false);
     }
+  }, [dataRegistro, addNotification]);
 
+  useEffect(() => {
+    fetchDadosTabela();
+  }, [fetchDadosTabela]);
+
+  const handleSave = async (formData: any) => {
     const payload = {
-      data_registro: dataRegistro,
-      cidade_id: parseInt(selectedCidade, 10),
-      estatisticas: Object.entries(valores)
+      data_registro: formData.data_ocorrencia,
+      cidade_id: formData.cidade_id,
+      estatisticas: Object.entries(formData.quantidades)
         .map(([natureza_id, quantidadeStr]) => ({
           natureza_id: parseInt(natureza_id, 10),
-          quantidade: parseInt(quantidadeStr, 10) || 0,
+          quantidade: parseInt(quantidadeStr as string, 10) || 0,
         }))
         .filter(({ quantidade }) => quantidade > 0),
     };
 
-    if (payload.estatisticas.length === 0) {
+    if (payload.estatisticas.length === 0 && !itemParaEditar) {
       addNotification('Nenhum valor foi preenchido.', 'info');
       return;
     }
 
     try {
-      await registrarEstatisticasLote(payload);
-      addNotification('Dados enviados com sucesso!', 'success');
-      setValores({});
+      // Para edição, primeiro limpamos os dados antigos da cidade
+      if (itemParaEditar) {
+        await limparEstatisticasDoDia(payload.data_registro);
+      }
+      
+      const response = await registrarEstatisticasLote(payload);
+      addNotification(itemParaEditar ? 'Lançamentos atualizados com sucesso!' : response.message, 'success');
+      
+      setIsModalOpen(false);
+      setItemParaEditar(null);
+      fetchDadosTabela();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao enviar os dados.';
       addNotification(message, 'error');
     }
   };
 
-  const naturezasAgrupadas = naturezas.reduce((acc, nat) => {
-    const grupo = nat.grupo || 'Outros';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(nat);
-    return acc;
-  }, {} as { [key: string]: IDataApoio[] });
+  const handleEdit = (cidade: ICidade, dadosAtuais: Record<string, number>) => {
+    setItemParaEditar({ cidade, dados: dadosAtuais });
+    setIsModalOpen(true);
+  };
+
+  const handleLimparTabela = async () => {
+    const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+    if (window.confirm(`Tem certeza que deseja excluir TODOS os lançamentos do dia ${dataFormatada}? Esta ação não pode ser desfeita.`)) {
+      try {
+        setLoading(true);
+        await limparEstatisticasDoDia(dataRegistro);
+        addNotification('Todos os registros do dia foram excluídos.', 'success');
+        fetchDadosTabela();
+      } catch (error) {
+        addNotification('Falha ao limpar os registros.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
-    // 2. Envolver o conteúdo com MainLayout
     <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
-      {loading ? (
-        <p>Carregando formulário...</p>
-      ) : (
-        <Form onSubmit={handleSubmit}>
-          <TopControls>
-            <ControlGroup>
-              <Label htmlFor="cidade-select">OBM (Obrigatório)</Label>
-              <Select id="cidade-select" value={selectedCidade} onChange={e => setSelectedCidade(e.target.value)} required>
-                <option value="">Selecione uma OBM</option>
-                {cidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
-              </Select>
-            </ControlGroup>
-            <ControlGroup>
-              <Label htmlFor="data-registro">Data de Registro</Label>
-              <InputDate id="data-registro" type="date" value={dataRegistro} onChange={e => setDataRegistro(e.target.value)} required />
-            </ControlGroup>
-          </TopControls>
+      <ControlsContainer>
+        <ControlGroup>
+          <Label htmlFor="data-registro">Data de Visualização</Label>
+          <InputDate 
+            id="data-registro" 
+            type="date" 
+            value={dataRegistro} 
+            onChange={e => setDataRegistro(e.target.value)} 
+          />
+        </ControlGroup>
+        <ActionsGroup>
+            <ClearButton onClick={handleLimparTabela} disabled={loading || dadosTabela.length === 0}>
+                Limpar Plantão
+            </ClearButton>
+            <AddButton onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }} disabled={cidades.length === 0}>
+                Adicionar Lançamento
+            </AddButton>
+        </ActionsGroup>
+      </ControlsContainer>
 
-          {Object.entries(naturezasAgrupadas).map(([grupo, nats]) => (
-            <Fieldset key={grupo}>
-              <Legend>{grupo}</Legend>
-              <FormGrid>
-                {nats.map(nat => (
-                  <InputGroup key={nat.id}>
-                    <InputLabel htmlFor={`natureza-${nat.id}`}>{nat.subgrupo}</InputLabel>
-                    <NumberInput
-                      id={`natureza-${nat.id}`}
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={valores[nat.id] || ''}
-                      onChange={e => handleValueChange(nat.id, e.target.value)}
-                    />
-                  </InputGroup>
-                ))}
-              </FormGrid>
-            </Fieldset>
-          ))}
-          
-          <ButtonContainer>
-            <SubmitButton type="submit">Enviar Dados</SubmitButton>
-            <ClearButton type="button" onClick={() => setValores({})}>Limpar Formulário</ClearButton>
-          </ButtonContainer>
-        </Form>
+      <LancamentoTabela
+        dadosApi={dadosTabela}
+        cidades={cidades}
+        naturezas={colunasNatureza}
+        loading={loading || cidades.length === 0}
+        onEdit={handleEdit}
+      />
+
+      {isModalOpen && (
+        <LancamentoModal
+          onClose={() => { setIsModalOpen(false); setItemParaEditar(null); }}
+          onSave={handleSave}
+          cidades={cidades}
+          naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
+          itemParaEditar={itemParaEditar}
+        />
       )}
     </MainLayout>
   );

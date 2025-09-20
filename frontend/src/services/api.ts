@@ -1,4 +1,5 @@
-// frontend/src/services/api.ts
+// Caminho: frontend/src/services/api.ts
+
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
 
@@ -13,6 +14,7 @@ export interface IDataApoio {
   nome?: string;
   grupo?: string;
   subgrupo?: string;
+  abreviacao?: string | null;
   descricao?: string;
 }
 
@@ -122,7 +124,6 @@ export interface IEstatisticaLotePayload {
   }[];
 }
 
-// AJUSTE: Interface atualizada para incluir cidade_id
 export interface IObitoRegistro {
   id: number;
   data_ocorrencia: string;
@@ -130,7 +131,7 @@ export interface IObitoRegistro {
   natureza_nome: string;
   numero_ocorrencia: string;
   obm_responsavel: string;
-  cidade_id: number; // Essencial para preencher o select na edição
+  cidade_id: number;
   quantidade_vitimas: number;
 }
 
@@ -138,9 +139,18 @@ export interface IObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
   numero_ocorrencia: string;
-  obm_responsavel: string; // Será o ID da cidade em formato string
+  obm_responsavel: string;
   quantidade_vitimas: number;
 }
+
+export interface IEstatisticaAgrupada {
+  crbm_nome: string;
+  cidade_nome: string;
+  natureza_nome: string;
+  natureza_abreviacao: string | null;
+  quantidade: number;
+}
+
 
 interface ApiError {
   message: string;
@@ -151,7 +161,7 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
 
 const api = axios.create({
   baseURL: baseURL,
@@ -185,7 +195,6 @@ const extractErrorMessage = (error: unknown): string => {
 // --- Funções da API Tipadas ---
 // ===============================================
 
-// ... (login, unidades, naturezas, ocorrências, etc. - sem alterações)
 export const login = async (email: string, senha: string): Promise<{ usuario: IUser; token: string }> => {
   try {
     const response = await api.post('/auth/login', { email, senha });
@@ -332,10 +341,6 @@ export const getRelatorio = async (data_inicio: string, data_fim: string): Promi
     throw new Error(extractErrorMessage(error));
   }
 };
-
-
-// --- Funções para o CRUD de Registros de Óbitos ---
-
 export const getObitosPorData = async (data: string): Promise<IObitoRegistro[]> => {
   try {
     const response = await api.get('/obitos-registros', { params: { data } });
@@ -344,7 +349,6 @@ export const getObitosPorData = async (data: string): Promise<IObitoRegistro[]> 
     throw new Error(extractErrorMessage(error));
   }
 };
-
 export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promise<IObitoRegistro> => {
   try {
     const response = await api.post('/obitos-registros', payload);
@@ -353,10 +357,6 @@ export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promis
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// ========================================================
-// NOVO: Função para atualizar um registro de óbito
-// ========================================================
 export const atualizarObitoRegistro = async (id: number, payload: IObitoRegistroPayload): Promise<IObitoRegistro> => {
   try {
     const response = await api.put(`/obitos-registros/${id}`, payload);
@@ -365,10 +365,6 @@ export const atualizarObitoRegistro = async (id: number, payload: IObitoRegistro
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// ========================================================
-// NOVO: Função para deletar um registro de óbito
-// ========================================================
 export const deletarObitoRegistro = async (id: number): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/obitos-registros/${id}`);
@@ -377,13 +373,25 @@ export const deletarObitoRegistro = async (id: number): Promise<{ message: strin
     throw new Error(extractErrorMessage(error));
   }
 };
-
-// ========================================================
-// NOVO: Função para limpar todos os registros de uma data
-// ========================================================
 export const limparRegistrosDoDia = async (data: string): Promise<{ message: string }> => {
     try {
         const response = await api.delete('/obitos-registros', { params: { data } });
+        return response.data;
+    } catch (error) {
+        throw new Error(extractErrorMessage(error));
+    }
+};
+export const getEstatisticasAgrupadasPorData = async (data: string): Promise<IEstatisticaAgrupada[]> => {
+  try {
+    const response = await api.get('/estatisticas/por-data', { params: { data } });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+export const limparEstatisticasDoDia = async (data: string): Promise<{ message: string }> => {
+    try {
+        const response = await api.delete('/estatisticas/por-data', { params: { data } });
         return response.data;
     } catch (error) {
         throw new Error(extractErrorMessage(error));

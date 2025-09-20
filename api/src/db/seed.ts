@@ -1,26 +1,21 @@
+// Caminho: backend/src/db/seed.ts
+
 import bcrypt from 'bcryptjs';
 import db from './index';
 
 async function seedDatabase() {
   const client = await db.pool.connect();
-  console.log('🚀 Iniciando o processo de seeding (v5.0 - Lista completa de naturezas)...');
+  console.log('🚀 Iniciando o processo de seeding (v6.0 - Lista completa de naturezas com abreviações)...');
 
   try {
     await client.query('BEGIN');
 
-    // Limpar tabelas para evitar duplicatas
+    // Limpar tabelas
     console.log('🧹 Limpando tabelas existentes...');
-    await client.query('DELETE FROM supervisor_plantao');
-    await client.query('DELETE FROM ocorrencia_destaque');
-    await client.query('DELETE FROM obitos');
-    await client.query('DELETE FROM ocorrencias');
-    await client.query('DELETE FROM usuarios');
-    await client.query('DELETE FROM cidades');
-    await client.query('DELETE FROM crbms');
-    await client.query('DELETE FROM naturezas_ocorrencia');
-    console.log('✅ Tabelas existentes foram limpas.');
+    await client.query('TRUNCATE TABLE obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, obitos, ocorrencias, usuarios, cidades, crbms, naturezas_ocorrencia RESTART IDENTITY CASCADE');
+    console.log('✅ Tabelas limpas e sequências reiniciadas.');
 
-    // 1. Inserir CRBMs (sem alterações)
+    // 1. Inserir CRBMs
     console.log('Inserindo CRBMs...');
     const crbmResult = await client.query(`
       INSERT INTO crbms (nome) VALUES
@@ -31,16 +26,16 @@ async function seedDatabase() {
     const crbmMap = new Map<string, number>(crbmResult.rows.map(r => [r.nome, r.id]));
     console.log('-> CRBMs inseridos.');
 
-    // 2. Inserir Cidades (sem alterações)
+    // 2. Inserir Cidades
     console.log('Inserindo Cidades...');
     const cidadesPorCrbm = {
-      '1º CRBM': ['Goiânia Diurno', 'Goiânia Noturno'],
-      '2º CRBM': ['Rio Verde', 'Jataí', 'Mineiros', 'Santa Helena', 'Palmeiras', 'Quirinópolis', 'Chapadão do Céu', 'Acreúna'],
+      '1º CRBM': ['Goiânia - Diurno', 'Goiânia - Noturno'],
+      '2º CRBM': ['Rio Verde', 'Jataí', 'Mineiros', 'Santa Helena', 'Palmeiras', 'Quirinópolis', 'Chapadão do Céu', 'Acreuna'],
       '3º CRBM': ['Anápolis', 'Pirenópolis', 'Ceres', 'Jaraguá', 'Silvânia', 'Itapaci'],
       '4º CRBM': ['Luziânia', 'Águas Lindas', 'Cristalina', 'Valparaíso', 'Santo Antônio do Descoberto'],
       '5º CRBM': ['Aparecida de Goiânia - Diurno', 'Aparecida de Goiânia - Noturno', 'Senador Canedo', 'Trindade', 'Inhumas', 'Goianira', 'Nerópolis', 'Bela Vista'],
       '6º CRBM': ['Goiás', 'Iporá', 'Itaberaí', 'São Luís', 'Aruanã'],
-      '7º CRBM': ['Itumbiara', 'Caldas', 'Catalão', 'Morrinhos', 'Pires do Rio', 'Goiatuba', 'Ipameri'],
+      '7º CRBM': ['Itumbiara', 'Caldas Novas', 'Catalão', 'Morrinhos', 'Pires do Rio', 'Goiatuba', 'Ipameri'],
       '8º CRBM': ['Porangatu', 'Goianésia', 'Minaçu', 'Niquelândia', 'Uruaçu', 'São Miguel do Araguaia'],
       '9º CRBM': ['Formosa', 'Planaltina', 'Posse', 'Campos Belos'],
     };
@@ -52,28 +47,48 @@ async function seedDatabase() {
     }
     console.log('-> Cidades inseridas.');
 
-    // 3. Inserir Naturezas de Ocorrência (LISTA COMPLETA ADICIONADA AQUI)
+    // 3. Inserir Naturezas de Ocorrência com Abreviações
     console.log('Inserindo Naturezas de Ocorrência...');
     const naturezasParaInserir = [
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTE DE TRÂNSITO' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'AFOGAMENTO OU CADÁVER' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ARMA DE FOGO/BRANCA/AGRESSÃO' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'AUTO EXTÉRMÍNIO' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'MAL SÚBITO' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTES COM VIATURAS' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'OUTROS' },
-      // Adicione outras naturezas gerais aqui se necessário
-      { grupo: 'Incêndio', subgrupo: 'Incêndio em Vegetação' },
-      { grupo: 'Atendimento Pré-Hospitalar', subgrupo: 'Clínico' },
-      { grupo: 'Trânsito', subgrupo: 'Colisão Carro x Moto' }
+      // Resgate
+      { grupo: 'Resgate', subgrupo: 'Resgate', abreviacao: 'RESGATE' },
+      // Incêndio
+      { grupo: 'Incêndio', subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
+      { grupo: 'Incêndio', subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
+      { grupo: 'Incêndio', subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
+      // Busca e Salvamento
+      { grupo: 'Busca e Salvamento', subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
+      { grupo: 'Busca e Salvamento', subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
+      // Ações Preventivas
+      { grupo: 'Ações Preventivas', subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
+      { grupo: 'Ações Preventivas', subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
+      { grupo: 'Ações Preventivas', subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
+      { grupo: 'Ações Preventivas', subgrupo: 'Outros', abreviacao: 'AP. OUT' },
+      // Atividades Técnicas
+      { grupo: 'Atividades Técnicas', subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
+      { grupo: 'Atividades Técnicas', subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
+      // Produtos Perigosos
+      { grupo: 'Produtos Perigosos', subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+      { grupo: 'Produtos Perigosos', subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
+      // Defesa Civil
+      { grupo: 'Defesa Civil', subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
+      { grupo: 'Defesa Civil', subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+      // Relatório de Óbitos (sem abreviação visível na tabela principal)
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTE DE TRÂNSITO', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'AFOGAMENTO OU CADÁVER', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ARMA DE FOGO/BRANCA/AGRESSÃO', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'AUTO EXTÉRMÍNIO', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'MAL SÚBITO', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTES COM VIATURAS', abreviacao: null },
+      { grupo: 'Relatório de Óbitos', subgrupo: 'OUTROS', abreviacao: null },
     ];
 
     for (const nat of naturezasParaInserir) {
-      await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ($1, $2) ON CONFLICT (grupo, subgrupo) DO NOTHING", [nat.grupo, nat.subgrupo]);
+      await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES ($1, $2, $3) ON CONFLICT (grupo, subgrupo) DO NOTHING", [nat.grupo, nat.subgrupo, nat.abreviacao]);
     }
     console.log('-> Naturezas de Ocorrência inseridas.');
 
-    // 4. Inserir Usuário Supervisor (sem alterações)
+    // 4. Inserir Usuário Supervisor
     console.log('Inserindo Usuário Supervisor...');
     const senhaPlana = 'supervisor123';
     const salt = await bcrypt.genSalt(10);
@@ -84,7 +99,7 @@ async function seedDatabase() {
     );
     console.log('-> Usuário supervisor inserido.');
 
-    // 5. Inserir configurações padrão (sem alterações)
+    // 5. Inserir configurações padrão
     console.log('Inicializando tabelas de gestão...');
     await client.query('INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');
     await client.query('INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');

@@ -1,3 +1,5 @@
+// Caminho: backend/src/routes/dadosRoutes.ts
+
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 
@@ -15,7 +17,12 @@ import {
 } from '../controllers/dadosController';
 
 // Controller do formulário de lançamento em lote e relatório estatístico
-import { registrarEstatisticas, getRelatorioEstatisticas } from '../controllers/estatisticasController';
+import { 
+  registrarEstatisticas, 
+  getRelatorioEstatisticas,
+  getEstatisticasPorData,
+  limparEstatisticasPorData
+} from '../controllers/estatisticasController';
 
 // Controller para o novo CRUD de registros de óbitos
 import { 
@@ -56,6 +63,11 @@ router.route('/estatisticas/lote')
 // --- Rota para buscar os dados do relatório estatístico consolidado ---
 router.route('/relatorio')
   .get(proteger, getRelatorioEstatisticas);
+
+// --- Rota para buscar e limpar os dados da tabela de lançamentos ---
+router.route('/estatisticas/por-data')
+  .get(proteger, getEstatisticasPorData)
+  .delete(proteger, limparEstatisticasPorData);
 
 // --- Rotas para o CRUD de Registros de Óbitos ---
 router.route('/obitos-registros')
