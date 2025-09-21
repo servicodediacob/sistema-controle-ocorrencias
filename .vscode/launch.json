@@ -1,27 +1,28 @@
+// .vscode/launch.json
 {
   "version": "0.2.0",
   "configurations": [
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Backend",
+      "name": "Debug API", // Nome atualizado para clareza
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "cwd": "${workspaceFolder}/backend",
-      "program": "${workspaceFolder}/backend/src/server.ts",
+      // ======================= INÍCIO DA CORREÇÃO =======================
+      "cwd": "${workspaceFolder}/api", // Caminho corrigido de 'backend' para 'api'
+      "program": "${workspaceFolder}/api/src/server.ts", // Caminho corrigido
+      // ======================= FIM DA CORREÇÃO =======================
       "runtimeArgs": [
-        // Usa ts-node para executar o TypeScript diretamente
         "--require", "ts-node/register",
-        // Carrega as variáveis de ambiente
         "--require", "dotenv/config"
       ],
       "env": {
-        // Aponta para o arquivo de ambiente correto
-        "DOTENV_CONFIG_PATH": "${workspaceFolder}/backend/.env.development"
+        // Caminho corrigido para o arquivo de ambiente
+        "DOTENV_CONFIG_PATH": "${workspaceFolder}/api/.env.development"
       },
       "outFiles": [
-        "${workspaceFolder}/backend/dist/**/*.js"
+        "${workspaceFolder}/api/dist/**/*.js" // Caminho corrigido
       ],
       "sourceMaps": true
     }

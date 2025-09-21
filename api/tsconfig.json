@@ -1,3 +1,4 @@
+// api/tsconfig.json
 {
   "compilerOptions": {
     /* Opções do Compilador */
@@ -7,7 +8,7 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "allowJs": true, // <--- ADICIONE ESTA LINHA
+    "allowJs": true,
 
     /* Checagem de Tipo Estrita */
     "strict": true,
@@ -17,7 +18,7 @@
     "noImplicitReturns": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*" // Este caminho relativo está correto
   ],
   "exclude": [
     "node_modules"

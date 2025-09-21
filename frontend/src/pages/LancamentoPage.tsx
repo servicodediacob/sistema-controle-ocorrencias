@@ -1,7 +1,6 @@
-// Caminho: frontend/src/pages/LancamentoPage.tsx
+// frontend/src/pages/LancamentoPage.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-// ===== CORREÇÃO APLICADA AQUI: IDataApoio foi removido da importação =====
 import {
   ICidade,
   registrarEstatisticasLote,
@@ -66,9 +65,12 @@ function LancamentoPage() {
   }, [fetchDadosTabela]);
 
   const handleSave = async (formData: any) => {
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // O payload agora usa 'obm_id' em vez de 'cidade_id' para corresponder à interface.
+    // O valor vem de formData.cidade_id, que é o ID da OBM selecionada no modal.
     const payload = {
       data_registro: formData.data_ocorrencia,
-      cidade_id: formData.cidade_id,
+      obm_id: formData.cidade_id, // <-- CORREÇÃO APLICADA AQUI
       estatisticas: Object.entries(formData.quantidades)
         .map(([natureza_id, quantidadeStr]) => ({
           natureza_id: parseInt(natureza_id, 10),
@@ -76,6 +78,7 @@ function LancamentoPage() {
         }))
         .filter(({ quantidade }) => quantidade > 0),
     };
+    // ======================= FIM DA CORREÇÃO =======================
 
     if (payload.estatisticas.length === 0 && !itemParaEditar) {
       addNotification('Nenhum valor foi preenchido.', 'info');
@@ -84,7 +87,8 @@ function LancamentoPage() {
 
     try {
       if (itemParaEditar) {
-        await limparEstatisticasDoDia(payload.data_registro, payload.cidade_id);
+        // A função limparEstatisticasDoDia espera o ID da OBM (cidade)
+        await limparEstatisticasDoDia(payload.data_registro, payload.obm_id);
       }
       
       const response = await registrarEstatisticasLote(payload);

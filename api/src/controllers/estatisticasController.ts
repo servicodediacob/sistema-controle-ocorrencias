@@ -1,18 +1,19 @@
+// api/src/controllers/estatisticasController.ts
 import { Request, Response } from 'express';
 import db from '../db';
 
 interface EstatisticaPayload {
   data_registro: string;
-  cidade_id: number;
+  obm_id: number; // Atualizado de cidade_id
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
 
 export const registrarEstatisticasLote = async (req: Request, res: Response): Promise<void> => {
-  const { data_registro, cidade_id, estatisticas } = req.body as EstatisticaPayload;
+  const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload; // Atualizado
   const usuario_id = req.usuario?.id;
 
-  if (!data_registro || !cidade_id || !estatisticas) {
-    res.status(400).json({ message: 'Dados incompletos. data_registro, cidade_id e estatisticas são obrigatórios.' });
+  if (!data_registro || !obm_id || !estatisticas) { // Atualizado
+    res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
     return;
   }
 
@@ -21,15 +22,15 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
   try {
     await client.query('BEGIN');
 
-    // Primeiro, deleta os registros existentes para esta cidade e data na tabela de estatísticas.
-    // Isso garante que a operação seja de "substituição", evitando duplicatas.
+    // CORREÇÃO: Usa obm_id
     await client.query(
-      `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`,
-      [data_registro, cidade_id]
+      `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`,
+      [data_registro, obm_id]
     );
 
+    // CORREÇÃO: Usa obm_id
     const query = `
-      INSERT INTO estatisticas_diarias (data_registro, cidade_id, natureza_id, quantidade, usuario_id)
+      INSERT INTO estatisticas_diarias (data_registro, obm_id, natureza_id, quantidade, usuario_id)
       VALUES ($1, $2, $3, $4, $5);
     `;
 
@@ -37,30 +38,27 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
 
     for (const stat of estatisticas) {
       const quantidade = Number(stat.quantidade);
-      if (!quantidade || quantidade <= 0) {
-        continue; // Pula para a próxima iteração se a quantidade for 0 ou inválida.
-      }
+      if (!quantidade || quantidade <= 0) continue;
       
-      const values = [data_registro, cidade_id, stat.natureza_id, quantidade, usuario_id];
+      // CORREÇÃO: Usa obm_id
+      const values = [data_registro, obm_id, stat.natureza_id, quantidade, usuario_id];
       await client.query(query, values);
       totalRegistrosCriados++;
     }
 
-    // Se nenhum registro foi criado (todos os valores eram 0), informa o usuário.
     if (totalRegistrosCriados === 0) {
-        await client.query('ROLLBACK'); // Desfaz o DELETE se nada novo for inserido.
-        res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e cidade foram limpos.' });
+        await client.query('ROLLBACK');
+        res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e OBM foram limpos.' });
         return;
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a cidade!` });
+    res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a OBM!` });
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Erro ao registrar estatísticas em lote (transação revertida):', error);
     res.status(500).json({ message: 'Erro interno do servidor ao registrar as estatísticas.' });
-
   } finally {
     client.release();
   }
@@ -75,13 +73,14 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
   }
 
   try {
+    // CORREÇÃO: Troca 'cidades' por 'obms' e 'c.nome' por 'o.nome', etc.
     const query = `
       SELECT
         n.grupo,
         n.subgrupo,
-        COALESCE(SUM(CASE WHEN c.nome = 'Goiânia - Diurno' THEN ed.quantidade ELSE 0 END), 0) AS diurno,
-        COALESCE(SUM(CASE WHEN c.nome = 'Goiânia - Noturno' THEN ed.quantidade ELSE 0 END), 0) AS noturno,
-        COALESCE(SUM(CASE WHEN c.crbm_id = (SELECT id FROM crbms WHERE nome = '1º CRBM') THEN ed.quantidade ELSE 0 END), 0) AS total_capital,
+        COALESCE(SUM(CASE WHEN o.nome = 'Goiânia - Diurno' THEN ed.quantidade ELSE 0 END), 0) AS diurno,
+        COALESCE(SUM(CASE WHEN o.nome = 'Goiânia - Noturno' THEN ed.quantidade ELSE 0 END), 0) AS noturno,
+        COALESCE(SUM(CASE WHEN o.crbm_id = (SELECT id FROM crbms WHERE nome = '1º CRBM') THEN ed.quantidade ELSE 0 END), 0) AS total_capital,
         COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "1º CRBM",
         COALESCE(SUM(CASE WHEN cr.nome = '2º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "2º CRBM",
         COALESCE(SUM(CASE WHEN cr.nome = '3º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "3º CRBM",
@@ -94,8 +93,8 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
         COALESCE(SUM(ed.quantidade), 0) AS total_geral
       FROM naturezas_ocorrencia n
       LEFT JOIN estatisticas_diarias ed ON n.id = ed.natureza_id AND ed.data_registro BETWEEN $1 AND $2
-      LEFT JOIN cidades c ON ed.cidade_id = c.id
-      LEFT JOIN crbms cr ON c.crbm_id = cr.id
+      LEFT JOIN obms o ON ed.obm_id = o.id
+      LEFT JOIN crbms cr ON o.crbm_id = cr.id
       WHERE n.grupo != 'Relatório de Óbitos'
       GROUP BY n.grupo, n.subgrupo
       ORDER BY n.grupo, n.subgrupo;
@@ -116,65 +115,55 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
   }
 
   try {
-    const queryLabel = `ConsultaEstatisticasAgrupadasUnificadas-${data}`;
-    console.time(queryLabel);
-
-    // Query SQL MODIFICADA para unificar as duas fontes de dados
+    // CORREÇÃO: Troca todas as referências de 'cidades' para 'obms' e 'cidade_id' para 'obm_id'
     const query = `
       WITH 
-      -- Fonte 1: Dados da tabela de lançamentos em lote (estatisticas_diarias)
       dados_lote AS (
         SELECT 
-          c.nome as cidade_nome,
+          o.nome as cidade_nome,
           n.subgrupo as natureza_nome,
           n.abreviacao as natureza_abreviacao,
           cr.nome as crbm_nome,
           ed.quantidade
         FROM estatisticas_diarias ed
-        JOIN cidades c ON ed.cidade_id = c.id
+        JOIN obms o ON ed.obm_id = o.id
         JOIN naturezas_ocorrencia n ON ed.natureza_id = n.id
-        JOIN crbms cr ON c.crbm_id = cr.id
+        JOIN crbms cr ON o.crbm_id = cr.id
         WHERE ed.data_registro = $1
           AND n.grupo != 'Relatório de Óbitos'
       ),
-      -- Fonte 2: Dados da tabela de lançamentos individuais (ocorrencias)
       dados_individuais AS (
         SELECT
-          c.nome as cidade_nome,
+          o.nome as cidade_nome,
           n.subgrupo as natureza_nome,
           n.abreviacao as natureza_abreviacao,
           cr.nome as crbm_nome,
-          COUNT(o.id) as quantidade -- Conta cada ocorrência como 1
-        FROM ocorrencias o
-        JOIN cidades c ON o.cidade_id = c.id
-        JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-        JOIN crbms cr ON c.crbm_id = cr.id
-        WHERE o.data_ocorrencia = $1
+          COUNT(occ.id) as quantidade
+        FROM ocorrencias occ
+        JOIN obms o ON occ.obm_id = o.id
+        JOIN naturezas_ocorrencia n ON occ.natureza_id = n.id
+        JOIN crbms cr ON o.crbm_id = cr.id
+        WHERE occ.data_ocorrencia = $1
           AND n.grupo != 'Relatório de Óbitos'
-        GROUP BY c.nome, n.subgrupo, n.abreviacao, cr.nome
+        GROUP BY o.nome, n.subgrupo, n.abreviacao, cr.nome
       ),
-      -- Unifica as duas fontes
       dados_unificados AS (
         SELECT * FROM dados_lote
         UNION ALL
         SELECT * FROM dados_individuais
       )
-      -- Agrupa e soma os resultados unificados para evitar duplicatas
       SELECT
         cidade_nome,
         natureza_nome,
         natureza_abreviacao,
         crbm_nome,
-        SUM(quantidade)::integer as quantidade -- Soma as quantidades de ambas as fontes
+        SUM(quantidade)::integer as quantidade
       FROM dados_unificados
       GROUP BY cidade_nome, natureza_nome, natureza_abreviacao, crbm_nome
       ORDER BY crbm_nome, cidade_nome, natureza_nome;
     `;
     
     const { rows } = await db.query(query, [data]);
-
-    console.timeEnd(queryLabel);
-
     res.status(200).json(rows);
 
   } catch (error) {
@@ -184,7 +173,7 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
 };
 
 export const limparEstatisticasDoDia = async (req: Request, res: Response): Promise<void> => {
-  const { data, cidade_id } = req.query;
+  const { data, obm_id } = req.query; // Atualizado de cidade_id
 
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
@@ -193,15 +182,14 @@ export const limparEstatisticasDoDia = async (req: Request, res: Response): Prom
 
   try {
     let result;
-    if (cidade_id && typeof cidade_id === 'string') {
-      // Limpa apenas para uma cidade específica
+    if (obm_id && typeof obm_id === 'string') {
+      // CORREÇÃO: Usa obm_id
       result = await db.query(
-        `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`, 
-        [data, cidade_id]
+        `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`, 
+        [data, obm_id]
       );
-      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a cidade no dia ${data}.` });
+      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a OBM no dia ${data}.` });
     } else {
-      // Limpa todos os registros do dia
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
         [data]

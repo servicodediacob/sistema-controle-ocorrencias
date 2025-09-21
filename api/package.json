@@ -5,12 +5,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "node run.js .env.development src/server.ts",
-    "migrate:dev": "node run.js .env.development src/scripts/migrate.ts",
-    "migrate:prod": "node run.js .env.production src/scripts/migrate.ts",
-    "seed:dev": "node run.js .env.development src/db/seed.ts",
-    "seed:prod": "node run.js .env.production src/db/seed.ts",
-    "test": "jest --runInBand"
+    "dev": "nodemon",
+    "seed:dev": "ts-node --swc src/db/seed.ts",
+    "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -29,7 +26,12 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.12",
     "@types/pg": "^8.11.6",
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^7.4.2",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   }

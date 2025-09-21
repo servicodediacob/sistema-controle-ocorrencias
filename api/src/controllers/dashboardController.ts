@@ -1,3 +1,4 @@
+// api/src/controllers/dashboardController.ts
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -10,25 +11,21 @@ interface DashboardStats {
 
 export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // VERSÃO FINAL E MAIS SEGURA DA QUERY
+    // CORREÇÃO: Troca todas as referências de 'cidades' para 'obms' e 'cidade_id' para 'obm_id'
     const query = `
       WITH 
       naturezas_de_obito AS (
-        -- 1. Isola os IDs de todas as naturezas que são para óbitos
         SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos'
       ),
       total_ocorrencias_gerais AS (
-        -- 2. Conta ocorrências EXCLUINDO as naturezas de óbito
         SELECT COUNT(id) AS total 
         FROM ocorrencias 
         WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
       ),
       total_obitos_registros AS (
-        -- 3. Soma as vítimas da tabela específica de óbitos
         SELECT SUM(quantidade_vitimas) AS total FROM obitos_registros
       ),
       ocorrencias_por_natureza AS (
-        -- 4. Agrupa por natureza, EXCLUINDO as naturezas de óbito
         SELECT
           n.subgrupo AS nome,
           COUNT(o.id)::int AS total
@@ -39,13 +36,12 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
         ORDER BY total DESC
       ),
       ocorrencias_por_crbm AS (
-        -- 5. Agrupa por CRBM, EXCLUINDO as naturezas de óbito
         SELECT
           cr.nome AS nome,
           COUNT(o.id)::int AS total
         FROM ocorrencias o
-        JOIN cidades c ON o.cidade_id = c.id
-        JOIN crbms cr ON c.crbm_id = cr.id
+        JOIN obms ob ON o.obm_id = ob.id
+        JOIN crbms cr ON ob.crbm_id = cr.id
         WHERE o.natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
         GROUP BY cr.nome
         ORDER BY total DESC

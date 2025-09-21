@@ -1,3 +1,4 @@
+// Caminho: api/src/controllers/dadosController.ts
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -7,11 +8,11 @@ import db from '../db';
 
 export const getNaturezas = async (_req: Request, res: Response) => {
   try {
-    const { rows } = await db.query('SELECT id, grupo, subgrupo FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
-    return res.status(200).json(rows); // Adicionado return
+    const { rows } = await db.query('SELECT id, grupo, subgrupo, abreviacao FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
+    return res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao buscar naturezas:', error);
-    return res.status(500).json({ message: 'Erro interno do servidor ao buscar naturezas.' }); // Adicionado return
+    return res.status(500).json({ message: 'Erro interno do servidor ao buscar naturezas.' });
   }
 };
 
@@ -36,10 +37,10 @@ export const getNaturezasPorNomes = async (req: Request, res: Response) => {
     const values = [...nomes, ...nomes];
     const { rows } = await db.query(query, values);
     
-    return res.status(200).json(rows); // Adicionado return
+    return res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao buscar naturezas por nomes:', error);
-    return res.status(500).json({ message: 'Erro interno do servidor.' }); // Adicionado return
+    return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
@@ -51,13 +52,13 @@ export const criarNatureza = async (req: Request, res: Response) => {
   try {
     const query = 'INSERT INTO naturezas_ocorrencia (grupo, subgrupo) VALUES ($1, $2) RETURNING *';
     const { rows } = await db.query(query, [grupo, subgrupo]);
-    return res.status(201).json(rows[0]); // Adicionado return
+    return res.status(201).json(rows[0]);
   } catch (error) {
     if ((error as any).code === '23505') {
-        return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` }); // Adicionado return
+        return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
     }
     console.error('Erro ao criar natureza:', error);
-    return res.status(500).json({ message: 'Erro interno do servidor ao criar natureza.' }); // Adicionado return
+    return res.status(500).json({ message: 'Erro interno do servidor ao criar natureza.' });
   }
 };
 
@@ -73,13 +74,13 @@ export const atualizarNatureza = async (req: Request, res: Response) => {
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Natureza não encontrada.' });
     }
-    return res.status(200).json(rows[0]); // Adicionado return
+    return res.status(200).json(rows[0]);
   } catch (error) {
     if ((error as any).code === '23505') {
-        return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` }); // Adicionado return
+        return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
     }
     console.error('Erro ao atualizar natureza:', error);
-    return res.status(500).json({ message: 'Erro interno do servidor ao atualizar natureza.' }); // Adicionado return
+    return res.status(500).json({ message: 'Erro interno do servidor ao atualizar natureza.' });
   }
 };
 
@@ -90,25 +91,26 @@ export const excluirNatureza = async (req: Request, res: Response) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Natureza não encontrada.' });
     }
-    return res.status(200).json({ message: 'Natureza excluída com sucesso.' }); // Adicionado return
+    return res.status(200).json({ message: 'Natureza excluída com sucesso.' });
   } catch (error) {
     if ((error as any).code === '23503') {
-      return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a ocorrências existentes.' }); // Adicionado return
+      return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a ocorrências existentes.' });
     }
     console.error('Erro ao excluir natureza:', error);
-    return res.status(500).json({ message: 'Erro interno do servidor ao excluir natureza.' }); // Adicionado return
+    return res.status(500).json({ message: 'Erro interno do servidor ao excluir natureza.' });
   }
 };
 
 
-// --- OCORRÊNCIAS ---
-// (As funções abaixo também foram corrigidas com 'return' para consistência)
+// ===============================================
+// OCORRÊNCIAS
+// ===============================================
 
 export const criarOcorrencia = async (req: Request, res: Response) => {
   const { ocorrencia, obitos } = req.body;
 
-  if (!ocorrencia || !ocorrencia.cidade_id || !ocorrencia.natureza_id || !ocorrencia.data_ocorrencia) {
-    return res.status(400).json({ message: 'Dados da ocorrência incompletos. Cidade, Natureza e Data são obrigatórios.' });
+  if (!ocorrencia || !ocorrencia.obm_id || !ocorrencia.natureza_id || !ocorrencia.data_ocorrencia) {
+    return res.status(400).json({ message: 'Dados da ocorrência incompletos. OBM, Natureza e Data são obrigatórios.' });
   }
 
   const client = await db.pool.connect();
@@ -117,16 +119,17 @@ export const criarOcorrencia = async (req: Request, res: Response) => {
     await client.query('BEGIN');
 
     const queryOcorrencia = `
-      INSERT INTO ocorrencias (data_ocorrencia, natureza_id, cidade_id, quantidade_obitos)
+      INSERT INTO ocorrencias (data_ocorrencia, natureza_id, obm_id, quantidade_obitos)
       VALUES ($1, $2, $3, $4)
       RETURNING id; 
     `;
     const ocorrenciaValues = [
       ocorrencia.data_ocorrencia,
       ocorrencia.natureza_id,
-      ocorrencia.cidade_id,
+      ocorrencia.obm_id,
       obitos ? obitos.length : 0
     ];
+    
     const resultOcorrencia = await client.query(queryOcorrencia, ocorrenciaValues);
     const novaOcorrenciaId = resultOcorrencia.rows[0].id;
 
@@ -168,17 +171,16 @@ export const getOcorrencias = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   try {
-    // CORREÇÃO: Adicionada a cláusula WHERE para filtrar os registros de óbito
     const ocorrenciasQuery = `
       SELECT 
-        o.id, o.data_ocorrencia, o.quantidade_obitos, o.natureza_id, o.cidade_id,
+        o.id, o.data_ocorrencia, o.quantidade_obitos, o.natureza_id, o.obm_id,
         CONCAT(n.grupo, ' - ', n.subgrupo) AS natureza_descricao,
-        c.nome AS cidade_nome, 
+        obm.nome AS obm_nome, 
         cr.nome AS crbm_nome
       FROM ocorrencias o
       JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      JOIN cidades c ON o.cidade_id = c.id
-      JOIN crbms cr ON c.crbm_id = cr.id
+      JOIN obms obm ON o.obm_id = obm.id
+      JOIN crbms cr ON obm.crbm_id = cr.id
       WHERE n.grupo != 'Relatório de Óbitos'
       ORDER BY o.data_ocorrencia DESC, o.id DESC
       LIMIT $1 OFFSET $2;
@@ -186,7 +188,6 @@ export const getOcorrencias = async (req: Request, res: Response) => {
     
     const { rows: ocorrencias } = await db.query(ocorrenciasQuery, [limit, offset]);
 
-    // CORREÇÃO: A contagem total também deve aplicar o filtro
     const totalQuery = "SELECT COUNT(*) FROM ocorrencias o JOIN naturezas_ocorrencia n ON o.natureza_id = n.id WHERE n.grupo != 'Relatório de Óbitos';";
     const { rows: totalRows } = await db.query(totalQuery);
     const total = parseInt(totalRows[0].count, 10);
@@ -204,18 +205,18 @@ export const getOcorrencias = async (req: Request, res: Response) => {
 
 export const updateOcorrencia = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { data_ocorrencia, natureza_id, cidade_id } = req.body;
+  const { data_ocorrencia, natureza_id, obm_id } = req.body;
 
-  if (!data_ocorrencia || !natureza_id || !cidade_id) {
+  if (!data_ocorrencia || !natureza_id || !obm_id) {
     return res.status(400).json({ message: 'Todos os campos são obrigatórios para atualização.' });
   }
 
   try {
     const query = `
-      UPDATE ocorrencias SET data_ocorrencia = $1, natureza_id = $2, cidade_id = $3
+      UPDATE ocorrencias SET data_ocorrencia = $1, natureza_id = $2, obm_id = $3
       WHERE id = $4 RETURNING *;
     `;
-    const { rows } = await db.query(query, [data_ocorrencia, natureza_id, cidade_id, id]);
+    const { rows } = await db.query(query, [data_ocorrencia, natureza_id, obm_id, id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Ocorrência não encontrada.' });

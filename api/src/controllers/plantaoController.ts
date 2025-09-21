@@ -1,23 +1,22 @@
-// backend/src/controllers/plantaoController.ts
-
+// api/src/controllers/plantaoController.ts
 import { Request, Response } from 'express';
 import db from '../db';
 
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
+    // CORREÇÃO: Troca 'cidades' por 'obms' e 'cidade_id' por 'obm_id'
     const destaqueQuery = `
       SELECT 
         od.ocorrencia_id,
         o.data_ocorrencia,
         CONCAT(n.grupo, ' - ', n.subgrupo) as natureza_descricao,
-        c.nome as cidade_nome,
+        ob.nome as cidade_nome,
         cr.nome as crbm_nome
       FROM ocorrencia_destaque od
       LEFT JOIN ocorrencias o ON od.ocorrencia_id = o.id
       LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      -- CORREÇÃO CRÍTICA: A junção agora é feita com a tabela 'cidades'
-      LEFT JOIN cidades c ON o.cidade_id = c.id
-      LEFT JOIN crbms cr ON c.crbm_id = cr.id
+      LEFT JOIN obms ob ON o.obm_id = ob.id
+      LEFT JOIN crbms cr ON ob.crbm_id = cr.id
       WHERE od.id = 1;
     `;
     
@@ -46,7 +45,7 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
   }
 };
 
-// O resto do arquivo (getSupervisores, setOcorrenciaDestaque, etc.) permanece o mesmo.
+// O resto do arquivo não precisa de alterações
 export const getSupervisores = async (_req: Request, res: Response): Promise<void> => {
   try {
     const { rows } = await db.query('SELECT id, nome FROM usuarios ORDER BY nome ASC');

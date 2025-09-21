@@ -1,6 +1,7 @@
-// Caminho: frontend/src/pages/LoginPage.tsx (CORRIGIDO)
+// frontend/src/pages/LoginPage.tsx
 
 import { useState, useEffect, ReactElement } from 'react';
+import { Link } from 'react-router-dom'; // <-- 1. Importe o Link
 import { useAuth } from '../contexts/useAuth';
 import { z } from 'zod';
 
@@ -24,8 +25,8 @@ const Spinner = (): ReactElement => (
 
 function LoginPage(): ReactElement {
   const [formData, setFormData] = useState({
-    email: 'supervisor@cbm.pe.gov.br',
-    senha: 'supervisor123',
+    email: 'admin@cbm.pe.gov.br', // Mudei para o usuário admin
+    senha: 'admin123',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
@@ -78,7 +79,7 @@ function LoginPage(): ReactElement {
   const isFormInvalid = Object.keys(errors).length > 0;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
       <div className="w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">
         <h2 className="mb-6 text-center text-2xl font-medium text-gray-200">
           Controle de Ocorrências
@@ -87,57 +88,45 @@ function LoginPage(): ReactElement {
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div>
             <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              disabled={loading}
+              type="email" name="email" placeholder="Email"
+              value={formData.email} onChange={handleChange} required disabled={loading}
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">
-              {errors.email || ''}
-            </p>
+            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.email || ''}</p>
           </div>
 
           <div>
             <input
-              type="password"
-              name="senha"
-              placeholder="Senha"
-              value={formData.senha}
-              onChange={handleChange}
-              required
-              disabled={loading}
+              type="password" name="senha" placeholder="Senha"
+              value={formData.senha} onChange={handleChange} required disabled={loading}
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">
-              {errors.senha || ''}
-            </p>
+            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.senha || ''}</p>
           </div>
 
           <button
-            type="submit"
-            disabled={loading || isFormInvalid}
+            type="submit" disabled={loading || isFormInvalid}
             className="mt-2 flex items-center justify-center rounded-md bg-blue-700 p-3 text-lg font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-70"
           >
-            {loading ? (
-              <>
-                <Spinner />
-                <span className="ml-2">Entrando...</span>
-              </>
-            ) : (
-              'Entrar'
-            )}
+            {loading ? <><Spinner /><span className="ml-2">Entrando...</span></> : 'Entrar'}
           </button>
 
-          {apiError && (
-            <p className="mt-4 text-center text-sm text-red-500">
-              {apiError}
-            </p>
-          )}
+          {apiError && <p className="mt-4 text-center text-sm text-red-500">{apiError}</p>}
         </form>
+
+        {/* 2. Adicione o divisor e o novo botão/link */}
+        <div className="my-6 flex items-center gap-4">
+          <hr className="flex-grow border-t border-gray-600" />
+          <span className="text-gray-400">OU</span>
+          <hr className="flex-grow border-t border-gray-600" />
+        </div>
+
+        <Link
+          to="/solicitar-acesso"
+          className="block w-full text-center rounded-md bg-gray-600 p-3 font-semibold text-white transition hover:bg-gray-500"
+        >
+          Solicitar Acesso
+        </Link>
       </div>
     </div>
   );

@@ -1,70 +1,74 @@
-// Caminho: frontend/src/contexts/DataProvider.tsx
+// frontend/src/contexts/DataProvider.tsx
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { getCidades, getNaturezas, ICidade, IDataApoio } from '../services/api';
+import { useAuth } from './useAuth'; // 1. Importe o hook de autenticação
 
-// 1. Definir a interface para o valor do contexto
+// Interfaces (sem alteração)
 interface IDataContext {
   cidades: ICidade[];
   naturezas: IDataApoio[];
   loading: boolean;
-  error: string | null;
+  refetchData: () => void;
 }
 
-// 2. Criar o Contexto
-const DataContext = createContext<IDataContext | null>(null);
-
-// 3. Criar o Provedor
 interface DataProviderProps {
   children: ReactNode;
 }
 
+// Contexto (sem alteração)
+const DataContext = createContext<IDataContext | null>(null);
+
+// Provedor (COM A CORREÇÃO)
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth(); // 2. Obtenha o estado de autenticação
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const fetchDadosDeApoio = useCallback(async () => {
+    // 3. VERIFICAÇÃO CRÍTICA: Só busca os dados se o usuário estiver autenticado
+    if (!isAuthenticated) {
+      setLoading(false); // Se não está autenticado, não há nada para carregar
+      return;
+    }
+
+    console.log('[DataProvider] Usuário autenticado. Buscando dados de apoio...');
+    setLoading(true);
+    try {
+      // O Promise.all busca os dados em paralelo
+      const [cidadesData, naturezasData] = await Promise.all([
+        getCidades(),
+        getNaturezas(),
+      ]);
+      setCidades(cidadesData);
+      setNaturezas(naturezasData);
+    } catch (error) {
+      // Este erro agora é esperado se o token expirar, por exemplo.
+      console.error('Falha ao carregar dados de apoio globais:', error);
+      // Em caso de erro (ex: token expirado), limpa os dados para evitar inconsistências
+      setCidades([]);
+      setNaturezas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]); // 4. Adicione 'isAuthenticated' como dependência do useCallback
 
   useEffect(() => {
-    const fetchDadosDeApoio = async () => {
-      try {
-        // Busca os dados apenas uma vez
-        const [cidadesData, naturezasData] = await Promise.all([
-          getCidades(),
-          getNaturezas(),
-        ]);
-        setCidades(cidadesData);
-        setNaturezas(naturezasData);
-      } catch (err) {
-        console.error("Falha ao carregar dados de apoio globais:", err);
-        setError("Não foi possível carregar os dados essenciais do sistema.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDadosDeApoio();
-  }, []); // O array de dependências vazio [] garante que isso rode só uma vez
+  }, [fetchDadosDeApoio]); // 5. O useEffect agora depende da função que depende do 'isAuthenticated'
 
-  const value = { cidades, naturezas, loading, error };
+  const value = {
+    cidades,
+    naturezas,
+    loading,
+    refetchData: fetchDadosDeApoio,
+  };
 
-  // Exibe uma mensagem de carregamento global enquanto os dados essenciais não chegam
-  if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center', color: 'white' }}>Carregando dados essenciais do sistema...</div>;
-  }
-  
-  if (error) {
-     return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>{error}</div>;
-  }
-
-  return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
-  );
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// 4. Criar o Hook customizado para usar o contexto
+// Hook (sem alteração)
 export const useData = (): IDataContext => {
   const context = useContext(DataContext);
   if (!context) {
