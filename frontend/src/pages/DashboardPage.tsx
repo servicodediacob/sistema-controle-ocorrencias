@@ -1,6 +1,7 @@
 // Caminho: frontend/src/pages/DashboardPage.tsx
 
-import React, { useState, useEffect, useCallback, ReactElement } from 'react';
+// A importação de 'React' foi removida daqui, pois não é mais necessária.
+import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -8,9 +9,10 @@ import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
 import PlantaoWidget from '../components/PlantaoWidget';
 import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
-import RelatorioWidget from '../components/RelatorioWidget'; // Já refatorado
+import RelatorioWidget from '../components/RelatorioWidget';
+import LancamentoWidget from '../components/LancamentoWidget';
 
-// --- Componentes Funcionais com Tailwind ---
+// --- Componentes Funcionais com Tailwind (StatCard, DataTable - sem alterações) ---
 
 interface StatCardProps {
   title: string;
@@ -117,6 +119,9 @@ function DashboardPage(): ReactElement {
 
       {/* Widget de Óbitos */}
       <ObitosDoDiaWidget />
+      
+      {/* Espelho de Lançamentos */}
+      <LancamentoWidget />
 
       {/* Tabelas de Dados */}
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">

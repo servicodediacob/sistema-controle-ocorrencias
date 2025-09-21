@@ -9,17 +9,19 @@ interface LancamentoTabelaProps {
   naturezas: Array<{ subgrupo: string; abreviacao: string }>;
   loading: boolean;
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
+  showActions?: boolean;
 }
 
-// --- Componente de Card para a Visualização Mobile (sem alterações) ---
+// --- Componente de Card para a Visualização Mobile ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
   total: number;
   onEdit: () => void;
+  showActions: boolean;
 }
 
-const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit }) => {
+const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, showActions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
 
@@ -49,12 +51,14 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit })
               </div>
             ))}
           </div>
-          <button
-            onClick={onEdit}
-            className="mt-4 w-full rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
-          >
-            Editar Lançamento
-          </button>
+          {showActions && (
+            <button
+              onClick={onEdit}
+              className="mt-4 w-full rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
+            >
+              Editar Lançamento
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -63,8 +67,14 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit })
 
 
 // --- Componente Principal da Tabela (COM A CORREÇÃO) ---
-const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, naturezas, loading, onEdit }) => {
-  // O Spinner de carregamento permanece o mesmo.
+const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
+  dadosApi, 
+  cidades, 
+  naturezas, 
+  loading, 
+  onEdit, 
+  showActions = true 
+}) => {
   if (loading) {
     return (
       <div className="mt-8 flex items-center justify-center rounded-lg bg-gray-800 p-12">
@@ -74,18 +84,16 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
   }
 
   // ======================= INÍCIO DA CORREÇÃO =======================
-  // A lógica de processamento de dados foi reescrita para ser mais robusta e correta.
-
-  // 1. Cria um mapa de dados mais eficiente para consulta.
+  // Adicionadas as arrays de dependências aos hooks useMemo.
+  
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc, item) => {
       const key = `${item.cidade_nome}|${item.natureza_nome}`;
       acc[key] = item.quantidade;
       return acc;
     }, {} as Record<string, number>);
-  }, [dadosApi]);
+  }, [dadosApi]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
 
-  // 2. Agrupa as cidades por CRBM para renderização.
   const cidadesAgrupadas = useMemo(() => {
     return cidades.reduce((acc, cidade) => {
       const crbm = cidade.crbm_nome;
@@ -93,14 +101,12 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
       acc[crbm].push(cidade);
       return acc;
     }, {} as Record<string, ICidade[]>);
-  }, [cidades]);
+  }, [cidades]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
 
-  // 3. Calcula os totais de forma mais direta e correta.
   const totais = useMemo(() => {
     const totaisCrbm: Record<string, Record<string, number>> = {};
     const totaisGeral: Record<string, number> = {};
 
-    // Inicializa os totais
     naturezas.forEach(nat => {
       totaisGeral[nat.subgrupo] = 0;
     });
@@ -114,7 +120,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
       totaisCrbm[crbm]['TOTAL'] = 0;
     });
 
-    // Preenche os totais iterando sobre as cidades filtradas
     cidades.forEach(cidade => {
       let totalCidade = 0;
       naturezas.forEach(nat => {
@@ -130,8 +135,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
     });
 
     return { crbm: totaisCrbm, geral: totaisGeral };
-  }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]);
-
+  }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
   // ======================= FIM DA CORREÇÃO =======================
 
   return (
@@ -156,6 +160,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
               ocorrencias={ocorrências}
               total={totalLinha}
               onEdit={() => onEdit(cidade, ocorrências)}
+              showActions={showActions}
             />
           );
         })}
@@ -172,7 +177,9 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                 <th key={nat.subgrupo} className="sticky top-0 border border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
               ))}
               <th className="sticky top-0 border border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
-              <th className="sticky top-0 border border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
+              {showActions && (
+                <th className="sticky top-0 border border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -197,9 +204,11 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                         <td key={nat.subgrupo} className="whitespace-nowrap border border-gray-700 p-3">{ocorrências[nat.subgrupo]}</td>
                       ))}
                       <td className="whitespace-nowrap border border-gray-700 bg-blue-900/50 p-3 font-bold">{totalLinha}</td>
-                      <td className="whitespace-nowrap border border-gray-700 p-3">
-                        <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
-                      </td>
+                      {showActions && (
+                        <td className="whitespace-nowrap border border-gray-700 p-3">
+                          <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -209,7 +218,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                     <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
                   ))}
                   <td className="border border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
-                  <td className="border border-gray-700 p-3"></td>
+                  {showActions && <td className="border border-gray-700 p-3"></td>}
                 </tr>
               </React.Fragment>
             ))}
@@ -219,7 +228,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                 <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.geral[nat.subgrupo] || 0}</td>
               ))}
               <td className="border border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
-              <td className="border border-gray-700 p-3"></td>
+              {showActions && <td className="border border-gray-700 p-3"></td>}
             </tr>
           </tbody>
         </table>
