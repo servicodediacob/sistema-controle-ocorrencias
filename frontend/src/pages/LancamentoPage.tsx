@@ -1,17 +1,16 @@
-// Caminho: frontend/src/pages/LancamentoPage.tsx (CORRIGIDO)
+// Caminho: frontend/src/pages/LancamentoPage.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+// ===== CORREÇÃO APLICADA AQUI: IDataApoio foi removido da importação =====
 import {
-  getCidades,
-  getNaturezas,
   ICidade,
-  IDataApoio,
   registrarEstatisticasLote,
   getEstatisticasAgrupadasPorData,
   IEstatisticaAgrupada,
   limparEstatisticasDoDia
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import { useData } from '../contexts/DataProvider';
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
 import LancamentoTabela from '../components/LancamentoTabela';
@@ -36,8 +35,9 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
 ];
 
 function LancamentoPage() {
-  const [cidades, setCidades] = useState<ICidade[]>([]);
-  const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
+  const { cidades, naturezas } = useData();
+  const { addNotification } = useNotification();
+
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
   const colunasNatureza = ORDEM_COLUNAS;
 
@@ -45,20 +45,8 @@ function LancamentoPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
-  const { addNotification } = useNotification();
-
-  useEffect(() => {
-    const fetchApoio = async () => {
-      try {
-        const [cidadesData, naturezasData] = await Promise.all([getCidades(), getNaturezas()]);
-        setCidades(cidadesData);
-        setNaturezas(naturezasData);
-      } catch (error) {
-        addNotification('Erro ao carregar dados de apoio.', 'error');
-      }
-    };
-    fetchApoio();
-  }, [addNotification]);
+  
+  const [filtroCrbm, setFiltroCrbm] = useState<string>('todos');
 
   const fetchDadosTabela = useCallback(async () => {
     if (!dataRegistro) return;
@@ -132,20 +120,48 @@ function LancamentoPage() {
     }
   };
 
+  const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
+
+  const cidadesFiltradas = useMemo(() => {
+    if (filtroCrbm === 'todos') {
+      return cidades;
+    }
+    return cidades.filter(c => c.crbm_nome === filtroCrbm);
+  }, [cidades, filtroCrbm]);
+
   return (
     <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-gray-800 p-6">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="data-registro" className="text-sm text-gray-400">
-            Data de Visualização
-          </label>
-          <input
-            id="data-registro"
-            type="date"
-            value={dataRegistro}
-            onChange={e => setDataRegistro(e.target.value)}
-            className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
-          />
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="data-registro" className="text-sm text-gray-400">
+              Data de Visualização
+            </label>
+            <input
+              id="data-registro"
+              type="date"
+              value={dataRegistro}
+              onChange={e => setDataRegistro(e.target.value)}
+              className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
+            />
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <label htmlFor="filtro-crbm" className="text-sm text-gray-400">
+              Filtrar por CRBM
+            </label>
+            <select
+              id="filtro-crbm"
+              value={filtroCrbm}
+              onChange={e => setFiltroCrbm(e.target.value)}
+              className="min-w-[200px] rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
+            >
+              <option value="todos">Todos os CRBMs</option>
+              {crbmsUnicos.map(crbm => (
+                <option key={crbm} value={crbm}>{crbm}</option>
+              ))}
+            </select>
+          </div>
         </div>
         
         <div className="flex items-end gap-4">
@@ -168,9 +184,9 @@ function LancamentoPage() {
 
       <LancamentoTabela
         dadosApi={dadosTabela}
-        cidades={cidades}
+        cidades={cidadesFiltradas}
         naturezas={colunasNatureza}
-        loading={loading || cidades.length === 0}
+        loading={loading}
         onEdit={handleEdit}
       />
 

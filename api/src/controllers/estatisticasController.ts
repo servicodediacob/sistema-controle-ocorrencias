@@ -9,11 +9,9 @@ interface EstatisticaPayload {
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
 
-/**
- * @description Registra um lote de ocorrências na tabela 'ocorrencias'.
- */
-export const registrarEstatisticas = async (req: Request, res: Response): Promise<void> => {
+export const registrarEstatisticasLote = async (req: Request, res: Response): Promise<void> => {
   const { data_registro, cidade_id, estatisticas } = req.body as EstatisticaPayload;
+  const usuario_id = req.usuario?.id;
 
   if (!data_registro || !cidade_id || !estatisticas) {
     res.status(400).json({ message: 'Dados incompletos. data_registro, cidade_id e estatisticas são obrigatórios.' });
@@ -25,48 +23,48 @@ export const registrarEstatisticas = async (req: Request, res: Response): Promis
   try {
     await client.query('BEGIN');
 
+    await client.query(
+      `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`,
+      [data_registro, cidade_id]
+    );
+
     const query = `
-      INSERT INTO ocorrencias (data_ocorrencia, cidade_id, natureza_id, quantidade_obitos)
-      VALUES ($1, $2, $3, 0);
+      INSERT INTO estatisticas_diarias (data_registro, cidade_id, natureza_id, quantidade, usuario_id)
+      VALUES ($1, $2, $3, $4, $5);
     `;
 
-    let totalOcorrenciasCriadas = 0;
+    let totalRegistrosCriados = 0;
 
     for (const stat of estatisticas) {
       const quantidade = Number(stat.quantidade);
       if (!quantidade || quantidade <= 0) {
         continue;
       }
-
-      for (let i = 0; i < quantidade; i++) {
-        const values = [data_registro, cidade_id, stat.natureza_id];
-        await client.query(query, values);
-        totalOcorrenciasCriadas++;
-      }
+      
+      const values = [data_registro, cidade_id, stat.natureza_id, quantidade, usuario_id];
+      await client.query(query, values);
+      totalRegistrosCriados++;
     }
 
-    if (totalOcorrenciasCriadas === 0) {
+    if (totalRegistrosCriados === 0) {
         await client.query('ROLLBACK');
-        res.status(400).json({ message: 'Nenhuma ocorrência para registrar. As quantidades devem ser maiores que zero.' });
+        res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e cidade foram limpos.' });
         return;
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ message: `${totalOcorrenciasCriadas} ocorrência(s) registrada(s) com sucesso!` });
+    res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a cidade!` });
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Erro ao registrar ocorrências em lote (transação revertida):', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao registrar as ocorrências.' });
+    console.error('Erro ao registrar estatísticas em lote (transação revertida):', error);
+    res.status(500).json({ message: 'Erro interno do servidor ao registrar as estatísticas.' });
 
   } finally {
     client.release();
   }
 };
 
-/**
- * @description Gera um relatório de estatísticas lendo da tabela 'ocorrencias'.
- */
 export const getRelatorioEstatisticas = async (req: Request, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
 
@@ -80,24 +78,24 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
       SELECT
         n.grupo,
         n.subgrupo,
-        COUNT(CASE WHEN c.nome LIKE 'Goiânia Diurno' THEN o.id ELSE NULL END) AS "diurno",
-        COUNT(CASE WHEN c.nome LIKE 'Goiânia Noturno' THEN o.id ELSE NULL END) AS "noturno",
-        COUNT(CASE WHEN c.nome LIKE 'Goiânia%' THEN o.id ELSE NULL END) AS "total_capital",
-        COUNT(CASE WHEN cr.nome = '1º CRBM' AND c.nome NOT LIKE 'Goiânia%' THEN o.id ELSE NULL END) AS "1º CRBM",
-        COUNT(CASE WHEN cr.nome = '2º CRBM' THEN o.id ELSE NULL END) AS "2º CRBM",
-        COUNT(CASE WHEN cr.nome = '3º CRBM' THEN o.id ELSE NULL END) AS "3º CRBM",
-        COUNT(CASE WHEN cr.nome = '4º CRBM' THEN o.id ELSE NULL END) AS "4º CRBM",
-        COUNT(CASE WHEN cr.nome = '5º CRBM' AND c.nome NOT LIKE 'Goiânia%' THEN o.id ELSE NULL END) AS "5º CRBM",
-        COUNT(CASE WHEN cr.nome = '6º CRBM' THEN o.id ELSE NULL END) AS "6º CRBM",
-        COUNT(CASE WHEN cr.nome = '7º CRBM' THEN o.id ELSE NULL END) AS "7º CRBM",
-        COUNT(CASE WHEN cr.nome = '8º CRBM' THEN o.id ELSE NULL END) AS "8º CRBM",
-        COUNT(CASE WHEN cr.nome = '9º CRBM' THEN o.id ELSE NULL END) AS "9º CRBM",
-        COUNT(o.id) AS "total_geral"
-      FROM ocorrencias o
-      JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      JOIN cidades c ON o.cidade_id = c.id
-      JOIN crbms cr ON c.crbm_id = cr.id
-      WHERE o.data_ocorrencia BETWEEN $1 AND $2
+        COALESCE(SUM(CASE WHEN c.nome = 'Goiânia - Diurno' THEN ed.quantidade ELSE 0 END), 0) AS diurno,
+        COALESCE(SUM(CASE WHEN c.nome = 'Goiânia - Noturno' THEN ed.quantidade ELSE 0 END), 0) AS noturno,
+        COALESCE(SUM(CASE WHEN c.crbm_id = (SELECT id FROM crbms WHERE nome = '1º CRBM') THEN ed.quantidade ELSE 0 END), 0) AS total_capital,
+        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "1º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '2º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "2º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '3º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "3º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '4º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "4º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '5º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "5º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '6º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "6º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '7º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "7º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '8º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "8º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '9º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "9º CRBM",
+        COALESCE(SUM(ed.quantidade), 0) AS total_geral
+      FROM naturezas_ocorrencia n
+      LEFT JOIN estatisticas_diarias ed ON n.id = ed.natureza_id AND ed.data_registro BETWEEN $1 AND $2
+      LEFT JOIN cidades c ON ed.cidade_id = c.id
+      LEFT JOIN crbms cr ON c.crbm_id = cr.id
+      WHERE n.grupo != 'Relatório de Óbitos'
       GROUP BY n.grupo, n.subgrupo
       ORDER BY n.grupo, n.subgrupo;
     `;
@@ -109,10 +107,7 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
   }
 };
 
-/**
- * @description Busca as estatísticas de uma data, agrupadas por cidade e natureza.
- */
-export const getEstatisticasPorData = async (req: Request, res: Response): Promise<void> => {
+export const getEstatisticasAgrupadasPorData = async (req: Request, res: Response): Promise<void> => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória.' });
@@ -120,23 +115,28 @@ export const getEstatisticasPorData = async (req: Request, res: Response): Promi
   }
 
   try {
+    const queryLabel = `ConsultaEstatisticasAgrupadas-${data}`;
+    console.time(queryLabel);
+
     const query = `
       SELECT 
         cr.nome as crbm_nome,
         c.nome as cidade_nome,
         n.subgrupo as natureza_nome,
         n.abreviacao as natureza_abreviacao,
-        COUNT(o.id)::int as quantidade
-      FROM ocorrencias o
-      JOIN cidades c ON o.cidade_id = c.id
+        ed.quantidade
+      FROM estatisticas_diarias ed
+      JOIN cidades c ON ed.cidade_id = c.id
       JOIN crbms cr ON c.crbm_id = cr.id
-      JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      WHERE o.data_ocorrencia = $1
+      JOIN naturezas_ocorrencia n ON ed.natureza_id = n.id
+      WHERE ed.data_registro = $1
         AND n.grupo != 'Relatório de Óbitos'
-      GROUP BY cr.nome, c.nome, n.subgrupo, n.abreviacao
       ORDER BY cr.nome, c.nome, n.subgrupo;
     `;
     const { rows } = await db.query(query, [data]);
+
+    console.timeEnd(queryLabel);
+
     res.status(200).json(rows);
 
   } catch (error) {
@@ -145,11 +145,8 @@ export const getEstatisticasPorData = async (req: Request, res: Response): Promi
   }
 };
 
-/**
- * @description Limpa (deleta) todas as ocorrências de uma data específica.
- */
-export const limparEstatisticasPorData = async (req: Request, res: Response): Promise<void> => {
-  const { data } = req.query;
+export const limparEstatisticasDoDia = async (req: Request, res: Response): Promise<void> => {
+  const { data, cidade_id } = req.query;
 
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
@@ -157,14 +154,20 @@ export const limparEstatisticasPorData = async (req: Request, res: Response): Pr
   }
 
   try {
-    const result = await db.query(
-      `DELETE FROM ocorrencias 
-       WHERE data_ocorrencia = $1 
-       AND natureza_id NOT IN (SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos')`, 
-      [data]
-    );
-    
-    res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de ocorrência foram excluídos.` });
+    let result;
+    if (cidade_id && typeof cidade_id === 'string') {
+      result = await db.query(
+        `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`, 
+        [data, cidade_id]
+      );
+      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a cidade no dia ${data}.` });
+    } else {
+      result = await db.query(
+        `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
+        [data]
+      );
+      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para o dia ${data}.` });
+    }
 
   } catch (error) {
     console.error('Erro ao limpar estatísticas por data:', error);

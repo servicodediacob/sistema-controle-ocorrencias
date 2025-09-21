@@ -18,10 +18,11 @@ import {
 
 // Controller do formulário de lançamento em lote e relatório estatístico
 import { 
-  registrarEstatisticas, 
+  // ===== CORREÇÃO APLICADA AQUI =====
+  registrarEstatisticasLote, // Nome corrigido
   getRelatorioEstatisticas,
-  getEstatisticasPorData,
-  limparEstatisticasPorData
+  getEstatisticasAgrupadasPorData,
+  limparEstatisticasDoDia
 } from '../controllers/estatisticasController';
 
 // Controller para o novo CRUD de registros de óbitos
@@ -57,8 +58,9 @@ router.route('/ocorrencias/:id')
   .delete(proteger, deleteOcorrencia);
 
 // --- Rota para o formulário de lançamento em lote ---
+// ===== CORREÇÃO APLICADA AQUI =====
 router.route('/estatisticas/lote')
-  .post(proteger, registrarEstatisticas);
+  .post(proteger, registrarEstatisticasLote); // Nome corrigido
 
 // --- Rota para buscar os dados do relatório estatístico consolidado ---
 router.route('/relatorio')
@@ -66,8 +68,8 @@ router.route('/relatorio')
 
 // --- Rota para buscar e limpar os dados da tabela de lançamentos ---
 router.route('/estatisticas/por-data')
-  .get(proteger, getEstatisticasPorData)
-  .delete(proteger, limparEstatisticasPorData);
+  .get(proteger, getEstatisticasAgrupadasPorData)
+  .delete(proteger, limparEstatisticasDoDia);
 
 // --- Rotas para o CRUD de Registros de Óbitos ---
 router.route('/obitos-registros')
@@ -80,8 +82,9 @@ router.route('/obitos-registros/:id')
   .delete(proteger, deletarObitoRegistro);
 
 // --- Rota para o widget de óbitos do dia no Dashboard ---
-router.route('/dashboard/obitos-do-dia')
-  .get(proteger, getObitosPorData);
+// (Esta rota estava duplicada, removi para evitar confusão)
+// router.route('/dashboard/obitos-do-dia')
+//   .get(proteger, getObitosPorData);
 
 
 export default router;
