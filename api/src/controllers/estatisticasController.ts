@@ -1,5 +1,3 @@
-// Caminho: backend/src/controllers/estatisticasController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
@@ -23,6 +21,8 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
   try {
     await client.query('BEGIN');
 
+    // Primeiro, deleta os registros existentes para esta cidade e data na tabela de estatísticas.
+    // Isso garante que a operação seja de "substituição", evitando duplicatas.
     await client.query(
       `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`,
       [data_registro, cidade_id]
@@ -38,7 +38,7 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
     for (const stat of estatisticas) {
       const quantidade = Number(stat.quantidade);
       if (!quantidade || quantidade <= 0) {
-        continue;
+        continue; // Pula para a próxima iteração se a quantidade for 0 ou inválida.
       }
       
       const values = [data_registro, cidade_id, stat.natureza_id, quantidade, usuario_id];
@@ -46,8 +46,9 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
       totalRegistrosCriados++;
     }
 
+    // Se nenhum registro foi criado (todos os valores eram 0), informa o usuário.
     if (totalRegistrosCriados === 0) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK'); // Desfaz o DELETE se nada novo for inserido.
         res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e cidade foram limpos.' });
         return;
     }
@@ -115,24 +116,61 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
   }
 
   try {
-    const queryLabel = `ConsultaEstatisticasAgrupadas-${data}`;
+    const queryLabel = `ConsultaEstatisticasAgrupadasUnificadas-${data}`;
     console.time(queryLabel);
 
+    // Query SQL MODIFICADA para unificar as duas fontes de dados
     const query = `
-      SELECT 
-        cr.nome as crbm_nome,
-        c.nome as cidade_nome,
-        n.subgrupo as natureza_nome,
-        n.abreviacao as natureza_abreviacao,
-        ed.quantidade
-      FROM estatisticas_diarias ed
-      JOIN cidades c ON ed.cidade_id = c.id
-      JOIN crbms cr ON c.crbm_id = cr.id
-      JOIN naturezas_ocorrencia n ON ed.natureza_id = n.id
-      WHERE ed.data_registro = $1
-        AND n.grupo != 'Relatório de Óbitos'
-      ORDER BY cr.nome, c.nome, n.subgrupo;
+      WITH 
+      -- Fonte 1: Dados da tabela de lançamentos em lote (estatisticas_diarias)
+      dados_lote AS (
+        SELECT 
+          c.nome as cidade_nome,
+          n.subgrupo as natureza_nome,
+          n.abreviacao as natureza_abreviacao,
+          cr.nome as crbm_nome,
+          ed.quantidade
+        FROM estatisticas_diarias ed
+        JOIN cidades c ON ed.cidade_id = c.id
+        JOIN naturezas_ocorrencia n ON ed.natureza_id = n.id
+        JOIN crbms cr ON c.crbm_id = cr.id
+        WHERE ed.data_registro = $1
+          AND n.grupo != 'Relatório de Óbitos'
+      ),
+      -- Fonte 2: Dados da tabela de lançamentos individuais (ocorrencias)
+      dados_individuais AS (
+        SELECT
+          c.nome as cidade_nome,
+          n.subgrupo as natureza_nome,
+          n.abreviacao as natureza_abreviacao,
+          cr.nome as crbm_nome,
+          COUNT(o.id) as quantidade -- Conta cada ocorrência como 1
+        FROM ocorrencias o
+        JOIN cidades c ON o.cidade_id = c.id
+        JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
+        JOIN crbms cr ON c.crbm_id = cr.id
+        WHERE o.data_ocorrencia = $1
+          AND n.grupo != 'Relatório de Óbitos'
+        GROUP BY c.nome, n.subgrupo, n.abreviacao, cr.nome
+      ),
+      -- Unifica as duas fontes
+      dados_unificados AS (
+        SELECT * FROM dados_lote
+        UNION ALL
+        SELECT * FROM dados_individuais
+      )
+      -- Agrupa e soma os resultados unificados para evitar duplicatas
+      SELECT
+        cidade_nome,
+        natureza_nome,
+        natureza_abreviacao,
+        crbm_nome,
+        SUM(quantidade)::integer as quantidade -- Soma as quantidades de ambas as fontes
+      FROM dados_unificados
+      GROUP BY cidade_nome, natureza_nome, natureza_abreviacao, crbm_nome
+      ORDER BY crbm_nome, cidade_nome, natureza_nome;
     `;
+    
     const { rows } = await db.query(query, [data]);
 
     console.timeEnd(queryLabel);
@@ -140,7 +178,7 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
     res.status(200).json(rows);
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas por data:', error);
+    console.error('Erro ao buscar estatísticas unificadas por data:', error);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -156,12 +194,14 @@ export const limparEstatisticasDoDia = async (req: Request, res: Response): Prom
   try {
     let result;
     if (cidade_id && typeof cidade_id === 'string') {
+      // Limpa apenas para uma cidade específica
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND cidade_id = $2`, 
         [data, cidade_id]
       );
       res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a cidade no dia ${data}.` });
     } else {
+      // Limpa todos os registros do dia
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
         [data]

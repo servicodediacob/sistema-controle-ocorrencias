@@ -1,6 +1,4 @@
-// Caminho: frontend/src/components/LancamentoTabela.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
 
@@ -13,7 +11,7 @@ interface LancamentoTabelaProps {
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
 }
 
-// --- Componente de Card para a Visualização Mobile ---
+// --- Componente de Card para a Visualização Mobile (sem alterações) ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
@@ -27,7 +25,6 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit })
 
   return (
     <div className={`rounded-lg border ${hasData ? 'border-gray-600 bg-gray-800' : 'border-red-800/50 bg-red-900/20'}`}>
-      {/* Cabeçalho do Card */}
       <div 
         className="flex items-center justify-between p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -42,7 +39,6 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit })
         </div>
       </div>
 
-      {/* Corpo Expansível do Card */}
       {isExpanded && (
         <div className="border-t border-gray-700 p-4">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -66,8 +62,9 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit })
 };
 
 
-// --- Componente Principal da Tabela ---
+// --- Componente Principal da Tabela (COM A CORREÇÃO) ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, naturezas, loading, onEdit }) => {
+  // O Spinner de carregamento permanece o mesmo.
   if (loading) {
     return (
       <div className="mt-8 flex items-center justify-center rounded-lg bg-gray-800 p-12">
@@ -76,52 +73,82 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
     );
   }
 
-  const dadosMapa = dadosApi.reduce((acc, item) => {
-    if (!acc[item.cidade_nome]) acc[item.cidade_nome] = {};
-    acc[item.cidade_nome][item.natureza_nome] = item.quantidade;
-    return acc;
-  }, {} as Record<string, Record<string, number>>);
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // A lógica de processamento de dados foi reescrita para ser mais robusta e correta.
 
-  const cidadesAgrupadas = cidades.reduce((acc, cidade) => {
-    const crbm = cidade.crbm_nome;
-    if (!acc[crbm]) acc[crbm] = [];
-    acc[crbm].push(cidade);
-    return acc;
-  }, {} as Record<string, ICidade[]>);
+  // 1. Cria um mapa de dados mais eficiente para consulta.
+  const dadosMapa = useMemo(() => {
+    return dadosApi.reduce((acc, item) => {
+      const key = `${item.cidade_nome}|${item.natureza_nome}`;
+      acc[key] = item.quantidade;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [dadosApi]);
 
-  const totais = {
-    crbm: {} as Record<string, Record<string, number>>,
-    geral: {} as Record<string, number>
-  };
-  naturezas.forEach(nat => { totais.geral[nat.subgrupo] = 0; });
-  totais.geral['TOTAL'] = 0;
+  // 2. Agrupa as cidades por CRBM para renderização.
+  const cidadesAgrupadas = useMemo(() => {
+    return cidades.reduce((acc, cidade) => {
+      const crbm = cidade.crbm_nome;
+      if (!acc[crbm]) acc[crbm] = [];
+      acc[crbm].push(cidade);
+      return acc;
+    }, {} as Record<string, ICidade[]>);
+  }, [cidades]);
 
-  for (const crbm in cidadesAgrupadas) {
-    totais.crbm[crbm] = {};
-    naturezas.forEach(nat => { totais.crbm[crbm][nat.subgrupo] = 0; });
-    totais.crbm[crbm]['TOTAL'] = 0;
-    for (const cidade of cidadesAgrupadas[crbm]) {
-      const dadosCidade = dadosMapa[cidade.cidade_nome] || {};
+  // 3. Calcula os totais de forma mais direta e correta.
+  const totais = useMemo(() => {
+    const totaisCrbm: Record<string, Record<string, number>> = {};
+    const totaisGeral: Record<string, number> = {};
+
+    // Inicializa os totais
+    naturezas.forEach(nat => {
+      totaisGeral[nat.subgrupo] = 0;
+    });
+    totaisGeral['TOTAL'] = 0;
+
+    Object.keys(cidadesAgrupadas).forEach(crbm => {
+      totaisCrbm[crbm] = {};
+      naturezas.forEach(nat => {
+        totaisCrbm[crbm][nat.subgrupo] = 0;
+      });
+      totaisCrbm[crbm]['TOTAL'] = 0;
+    });
+
+    // Preenche os totais iterando sobre as cidades filtradas
+    cidades.forEach(cidade => {
       let totalCidade = 0;
-      for (const natureza of naturezas) {
-        const qtd = dadosCidade[natureza.subgrupo] || 0;
-        totais.crbm[crbm][natureza.subgrupo] += qtd;
-        totais.geral[natureza.subgrupo] += qtd;
-        totalCidade += qtd;
-      }
-      totais.crbm[crbm]['TOTAL'] += totalCidade;
-      totais.geral['TOTAL'] += totalCidade;
-    }
-  }
+      naturezas.forEach(nat => {
+        const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
+        if (qtd > 0) {
+          totaisCrbm[cidade.crbm_nome][nat.subgrupo] += qtd;
+          totaisGeral[nat.subgrupo] += qtd;
+          totalCidade += qtd;
+        }
+      });
+      totaisCrbm[cidade.crbm_nome]['TOTAL'] += totalCidade;
+      totaisGeral['TOTAL'] += totalCidade;
+    });
+
+    return { crbm: totaisCrbm, geral: totaisGeral };
+  }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]);
+
+  // ======================= FIM DA CORREÇÃO =======================
 
   return (
     <>
       {/* ===== VISUALIZAÇÃO MOBILE (CARDS) ===== */}
-      {/* Visível apenas em telas pequenas (escondido em 'md' e maiores) */}
       <div className="mt-4 space-y-4 md:hidden">
         {cidades.map(cidade => {
-          const ocorrências = dadosMapa[cidade.cidade_nome] || {};
-          const totalLinha = Object.values(ocorrências).reduce((a, b) => a + b, 0);
+          const ocorrências: Record<string, number> = {};
+          let totalLinha = 0;
+          naturezas.forEach(nat => {
+            const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
+            if (qtd > 0) {
+              ocorrências[nat.subgrupo] = qtd;
+              totalLinha += qtd;
+            }
+          });
+          
           return (
             <MobileCard
               key={`mobile-${cidade.id}`}
@@ -135,7 +162,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
       </div>
 
       {/* ===== VISUALIZAÇÃO DESKTOP (TABELA) ===== */}
-      {/* Escondida em telas pequenas, vira uma tabela a partir de 'md' */}
       <div className="mt-8 hidden overflow-x-auto rounded-lg border border-gray-700 bg-gray-800 md:block">
         <table className="min-w-[1300px] w-full border-collapse">
           <thead>
@@ -153,8 +179,14 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
             {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
               <React.Fragment key={crbm}>
                 {listaCidades.map((cidade, index) => {
-                  const ocorrências = dadosMapa[cidade.cidade_nome] || {};
-                  const totalLinha = Object.values(ocorrências).reduce((a, b) => a + b, 0);
+                  const ocorrências: Record<string, number> = {};
+                  let totalLinha = 0;
+                  naturezas.forEach(nat => {
+                    const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
+                    ocorrências[nat.subgrupo] = qtd;
+                    totalLinha += qtd;
+                  });
+
                   return (
                     <tr key={cidade.id} className="text-center hover:bg-gray-700/50">
                       {index === 0 && (
@@ -162,7 +194,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                       )}
                       <td className={`sticky left-[150px] border border-gray-700 p-3 text-left font-bold ${totalLinha === 0 ? 'bg-red-900/50 text-red-200' : 'bg-gray-800'}`}>{cidade.cidade_nome}</td>
                       {naturezas.map(nat => (
-                        <td key={nat.subgrupo} className="whitespace-nowrap border border-gray-700 p-3">{ocorrências[nat.subgrupo] || 0}</td>
+                        <td key={nat.subgrupo} className="whitespace-nowrap border border-gray-700 p-3">{ocorrências[nat.subgrupo]}</td>
                       ))}
                       <td className="whitespace-nowrap border border-gray-700 bg-blue-900/50 p-3 font-bold">{totalLinha}</td>
                       <td className="whitespace-nowrap border border-gray-700 p-3">
@@ -174,9 +206,9 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ dadosApi, cidades, 
                 <tr className="bg-blue-800 font-bold text-white">
                   <td className="sticky left-[150px] border border-gray-700 p-3 text-center">TOTAL</td>
                   {naturezas.map(nat => (
-                    <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.crbm[crbm][nat.subgrupo] || 0}</td>
+                    <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
                   ))}
-                  <td className="border border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]['TOTAL']}</td>
+                  <td className="border border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
                   <td className="border border-gray-700 p-3"></td>
                 </tr>
               </React.Fragment>
