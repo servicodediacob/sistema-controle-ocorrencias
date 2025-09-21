@@ -1,126 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { useAuth } from '../contexts/useAuth';
-import { z } from 'zod'; // 1. Importe o Zod
+// Caminho: frontend/src/pages/LoginPage.tsx (CORRIGIDO)
 
-// 2. Defina o esquema de validação para o formulário
+import { useState, useEffect, ReactElement } from 'react';
+import { useAuth } from '../contexts/useAuth';
+import { z } from 'zod';
+
+// Esquema de validação com Zod
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um email válido." }),
   senha: z.string().min(6, { message: "A senha deve ter no mínimo 6 caracteres." }),
 });
 
-// Extrai o tipo do esquema para usar no estado de erros
 type LoginFormInputs = z.infer<typeof loginSchema>;
 type FormErrors = { [key in keyof LoginFormInputs]?: string };
 
+// Componente Spinner
+const Spinner = (): ReactElement => (
+  <div
+    className="h-5 w-5 animate-spin rounded-full border-4 border-white/30 border-t-white"
+    role="status"
+    aria-label="Carregando..."
+  />
+);
 
-// --- Componentes Estilizados (sem alterações) ---
-const Container = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #1e1e1e;
-`;
-// ... (todos os outros styled-components que criamos antes)
-const LoginBox = styled.div`
-  padding: 2.5rem;
-  background-color: #2c2c2c;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  width: 350px;
-  text-align: center;
-`;
-
-const Title = styled.h2`
-  margin: 0 0 1.5rem 0;
-  color: #e0e0e0;
-  font-weight: 500;
-`;
-
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem; /* Reduzido para acomodar mensagens de erro */
-`;
-
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-`;
-
-const Input = styled.input`
-  padding: 0.8rem;
-  border-radius: 4px;
-  border: 1px solid #555;
-  background-color: #3a3a3a;
-  color: white;
-  font-size: 1rem;
-
-  &:disabled {
-    background-color: #444;
-    cursor: not-allowed;
-  }
-`;
-
-const Button = styled.button`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0.8rem;
-  border-radius: 4px;
-  border: none;
-  background-color: #3a7ca5;
-  color: white;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-top: 1rem; /* Espaçamento acima do botão */
-
-  &:disabled {
-    background-color: #5a8ca5;
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-`;
-
-const ErrorMessage = styled.p`
-  color: #d9534f;
-  font-size: 0.8rem;
-  margin: 4px 0 0 4px;
-  min-height: 1.2rem;
-`;
-
-const spin = keyframes`
-  to {
-    transform: rotate(360deg);
-  }
-`;
-
-const Spinner = styled.div`
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: ${spin} 1s linear infinite;
-  margin-right: 10px;
-`;
-
-
-function LoginPage(): React.ReactElement {
+function LoginPage(): ReactElement {
   const [formData, setFormData] = useState({
     email: 'supervisor@cbm.pe.gov.br',
     senha: 'supervisor123',
   });
-  const [errors, setErrors] = useState<FormErrors>({}); // 3. Estado para os erros
+  const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
 
-  // 4. Função para validar o formulário em tempo real
   const validateForm = () => {
     const result = loginSchema.safeParse(formData);
     if (!result.success) {
@@ -135,7 +47,6 @@ function LoginPage(): React.ReactElement {
     return true;
   };
 
-  // Valida o formulário sempre que os dados mudam
   useEffect(() => {
     validateForm();
   }, [formData]);
@@ -149,7 +60,6 @@ function LoginPage(): React.ReactElement {
     e.preventDefault();
     setApiError('');
 
-    // 5. Verifica a validade antes de enviar
     if (!validateForm()) {
       return;
     }
@@ -168,50 +78,68 @@ function LoginPage(): React.ReactElement {
   const isFormInvalid = Object.keys(errors).length > 0;
 
   return (
-    <Container>
-      <LoginBox>
-        <Title>Controle de Ocorrências</Title>
-        <Form onSubmit={handleLogin}>
-          <InputGroup>
-            <Input
+    <div className="flex min-h-screen items-center justify-center bg-gray-900">
+      <div className="w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">
+        <h2 className="mb-6 text-center text-2xl font-medium text-gray-200">
+          Controle de Ocorrências
+        </h2>
+
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <div>
+            <input
               type="email"
-              name="email" // Adicionado o 'name'
+              name="email"
               placeholder="Email"
               value={formData.email}
               onChange={handleChange}
               required
               disabled={loading}
+              className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
-            {errors.email && <ErrorMessage>{errors.email}</ErrorMessage>}
-          </InputGroup>
+            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">
+              {errors.email || ''}
+            </p>
+          </div>
 
-          <InputGroup>
-            <Input
+          <div>
+            <input
               type="password"
-              name="senha" // Adicionado o 'name'
+              name="senha"
               placeholder="Senha"
               value={formData.senha}
               onChange={handleChange}
               required
               disabled={loading}
+              className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
-            {errors.senha && <ErrorMessage>{errors.senha}</ErrorMessage>}
-          </InputGroup>
+            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">
+              {errors.senha || ''}
+            </p>
+          </div>
 
-          <Button type="submit" disabled={loading || isFormInvalid}>
+          <button
+            type="submit"
+            disabled={loading || isFormInvalid}
+            className="mt-2 flex items-center justify-center rounded-md bg-blue-700 p-3 text-lg font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-70"
+          >
             {loading ? (
               <>
                 <Spinner />
-                <span>Entrando...</span>
+                <span className="ml-2">Entrando...</span>
               </>
             ) : (
               'Entrar'
             )}
-          </Button>
-          {apiError && <ErrorMessage style={{ textAlign: 'center', marginTop: '1rem' }}>{apiError}</ErrorMessage>}
-        </Form>
-      </LoginBox>
-    </Container>
+          </button>
+
+          {apiError && (
+            <p className="mt-4 text-center text-sm text-red-500">
+              {apiError}
+            </p>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }
 

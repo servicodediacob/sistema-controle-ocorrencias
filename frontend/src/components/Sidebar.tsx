@@ -1,15 +1,17 @@
+// Caminho: frontend/src/components/Sidebar.tsx
+
 import React from 'react';
-import styled, { css } from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { device } from '../styles/theme';
+// Não precisamos mais de 'styled-components' ou 'device' de theme.tsx
 
 // --- Ícones (SVG como componentes) ---
 const Icon = ({ path, size = 24 }: { path: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
     <path d={path}></path>
   </svg>
 );
 
+// Mapeamento de ícones para cada item do menu
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -23,182 +25,33 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
 };
 
-// --- Styled Components ---
+// --- Componente de Botão de Navegação Reutilizável ---
+interface NavButtonProps {
+  onClick: () => void;
+  isCollapsed: boolean;
+  isActive: boolean;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
 
-const SidebarContainer = styled.aside<{ $isMobileOpen: boolean }>`
-  background-color: #2c2c2c;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  box-sizing: border-box;
-  border-right: 1px solid #444;
-  padding: 0 1rem 1.5rem 1rem;
-  position: static; 
-  width: auto; 
+const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, title, children, className = '' }) => {
+  const baseClasses = "w-full flex items-center gap-4 p-3 rounded-md text-white text-left transition-colors duration-200";
+  const activeClasses = isActive ? "bg-blue-700" : "hover:bg-gray-700";
+  const collapsedClasses = isCollapsed ? "justify-center px-3" : "px-4";
 
-  @media ${device.mobileL} {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 250px;
-    z-index: 1000;
-    transition: transform 0.3s ease;
-    transform: translateX(-100%);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`${baseClasses} ${activeClasses} ${collapsedClasses} ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
 
-    ${({ $isMobileOpen }) => $isMobileOpen && css`
-      transform: translateX(0);
-    `}
-  }
-`;
-
-const SidebarTitle = styled.button<{ $isCollapsed: boolean }>`
-  color: #e9c46a;
-  font-size: 1.5rem;
-  font-weight: bold;
-  background: none;
-  border: none;
-  cursor: pointer;
-  height: 73px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #444;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0;
-  transition: all 0.3s ease;
-  
-  ${({ $isCollapsed }) => $isCollapsed && css`
-    opacity: 0;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-    overflow: hidden;
-  `}
-
-  @media ${device.mobileL} {
-    opacity: 1;
-    height: 73px;
-    border-bottom: 1px solid #444;
-  }
-`;
-
-const NavItemsContainer = styled.div`
-  padding-top: 1.5rem;
-`;
-
-const NavButton = styled.button<{ $isCollapsed: boolean; $isActive: boolean }>`
-  width: 100%;
-  padding: 0.8rem 1rem;
-  cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 1rem;
-  background-color: transparent;
-  transition: background-color 0.2s ease;
-  margin-bottom: 0.5rem;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  overflow: hidden;
-
-  span {
-    transition: opacity 0.2s ease, width 0.3s ease;
-    opacity: 1;
-    white-space: nowrap;
-  }
-
-  ${({ $isCollapsed }) => $isCollapsed && css`
-    justify-content: center;
-    padding: 0.8rem;
-    span {
-      opacity: 0;
-      width: 0;
-    }
-  `}
-
-  ${({ $isActive }) => $isActive && css`
-    background-color: #3a7ca5;
-  `}
-
-  &:hover {
-    background-color: #4a4a4a;
-  }
-
-  @media ${device.tablet} {
-    justify-content: center;
-    padding: 0.8rem;
-    span {
-      opacity: 0;
-      width: 0;
-    }
-  }
-
-  @media ${device.mobileL} {
-    justify-content: flex-start;
-    padding: 0.8rem 1rem;
-    span {
-      opacity: 1;
-      width: auto;
-    }
-  }
-`;
-
-const Spacer = styled.div`
-  flex-grow: 1;
-`;
-
-const UserInfo = styled.div<{ $isCollapsed: boolean }>`
-  padding: 1rem;
-  text-align: center;
-  color: #ccc;
-  border-top: 1px solid #444;
-  margin-top: 1rem;
-  overflow: hidden;
-  white-space: nowrap;
-  transition: all 0.3s ease;
-
-  strong {
-    font-weight: 600;
-    color: white;
-  }
-
-  ${({ $isCollapsed }) => $isCollapsed && css`
-    opacity: 0;
-    height: 0;
-    padding: 0;
-    margin: 0;
-    border: none;
-  `}
-  
-  @media ${device.tablet} {
-    opacity: 0;
-    height: 0;
-    padding: 0;
-    margin: 0;
-    border: none;
-  }
-
-  @media ${device.mobileL} {
-    opacity: 1;
-    height: auto;
-    padding: 1rem;
-    margin-top: 1rem;
-    border-top: 1px solid #444;
-  }
-`;
-
-const CollapseButton = styled(NavButton)`
-  @media ${device.tablet} {
-    display: none;
-  }
-`;
-
-// --- Componente Principal ---
-
+// --- Componente Principal da Sidebar ---
 interface SidebarProps {
   onLogout: () => void;
   isCollapsed: boolean;
@@ -208,13 +61,12 @@ interface SidebarProps {
   userName?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  onLogout, 
-  isCollapsed, 
-  setIsCollapsed, 
-  isMobileOpen, 
-  closeMobileMenu, 
-  userName 
+const Sidebar: React.FC<SidebarProps> = ({
+  onLogout,
+  isCollapsed,
+  setIsCollapsed,
+  closeMobileMenu,
+  userName
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -239,58 +91,76 @@ const Sidebar: React.FC<SidebarProps> = ({
     closeMobileMenu();
   };
 
+  const sidebarWidth = isCollapsed ? 'w-[80px]' : 'w-[250px]';
+
   return (
-    <SidebarContainer $isMobileOpen={isMobileOpen}>
-      <SidebarTitle 
-        $isCollapsed={isCollapsed} 
+    <aside className={`flex h-full flex-col bg-gray-800 border-r border-gray-700 p-4 transition-all duration-300 ${sidebarWidth}`}>
+      {/* Título */}
+      <button
         onClick={() => handleNavigate('/dashboard')}
         title="Ir para o Dashboard Principal"
+        className={`flex items-center justify-center border-b border-gray-700 pb-4 mb-4 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 h-[41px] visible'}`}
       >
-        COCB
-      </SidebarTitle>
-      
-      <NavItemsContainer>
+        <span className="text-2xl font-bold text-yellow-500">COCB</span>
+      </button>
+
+      {/* Itens de Navegação */}
+      <nav className="flex flex-col gap-2">
         {navItems.map(item => (
           <NavButton
             key={item.path}
             onClick={() => handleNavigate(item.path)}
-            $isCollapsed={isCollapsed}
-            $isActive={location.pathname === item.path}
+            isCollapsed={isCollapsed}
+            isActive={location.pathname === item.path}
             title={item.label}
           >
             <Icon path={item.icon} />
-            <span>{item.label}</span>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+              {item.label}
+            </span>
           </NavButton>
         ))}
-      </NavItemsContainer>
+      </nav>
 
-      <Spacer />
+      {/* Espaçador para empurrar os itens inferiores para baixo */}
+      <div className="flex-grow" />
 
-      <UserInfo $isCollapsed={isCollapsed}>
-        Olá, <strong>{userName?.split(' ')[0].toUpperCase() || 'UTILIZADOR'}</strong>
-      </UserInfo>
+      {/* Informações do Usuário */}
+      <div className={`border-t border-gray-700 pt-4 mt-4 text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
+        <p className="text-sm text-gray-400">Olá, <strong className="font-semibold text-white">{userName?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
+      </div>
 
-      <CollapseButton 
-        onClick={() => setIsCollapsed(!isCollapsed)} 
-        $isCollapsed={isCollapsed}
-        $isActive={false}
-        title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
-      >
-        <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
-        <span>{isCollapsed ? '' : 'Recolher'}</span>
-      </CollapseButton>
+      {/* Botão de Recolher/Expandir (visível apenas em telas grandes) */}
+      <div className="hidden lg:block mt-4">
+        <NavButton
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          isCollapsed={isCollapsed}
+          isActive={false}
+          title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
+        >
+          <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+            Recolher
+          </span>
+        </NavButton>
+      </div>
 
-      <NavButton 
-        onClick={handleLogout} 
-        $isCollapsed={isCollapsed}
-        $isActive={false}
-        title={isCollapsed ? 'Sair' : ''}
-        style={{ backgroundColor: '#e76f51', marginTop: '0.5rem' }}
-      >
-        <Icon path={ICONS.logout} />
-        <span>Sair</span>
-      </NavButton>
-    </SidebarContainer>
+      {/* Botão de Logout */}
+      <div className="mt-2">
+        <NavButton
+          onClick={handleLogout}
+          isCollapsed={isCollapsed}
+          isActive={false}
+          title="Sair"
+          className="!bg-red-600 hover:!bg-red-700" // Usa ! para dar prioridade sobre outros estilos
+        >
+          <Icon path={ICONS.logout} />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+            Sair
+          </span>
+        </NavButton>
+      </div>
+    </aside>
   );
 };
 

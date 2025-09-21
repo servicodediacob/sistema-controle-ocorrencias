@@ -1,71 +1,11 @@
 // Caminho: frontend/src/components/LancamentoModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+// Não precisamos mais de 'styled-components'
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
-// --- Styled Components (sem alterações) ---
-const ModalBackdrop = styled.div`
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.7); display: flex;
-  justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
-`;
-const ModalContent = styled.div`
-  background-color: #2c2c2c; padding: 2rem; border-radius: 8px;
-  width: 100%; max-width: 900px; max-height: 90vh;
-  display: flex; flex-direction: column; color: white;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-`;
-const ModalTitle = styled.h2`
-  margin-top: 0; font-size: 1.5rem; border-bottom: 1px solid #444;
-  padding-bottom: 1rem; margin-bottom: 1.5rem; flex-shrink: 0;
-`;
-const Form = styled.form`
-  display: flex; flex-direction: column; gap: 1.5rem;
-  overflow-y: auto; padding-right: 1rem;
-`;
-const TopControls = styled.div`
-  display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
-`;
-const FormGroup = styled.div`
-  display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 250px;
-`;
-const Label = styled.label`
-  font-size: 0.9rem; color: #aaa;
-`;
-const Input = styled.input`
-  padding: 0.75rem; background-color: #3a3a3a; border: 1px solid #555;
-  color: white; border-radius: 4px; font-size: 1rem;
-`;
-const Select = styled(Input).attrs({ as: 'select' })``;
-const Fieldset = styled.fieldset`
-  border: 1px solid #444; border-radius: 8px; padding: 1.5rem; margin: 0;
-`;
-const Legend = styled.legend`
-  padding: 0 0.5rem; font-weight: bold; font-size: 1.2rem; color: #e9c46a;
-`;
-const FormGrid = styled.div`
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;
-`;
-const ButtonContainer = styled.div`
-  display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; flex-shrink: 0;
-`;
-const Button = styled.button`
-  padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
-  cursor: pointer; font-size: 1rem; font-weight: 600;
-`;
-const SaveButton = styled(Button)`
-  background-color: #2a9d8f; color: white;
-`;
-const CancelButton = styled(Button)`
-  background-color: #555; color: white;
-`;
-const ClearButton = styled(Button)`
-  background-color: #e76f51; color: white; margin-right: auto;
-`;
-
-// --- Interfaces ---
+// --- Interfaces (sem alterações) ---
 interface LancamentoModalProps {
   cidades: ICidade[];
   naturezas: IDataApoio[];
@@ -78,9 +18,9 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
   const { addNotification } = useNotification();
   const isEditing = !!itemParaEditar;
 
+  // --- Lógica do Componente (sem alterações) ---
   const getInitialQuantidades = () => {
     if (isEditing && itemParaEditar) {
-      // Mapeia os dados recebidos para o formato { natureza_id: quantidade }
       const quantidadesIniciais: Record<string, string> = {};
       for (const subgrupo in itemParaEditar.dados) {
         const natureza = naturezas.find(n => n.subgrupo === subgrupo);
@@ -98,7 +38,6 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
   const [quantidades, setQuantidades] = useState<Record<string, string>>(getInitialQuantidades());
 
   useEffect(() => {
-    // Se o item para editar mudar, reseta o formulário
     setCidadeId(isEditing ? itemParaEditar.cidade.id : '');
     setQuantidades(getInitialQuantidades());
   }, [itemParaEditar]);
@@ -129,59 +68,121 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
     return acc;
   }, {} as { [key: string]: IDataApoio[] });
 
+  // --- JSX Refatorado com Tailwind CSS ---
   return (
-    <ModalBackdrop onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
-        <ModalTitle>
+    // ModalBackdrop
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4"
+      onClick={onClose}
+    >
+      {/* ModalContent */}
+      <div
+        className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-gray-800 text-white shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ModalTitle */}
+        <h2 className="flex-shrink-0 border-b border-gray-700 p-6 text-xl font-semibold">
           {isEditing ? `Editando Lançamentos de ${itemParaEditar.cidade.cidade_nome}` : 'Formulário de Lançamento de Ocorrências'}
-        </ModalTitle>
-        
-        <Form id="lancamento-form" onSubmit={handleSubmit}>
-          <TopControls>
-            <FormGroup>
-              <Label htmlFor="cidade_id">OBM (Obrigatório)</Label>
-              <Select id="cidade_id" name="cidade_id" value={cidadeId} onChange={e => setCidadeId(Number(e.target.value))} required disabled={isEditing}>
+        </h2>
+
+        {/* Form */}
+        <form
+          id="lancamento-form"
+          onSubmit={handleSubmit}
+          className="flex flex-grow flex-col gap-6 overflow-y-auto p-6"
+        >
+          {/* TopControls */}
+          <div className="flex flex-wrap items-end gap-4">
+            {/* FormGroup */}
+            <div className="flex min-w-[250px] flex-1 flex-col gap-2">
+              {/* Label */}
+              <label htmlFor="cidade_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
+              {/* Select */}
+              <select
+                id="cidade_id"
+                name="cidade_id"
+                value={cidadeId}
+                onChange={e => setCidadeId(Number(e.target.value))}
+                required
+                disabled={isEditing}
+                className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <option value="" disabled>Selecione uma OBM</option>
                 {cidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
-              </Select>
-            </FormGroup>
-            <FormGroup>
-              <Label htmlFor="data_ocorrencia">Data da Ocorrência</Label>
-              <Input id="data_ocorrencia" name="data_ocorrencia" type="date" value={dataOcorrencia} onChange={e => setDataOcorrencia(e.target.value)} required />
-            </FormGroup>
-          </TopControls>
+              </select>
+            </div>
+            {/* FormGroup */}
+            <div className="flex min-w-[250px] flex-1 flex-col gap-2">
+              {/* Label */}
+              <label htmlFor="data_ocorrencia" className="text-sm text-gray-400">Data da Ocorrência</label>
+              {/* Input */}
+              <input
+                id="data_ocorrencia"
+                name="data_ocorrencia"
+                type="date"
+                value={dataOcorrencia}
+                onChange={e => setDataOcorrencia(e.target.value)}
+                required
+                className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
           {Object.entries(naturezasAgrupadas).map(([grupo, nats]) => (
-            <Fieldset key={grupo}>
-              <Legend>{grupo}</Legend>
-              <FormGrid>
+            // Fieldset
+            <fieldset key={grupo} className="rounded-lg border border-gray-700 p-6">
+              {/* Legend */}
+              <legend className="px-2 text-lg font-bold text-yellow-400">{grupo}</legend>
+              {/* FormGrid */}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 pt-2">
                 {nats.map(nat => (
-                  <FormGroup key={nat.id}>
-                    <Label htmlFor={`nat-${nat.id}`}>{nat.subgrupo}</Label>
-                    <Input
+                  // FormGroup
+                  <div key={nat.id} className="flex flex-col gap-2">
+                    {/* Label */}
+                    <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
+                    {/* Input */}
+                    <input
                       id={`nat-${nat.id}`}
                       type="number"
                       min="0"
                       placeholder="0"
                       value={quantidades[nat.id] || ''}
                       onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
+                      className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                     />
-                  </FormGroup>
+                  </div>
                 ))}
-              </FormGrid>
-            </Fieldset>
+              </div>
+            </fieldset>
           ))}
-        </Form>
+        </form>
 
-        <ButtonContainer>
-          <ClearButton type="button" onClick={limparFormulario}>Limpar Formulário</ClearButton>
-          <CancelButton type="button" onClick={onClose}>Cancelar</CancelButton>
-          <SaveButton type="submit" form="lancamento-form">
+        {/* ButtonContainer */}
+        <div className="flex flex-shrink-0 items-center justify-end gap-4 border-t border-gray-700 p-6">
+          <button
+            type="button"
+            onClick={limparFormulario}
+            className="mr-auto rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700"
+          >
+            Limpar Formulário
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="lancamento-form"
+            className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700"
+          >
             {isEditing ? 'Salvar Alterações' : 'Enviar Dados'}
-          </SaveButton>
-        </ButtonContainer>
-      </ModalContent>
-    </ModalBackdrop>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

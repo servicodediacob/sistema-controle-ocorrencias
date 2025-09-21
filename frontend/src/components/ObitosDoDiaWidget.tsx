@@ -1,65 +1,9 @@
+// Caminho: frontend/src/components/ObitosDoDiaWidget.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+// Não precisamos mais de 'styled-components'
 import { getObitosPorData, getNaturezasPorNomes, IObitoRegistro, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
-// --- Styled Components ---
-const WidgetContainer = styled.div`
-  background-color: #2c2c2c;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  margin-top: 1.5rem;
-`;
-
-const WidgetTitle = styled.h3`
-  margin-top: 0;
-  border-bottom: 1px solid #444;
-  padding-bottom: 1rem;
-  color: #e0e0e0;
-`;
-
-const TableWrapper = styled.div`
-  overflow-x: auto;
-  width: 100%;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  min-width: 600px;
-`;
-
-const Th = styled.th`
-  padding: 1rem;
-  text-align: left;
-  background-color: #e53935;
-  color: white;
-  font-weight: bold;
-  white-space: nowrap;
-`;
-
-const Td = styled.td`
-  padding: 1rem;
-  border-top: 1px solid #444;
-`;
-
-const TotalRow = styled.tr`
-  background-color: #c62828;
-  font-weight: bold;
-  color: white;
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #888;
-`;
-
-const DetalheItem = styled.span`
-  color: #8bf1ff;
-`;
 
 const NATUREZAS_FIXAS_NOMES = [
   'ACIDENTE DE TRÂNSITO', 'AFOGAMENTO OU CADÁVER', 'ARMA DE FOGO/BRANCA/AGRESSÃO',
@@ -91,7 +35,7 @@ function ObitosDoDiaWidget() {
 
   useEffect(() => {
     fetchDados();
-    const interval = setInterval(fetchDados, 60000); // Atualiza a cada 1 minuto
+    const interval = setInterval(fetchDados, 60000);
     return () => clearInterval(interval);
   }, [fetchDados]);
 
@@ -108,47 +52,49 @@ function ObitosDoDiaWidget() {
   const totalGeral = dadosTabela.reduce((acc, curr) => acc + curr.quantidade, 0);
 
   return (
-    <WidgetContainer>
-      <WidgetTitle>Relatório de Óbitos do Dia</WidgetTitle>
+    <div className="mt-6 w-full rounded-lg bg-gray-800 p-6">
+      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold text-gray-200">
+        Relatório de Óbitos do Dia
+      </h3>
       {loading && registrosDoDia.length === 0 ? (
-        <EmptyState>Carregando...</EmptyState>
+        <div className="py-8 text-center text-gray-500">Carregando...</div>
       ) : (
-        <TableWrapper>
-          <Table>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-[600px] w-full border-collapse">
             <thead>
               <tr>
-                <Th>NATUREZA</Th>
-                <Th>QTE</Th>
-                <Th>NÚMERO RAI E OBM RESPONSÁVEL</Th>
+                <th className="bg-red-700 p-3 text-left text-sm font-bold uppercase text-white">NATUREZA</th>
+                <th className="bg-red-700 p-3 text-left text-sm font-bold uppercase text-white">QTE</th>
+                <th className="bg-red-700 p-3 text-left text-sm font-bold uppercase text-white">NÚMERO RAI E OBM RESPONSÁVEL</th>
               </tr>
             </thead>
             <tbody>
               {dadosTabela.map((item) => (
-                <tr key={item.nome}>
-                  <Td>{item.nome}</Td>
-                  <Td>{item.quantidade}</Td>
-                  <Td>
+                <tr key={item.nome} className="border-b border-gray-700">
+                  <td className="p-3">{item.nome}</td>
+                  <td className="p-3">{item.quantidade}</td>
+                  <td className="p-3">
                     {item.registros.map((r, index) => (
                       <React.Fragment key={r.id}>
-                        <DetalheItem>
+                        <span className="text-cyan-400">
                           {`(${(r.numero_ocorrencia || 'N/A')}) - ${r.obm_responsavel || 'N/A'} (${r.quantidade_vitimas})`}
-                        </DetalheItem>
+                        </span>
                         {index < item.registros.length - 1 && '; '}
                       </React.Fragment>
                     ))}
-                  </Td>
+                  </td>
                 </tr>
               ))}
-              <TotalRow>
-                <Td>TOTAL</Td>
-                <Td>{totalGeral}</Td>
-                <Td></Td>
-              </TotalRow>
+              <tr className="bg-red-800 font-bold text-white">
+                <td className="p-3">TOTAL</td>
+                <td className="p-3">{totalGeral}</td>
+                <td className="p-3"></td>
+              </tr>
             </tbody>
-          </Table>
-        </TableWrapper>
+          </table>
+        </div>
       )}
-    </WidgetContainer>
+    </div>
   );
 }
 

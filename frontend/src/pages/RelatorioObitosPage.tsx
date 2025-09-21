@@ -1,7 +1,7 @@
-// frontend/src/pages/RelatorioObitosPage.tsx
+// Caminho: frontend/src/pages/RelatorioObitosPage.tsx
 
 import React, { useState, useEffect, useCallback, ReactElement } from 'react';
-import styled from 'styled-components';
+// Não precisamos mais de 'styled-components' ou 'device'
 import {
   getObitosPorData,
   criarObitoRegistro,
@@ -17,134 +17,8 @@ import {
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import RegistroObitoModal from '../components/RegistroObitoModal';
-import { device } from '../styles/theme';
 
-// --- Styled Components ---
-const ControlsContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  background-color: #2c2c2c;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  gap: 1rem;
-
-  @media ${device.tablet} {
-    flex-direction: column;
-    align-items: stretch;
-  }
-`;
-
-const ControlGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const Label = styled.label`
-  font-size: 0.9rem;
-  color: #aaa;
-`;
-
-const InputDate = styled.input`
-  padding: 0.75rem;
-  background-color: #3a3a3a;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 4px;
-`;
-
-const TableWrapper = styled.div`
-  overflow-x: auto;
-  width: 100%;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  background-color: #2c2c2c;
-  border-radius: 8px;
-  overflow: hidden;
-  min-width: 600px;
-`;
-
-const Th = styled.th`
-  padding: 1rem;
-  text-align: left;
-  background-color: #e53935;
-  color: white;
-  font-weight: bold;
-  white-space: nowrap;
-`;
-
-const Td = styled.td`
-  padding: 1rem;
-  border-top: 1px solid #444;
-
-  &:last-child {
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-`;
-
-const TotalRow = styled.tr`
-  background-color: #c62828;
-  font-weight: bold;
-  color: white;
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #888;
-`;
-
-// NOVO: Container para os botões de ação
-const ActionsContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-`;
-
-const ActionButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 1rem;
-  cursor: pointer;
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const AddButton = styled(ActionButton)`
-  background-color: #2a9d8f;
-`;
-
-// NOVO: Botão para limpar a tabela
-const ClearButton = styled(ActionButton)`
-  background-color: #e76f51;
-`;
-
-// NOVO: Estilo para os detalhes clicáveis
-const DetalheItem = styled.span`
-  cursor: pointer;
-  text-decoration: underline;
-  color: #8bf1ff; // Cor ciano para indicar que é clicável
-  
-  &:hover {
-    color: #aeffff;
-  }
-`;
-
-
-// --- Componente Principal ---
-
+// --- Constante (sem alterações) ---
 const NATUREZAS_FIXAS_NOMES = [
   'ACIDENTE DE TRÂNSITO',
   'AFOGAMENTO OU CADÁVER',
@@ -155,18 +29,18 @@ const NATUREZAS_FIXAS_NOMES = [
   'OUTROS'
 ];
 
+// --- Componente Principal ---
 function RelatorioObitosPage(): ReactElement {
+  // --- Lógica e Estados (sem alterações) ---
   const [dataRelatorio, setDataRelatorio] = useState(new Date().toISOString().split('T')[0]);
   const [naturezasDoRelatorio, setNaturezasDoRelatorio] = useState<IDataApoio[]>([]);
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [registrosDoDia, setRegistrosDoDia] = useState<IObitoRegistro[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // NOVO: Estado para guardar o registro que será editado
   const [registroEmEdicao, setRegistroEmEdicao] = useState<IObitoRegistro | null>(null);
   const { addNotification } = useNotification();
 
-  // useEffect para carregar dados de apoio (naturezas e cidades) - sem alterações
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -200,31 +74,28 @@ function RelatorioObitosPage(): ReactElement {
     }
   }, [dataRelatorio, naturezasDoRelatorio, fetchDadosDoDia]);
 
-  // ATUALIZADO: Handler para salvar (criação ou edição)
   const handleSaveRegistro = async (formData: IObitoRegistroPayload, id?: number) => {
     try {
-      if (id) { // Se tem ID, é edição
+      if (id) {
         await atualizarObitoRegistro(id, formData);
         addNotification('Registro atualizado com sucesso!', 'success');
-      } else { // Senão, é criação
+      } else {
         await criarObitoRegistro(formData);
         addNotification('Novo registro de óbito adicionado!', 'success');
       }
       setIsModalOpen(false);
-      setRegistroEmEdicao(null); // Limpa o registro em edição
-      fetchDadosDoDia(dataRelatorio); // Recarrega os dados
+      setRegistroEmEdicao(null);
+      fetchDadosDoDia(dataRelatorio);
     } catch (error) {
       addNotification('Falha ao salvar o registro.', 'error');
     }
   };
 
-  // NOVO: Handler para abrir o modal em modo de edição
   const handleEditClick = (registro: IObitoRegistro) => {
     setRegistroEmEdicao(registro);
     setIsModalOpen(true);
   };
   
-  // NOVO: Handler para o botão de limpar tabela
   const handleLimparTabela = async () => {
     if (registrosDoDia.length === 0) {
         addNotification('Não há registros para limpar.', 'info');
@@ -236,7 +107,7 @@ function RelatorioObitosPage(): ReactElement {
         setLoading(true);
         await limparRegistrosDoDia(dataRelatorio);
         addNotification('Todos os registros do dia foram excluídos.', 'success');
-        fetchDadosDoDia(dataRelatorio); // Recarrega a lista (que agora estará vazia)
+        fetchDadosDoDia(dataRelatorio);
       } catch (error) {
         addNotification('Falha ao limpar os registros.', 'error');
       } finally {
@@ -248,83 +119,99 @@ function RelatorioObitosPage(): ReactElement {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setRegistroEmEdicao(null);
-    // Recarrega os dados caso uma exclusão tenha ocorrido dentro do modal
     fetchDadosDoDia(dataRelatorio);
   };
 
   const dadosTabela = naturezasDoRelatorio.map(natureza => {
     const registrosDaNatureza = registrosDoDia.filter(r => r.natureza_id === natureza.id);
     const quantidade = registrosDaNatureza.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
-    
     return {
       nome: natureza.subgrupo,
       quantidade,
-      registros: registrosDaNatureza // Passa a lista completa de registros para o render
+      registros: registrosDaNatureza
     };
   });
 
   const totalGeral = dadosTabela.reduce((acc, curr) => acc + curr.quantidade, 0);
 
+  // --- JSX Refatorado com Tailwind CSS ---
   return (
     <MainLayout pageTitle="Lançamento de Óbitos para Relatório">
-      <ControlsContainer>
-        <ControlGroup>
-          <Label htmlFor="data-relatorio">Data do Relatório</Label>
-          <InputDate
+      {/* ControlsContainer */}
+      <div className="mb-8 flex flex-col items-stretch gap-4 rounded-lg bg-gray-800 p-6 md:flex-row md:items-end md:justify-between">
+        {/* ControlGroup */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="data-relatorio" className="text-sm text-gray-400">Data do Relatório</label>
+          <input
             id="data-relatorio"
             type="date"
             value={dataRelatorio}
             onChange={e => setDataRelatorio(e.target.value)}
+            className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
           />
-        </ControlGroup>
-        <ActionsContainer>
-            <ClearButton onClick={handleLimparTabela} disabled={loading || registrosDoDia.length === 0}>
-                Limpar Tabela
-            </ClearButton>
-            <AddButton onClick={() => setIsModalOpen(true)} disabled={loading}>
-                Adicionar Registro
-            </AddButton>
-        </ActionsContainer>
-      </ControlsContainer>
+        </div>
+        {/* ActionsContainer */}
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <button
+            onClick={handleLimparTabela}
+            disabled={loading || registrosDoDia.length === 0}
+            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Limpar Tabela
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            disabled={loading}
+            className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Adicionar Registro
+          </button>
+        </div>
+      </div>
 
       {loading ? (
-        <EmptyState>Carregando...</EmptyState>
+        <div className="text-center text-gray-400 p-8">Carregando...</div>
       ) : (
-        <TableWrapper>
-          <Table>
+        // TableWrapper
+        <div className="overflow-x-auto">
+          {/* Table */}
+          <table className="min-w-[600px] w-full border-collapse overflow-hidden rounded-lg bg-gray-800">
             <thead>
               <tr>
-                <Th>NATUREZA</Th>
-                <Th>QTE</Th>
-                <Th>NÚMERO RAI E OBM RESPONSÁVEL</Th>
+                <th className="bg-red-700 p-4 text-left text-sm font-bold uppercase text-white">Natureza</th>
+                <th className="bg-red-700 p-4 text-left text-sm font-bold uppercase text-white">QTE</th>
+                <th className="bg-red-700 p-4 text-left text-sm font-bold uppercase text-white">Número RAI e OBM Responsável</th>
               </tr>
             </thead>
             <tbody>
               {dadosTabela.map((item) => (
-                <tr key={item.nome}>
-                  <Td>{item.nome}</Td>
-                  <Td>{item.quantidade}</Td>
-                  <Td>
-                    {/* Mapeia os registros para criar os itens clicáveis */}
+                <tr key={item.nome} className="border-b border-gray-700">
+                  <td className="p-4">{item.nome}</td>
+                  <td className="p-4">{item.quantidade}</td>
+                  <td className="p-4">
                     {item.registros.map((r, index) => (
                       <React.Fragment key={r.id}>
-                        <DetalheItem onClick={() => handleEditClick(r)}>
+                        <span
+                          onClick={() => handleEditClick(r)}
+                          className="cursor-pointer text-cyan-400 underline decoration-dotted hover:text-cyan-300"
+                        >
                           {`(${(r.numero_ocorrencia || 'N/A')}) - ${r.obm_responsavel || 'N/A'} (${r.quantidade_vitimas})`}
-                        </DetalheItem>
+                        </span>
                         {index < item.registros.length - 1 && '; '}
                       </React.Fragment>
                     ))}
-                  </Td>
+                  </td>
                 </tr>
               ))}
-              <TotalRow>
-                <Td>TOTAL</Td>
-                <Td>{totalGeral}</Td>
-                <Td></Td>
-              </TotalRow>
+              {/* TotalRow */}
+              <tr className="bg-red-800 font-bold text-white">
+                <td className="p-4">TOTAL</td>
+                <td className="p-4">{totalGeral}</td>
+                <td className="p-4"></td>
+              </tr>
             </tbody>
-          </Table>
-        </TableWrapper>
+          </table>
+        </div>
       )}
 
       {isModalOpen && (
@@ -334,7 +221,7 @@ function RelatorioObitosPage(): ReactElement {
           cidades={cidades}
           onClose={handleCloseModal}
           onSave={handleSaveRegistro}
-          registroParaEditar={registroEmEdicao} // Passa o registro para o modal
+          registroParaEditar={registroEmEdicao}
         />
       )}
     </MainLayout>

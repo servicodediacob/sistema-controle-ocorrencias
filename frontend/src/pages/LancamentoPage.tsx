@@ -1,82 +1,20 @@
-// Caminho: frontend/src/pages/LancamentoPage.tsx
+// Caminho: frontend/src/pages/LancamentoPage.tsx (CORRIGIDO)
 
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
-import { 
-  getCidades, 
-  getNaturezas, 
-  ICidade, 
-  IDataApoio, 
+import {
+  getCidades,
+  getNaturezas,
+  ICidade,
+  IDataApoio,
   registrarEstatisticasLote,
   getEstatisticasAgrupadasPorData,
   IEstatisticaAgrupada,
-  limparEstatisticasDoDia // <-- Importa a nova função
+  limparEstatisticasDoDia
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
 import LancamentoTabela from '../components/LancamentoTabela';
-
-// --- Styled Components ---
-const ControlsContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  background-color: #2c2c2c;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  gap: 1rem;
-  flex-wrap: wrap;
-`;
-
-const ControlGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const Label = styled.label`
-  font-size: 0.9rem;
-  color: #aaa;
-`;
-
-const InputDate = styled.input`
-  padding: 0.75rem;
-  background-color: #3a3a3a;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 4px;
-`;
-
-const ActionsGroup = styled.div`
-    display: flex;
-    gap: 1rem;
-    align-items: flex-end;
-`;
-
-const ActionButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const AddButton = styled(ActionButton)`
-  background-color: #2a9d8f;
-  color: white;
-`;
-
-const ClearButton = styled(ActionButton)`
-  background-color: #e76f51;
-  color: white;
-`;
 
 const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
@@ -157,9 +95,8 @@ function LancamentoPage() {
     }
 
     try {
-      // Para edição, primeiro limpamos os dados antigos da cidade
       if (itemParaEditar) {
-        await limparEstatisticasDoDia(payload.data_registro);
+        await limparEstatisticasDoDia(payload.data_registro, payload.cidade_id);
       }
       
       const response = await registrarEstatisticasLote(payload);
@@ -197,25 +134,37 @@ function LancamentoPage() {
 
   return (
     <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
-      <ControlsContainer>
-        <ControlGroup>
-          <Label htmlFor="data-registro">Data de Visualização</Label>
-          <InputDate 
-            id="data-registro" 
-            type="date" 
-            value={dataRegistro} 
-            onChange={e => setDataRegistro(e.target.value)} 
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-gray-800 p-6">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="data-registro" className="text-sm text-gray-400">
+            Data de Visualização
+          </label>
+          <input
+            id="data-registro"
+            type="date"
+            value={dataRegistro}
+            onChange={e => setDataRegistro(e.target.value)}
+            className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
           />
-        </ControlGroup>
-        <ActionsGroup>
-            <ClearButton onClick={handleLimparTabela} disabled={loading || dadosTabela.length === 0}>
-                Limpar Plantão
-            </ClearButton>
-            <AddButton onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }} disabled={cidades.length === 0}>
-                Adicionar Lançamento
-            </AddButton>
-        </ActionsGroup>
-      </ControlsContainer>
+        </div>
+        
+        <div className="flex items-end gap-4">
+          <button
+            onClick={handleLimparTabela}
+            disabled={loading || dadosTabela.length === 0}
+            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Limpar Plantão
+          </button>
+          <button
+            onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
+            disabled={cidades.length === 0}
+            className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Adicionar Lançamento
+          </button>
+        </div>
+      </div>
 
       <LancamentoTabela
         dadosApi={dadosTabela}

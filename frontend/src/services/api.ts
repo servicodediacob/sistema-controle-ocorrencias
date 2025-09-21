@@ -1,4 +1,4 @@
-// Caminho: frontend/src/services/api.ts
+// Caminho: frontend/src/services/api.ts (COMPLETO E CORRIGIDO)
 
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
@@ -161,7 +161,7 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
 
 const api = axios.create({
   baseURL: baseURL,
@@ -389,9 +389,15 @@ export const getEstatisticasAgrupadasPorData = async (data: string): Promise<IEs
     throw new Error(extractErrorMessage(error));
   }
 };
-export const limparEstatisticasDoDia = async (data: string): Promise<{ message: string }> => {
+
+// --- FUNÇÃO CORRIGIDA ---
+export const limparEstatisticasDoDia = async (data: string, cidade_id?: number): Promise<{ message: string }> => {
     try {
-        const response = await api.delete('/estatisticas/por-data', { params: { data } });
+        const params: { data: string; cidade_id?: number } = { data };
+        if (cidade_id) {
+            params.cidade_id = cidade_id;
+        }
+        const response = await api.delete('/estatisticas/por-data', { params });
         return response.data;
     } catch (error) {
         throw new Error(extractErrorMessage(error));
