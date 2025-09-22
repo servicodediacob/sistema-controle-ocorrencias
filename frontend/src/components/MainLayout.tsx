@@ -1,5 +1,5 @@
 import { useState, ReactNode } from 'react';
-import { useAuth } from '../contexts/useAuth';
+// A importação do useAuth foi removida, pois não é mais necessária aqui.
 import Sidebar from './Sidebar';
 
 interface MainLayoutProps {
@@ -8,13 +8,13 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
-  const { usuario, logout } = useAuth();
+  // Os dados do usuário e a função de logout foram removidos daqui.
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <>
-      {/* Backdrop para fechar o menu em dispositivos móveis */}
+      {/* Backdrop para o menu mobile */}
       <div
         className={`
           fixed inset-0 bg-black bg-opacity-50 z-40
@@ -34,6 +34,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
         >
+          {/* As props 'userName' e 'onLogout' foram removidas da chamada do Sidebar */}
           <Sidebar
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
@@ -46,13 +47,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           {/* Cabeçalho */}
           <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 px-6 md:px-10">
             <div className="flex items-center">
-              {/* Botão Hamburger para abrir o menu em mobile */}
+              {/* Botão Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="text-white lg:hidden"
                 aria-label="Abrir menu"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="24" height="24" viewBox="0 0 24" fill="currentColor">
                   <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
               </button>
@@ -61,7 +62,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
                 {pageTitle}
               </h1>
             </div>
-            {/* Informações do Usuário e Logout (movido para o Sidebar para consistência) */}
           </header>
 
           {/* Corpo da Página */}
