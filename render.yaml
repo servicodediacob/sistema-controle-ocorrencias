@@ -1,34 +1,23 @@
 services:
-  # --- Configuração do Backend (API) ---
   - type: web
-    name: sistema-ocorrencias-api # Nome do serviço no Render
+    name: sistema-ocorrencias-api
     env: node
-    region: oregon # ou a região que você preferir, ex: frankfurt
-    rootDir: api # Define o diretório raiz para este serviço
-    plan: free # Define o plano (pode ser 'starter' se você fizer upgrade)
+    region: oregon
+    plan: free
+    rootDir: api
     
+    # --- CORREÇÃO APLICADA AQUI ---
+    # A chave 'buildFilter' é o objeto pai, e 'paths' é uma de suas propriedades.
+    # Eles não devem estar no mesmo nível.
     buildFilter:
       paths:
-      - "api/**/*" # Só faz novo build se houver mudanças na pasta 'api'
-      
+        - "api/**/*"
+        - "render.yaml" # Adicionado: Também aciona um deploy se a própria configuração mudar.
+      ignoredPaths:
+        - "frontend/**/*" # Adicionado: Ignora explicitamente mudanças no frontend.
+
     buildCommand: "npm install && npm run build"
-    
     startCommand: "npm run start"
     
     healthCheck:
-      path: /api/health # Caminho para a verificação de saúde
-      
-    # --- Variáveis de Ambiente ---
-    # O Render usará as variáveis que você já configurou no painel.
-    # Você pode defini-las aqui também, mas é mais seguro usar o "Secret File" ou o painel.
-    # Exemplo de como seria:
-    # envVars:
-    #   - key: DATABASE_URL
-    #     fromSecret: true # Indica que o valor vem de um segredo
-    #   - key: JWT_SECRET
-    #     fromSecret: true
-
-  # --- Configuração do Frontend (Vercel) ---
-  # Não adicionamos o frontend aqui, pois ele já está sendo gerenciado pela Vercel.
-  # Este arquivo é apenas para os serviços hospedados no Render.
-
+      path: /api/health
