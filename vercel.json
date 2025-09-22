@@ -1,3 +1,4 @@
+// Caminho: vercel.json (na raiz do projeto)
 {
   "version": 2,
   "builds": [
