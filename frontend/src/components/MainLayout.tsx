@@ -1,5 +1,3 @@
-// Caminho: frontend/src/components/MainLayout.tsx (CORRIGIDO)
-
 import { useState, ReactNode } from 'react';
 import { useAuth } from '../contexts/useAuth';
 import Sidebar from './Sidebar';
@@ -14,11 +12,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // A variável 'sidebarWidthClass' foi removida daqui, pois não era utilizada.
-
   return (
     <>
-      {/* Backdrop para o menu mobile */}
+      {/* Backdrop para fechar o menu em dispositivos móveis */}
       <div
         className={`
           fixed inset-0 bg-black bg-opacity-50 z-40
@@ -39,12 +35,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           `}
         >
           <Sidebar
-            onLogout={logout}
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
-            isMobileOpen={isMobileMenuOpen}
             closeMobileMenu={() => setMobileMenuOpen(false)}
-            userName={usuario?.nome}
           />
         </div>
 
@@ -53,7 +46,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           {/* Cabeçalho */}
           <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 px-6 md:px-10">
             <div className="flex items-center">
-              {/* Botão Hamburger */}
+              {/* Botão Hamburger para abrir o menu em mobile */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="text-white lg:hidden"
@@ -68,6 +61,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
                 {pageTitle}
               </h1>
             </div>
+            {/* Informações do Usuário e Logout (movido para o Sidebar para consistência) */}
           </header>
 
           {/* Corpo da Página */}
