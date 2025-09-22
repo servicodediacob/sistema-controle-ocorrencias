@@ -27,13 +27,13 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'https://sistema-controle-ocorrencias.vercel.app',
   'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app',
-  'https://siscob-iota.vercel.app',
-  'https://sistema-ocorrencias-d7rw.onrender.com', 
-  'https://sistema-ocorrencias-api-1jzi.onrender.com' 
+  'https://siscob-iota.vercel.app', // URL principal do seu frontend
+  'https://sistema-ocorrencias-d7rw.onrender.com', // URL antiga do backend (segurança )
+  'https://sistema-ocorrencias-api-1jzi.onrender.com' // URL nova do backend (segurança )
 ];
 
 if (process.env.NODE_ENV !== 'production' ) {
-  allowedOrigins.push('http://localhost:5173' );
+  allowedOrigins.push('http://localhost:5173'  );
 }
 
 const corsOptions: cors.CorsOptions = {
