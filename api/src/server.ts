@@ -22,17 +22,23 @@ const PORT = process.env.PORT || 3001;
 
 // --- Configuração de CORS ---
 const allowedOrigins = [
+  // URLs antigas (podem ser mantidas por segurança ou removidas)
   'https://sistema-controle-ocorrencias.vercel.app',
-  'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app'
+  'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app',
+  
+  // ===== ATUALIZAÇÃO APLICADA AQUI =====
+  // Adiciona a nova URL do frontend da Vercel à lista de permissões.
+  'https://siscob-iota.vercel.app'
 ];
 
-// Permite localhost apenas se não estiver em produção
+// Permite localhost apenas se não estiver em ambiente de produção
 if (process.env.NODE_ENV !== 'production' ) {
   allowedOrigins.push('http://localhost:5173' );
 }
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
+    // Permite requisições sem 'origin' (como de apps mobile ou Postman) e verifica a lista de permissões.
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
