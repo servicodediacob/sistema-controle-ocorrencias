@@ -7,7 +7,10 @@
     },
     {
       "src": "frontend/package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "frontend/dist"
+      }
     }
   ],
   "rewrites": [
@@ -16,8 +19,8 @@
       "destination": "/api"
     },
     {
-      "source": "/(.*)",
-      "destination": "/frontend/index.html"
+      "source": "/((?!api/|_next/|assets/|favicon.ico|sw.js|.*\\..*).*)",
+      "destination": "/index.html"
     }
   ]
 }
