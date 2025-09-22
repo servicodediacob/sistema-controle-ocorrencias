@@ -7,16 +7,18 @@
     "start": "node dist/server.js",
     "dev": "nodemon",
     "seed:dev": "ts-node --swc src/db/seed.ts",
-    "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js",
+    "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "csv-parse": "^5.5.6",
-    "dotenv": "^17.2.2",
-    "express": "^5.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.3"
+    "pg": "^8.11.5"
   },
   "devDependencies": {
     "@swc/core": "^1.7.3",

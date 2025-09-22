@@ -1,3 +1,4 @@
+// Caminho: frontend/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -20,8 +21,16 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Incremental Migration Setting */
-    "allowJs": true
+    /* --- CORREÇÕES APLICADAS --- */
+
+    // 1. Facilita a importação de módulos CommonJS em um ambiente de Módulos ES.
+    //    Resolve o aviso do ts-jest.
+    "esModuleInterop": true,
+
+    // 2. Informa ao TypeScript para carregar os tipos do Jest e do Jest-DOM
+    //    para todo o projeto, habilitando o autocomplete e a verificação de tipos
+    //    para matchers como .toBeInTheDocument()
+    "types": ["jest", "@testing-library/jest-dom"]
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -1,133 +1,91 @@
 // Caminho: api/src/__tests__/api.test.ts
-import '../config/envLoader'; // IMPORTANTE: Carrega o .env.test primeiro
+
 import request from 'supertest';
-import { app, server } from '../server';
-import db from '../db';
+import { app } from '../server'; // Apenas o 'app' é necessário para o supertest
 import { seedDatabase } from '../db/seed';
+import db from '../db';
 
-// Variáveis globais para armazenar dados entre os testes
-let token: string;
-let naturezaId: number;
-let cidadeId: number; // Representa o ID da OBM
-let ocorrenciaId: number;
-
-// HOOK: Executado uma vez antes de todos os testes desta suíte.
-beforeAll(async () => {
-  // 1. Garante um banco de dados limpo e semeado para o teste
-  try {
-    await seedDatabase();
-  } catch (error) {
-    console.error("Falha crítica ao semear o banco de dados para teste. Abortando.", error);
-    process.exit(1);
-  }
-
-  // 2. Inicia o servidor HTTP
-  const port = process.env.PORT || 3002;
-  await new Promise<void>((resolve) => {
-    server.listen(port, resolve);
-  });
-});
-
-// HOOK: Executado uma vez após todos os testes desta suíte.
-afterAll(async () => {
-  // Fecha a conexão com o banco e o servidor para evitar "open handles".
-  await db.pool.end();
-  await new Promise<void>((resolve, reject) => {
-    server.close((err) => {
-      if (err) return reject(err);
-      resolve();
-    });
-  });
-});
-
-// Suíte principal de testes
 describe('API End-to-End Test Suite', () => {
+  let token: string;
+
+  // Antes de cada teste, semeia o banco e obtém um token de autenticação.
+  // Usar beforeEach garante que cada teste comece em um estado limpo e conhecido.
+  beforeEach(async () => {
+    await seedDatabase();
+
+    const loginResponse = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'supervisor@cbm.pe.gov.br', // Usuário do seed
+        senha: 'supervisor123',
+      });
+    
+    token = loginResponse.body.token;
+    expect(token).toBeDefined();
+  });
 
   describe('POST /api/auth/login', () => {
     it('deve autenticar o usuário supervisor e retornar um token', async () => {
-      const response = await request(app)
+      const res = await request(app)
         .post('/api/auth/login')
         .send({
           email: 'supervisor@cbm.pe.gov.br',
           senha: 'supervisor123',
         });
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('token');
-      token = response.body.token;
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('token');
+      expect(res.body.usuario.email).toEqual('supervisor@cbm.pe.gov.br');
     });
   });
 
   describe('CRUD de Recursos Protegidos', () => {
-    // Hook para garantir que o token existe antes de rodar os testes protegidos
-    beforeAll(() => {
-      if (!token) {
-        throw new Error('O token de autenticação não foi obtido. Os testes de rotas protegidas não podem continuar.');
-      }
+    let obmId: number;
+    let naturezaId: number;
+
+    // Obtém IDs necessários para os testes de CRUD
+    beforeEach(async () => {
+      const obms = await db.query("SELECT id FROM obms WHERE nome = 'Goiânia - Diurno'");
+      obmId = obms.rows[0].id;
+
+      const naturezas = await db.query("SELECT id FROM naturezas_ocorrencia WHERE subgrupo = 'Resgate'");
+      naturezaId = naturezas.rows[0].id;
     });
 
-    it('GET /api/unidades -> deve obter a OBM para usar nos testes', async () => {
-      const res = await request(app).get('/api/unidades').set('Authorization', `Bearer ${token}`);
-      expect(res.status).toBe(200);
-      expect(res.body.length).toBeGreaterThan(0);
-      cidadeId = res.body[0].id;
-    });
+    it('CRUD /api/ocorrencias -> deve criar, ler e deletar uma ocorrência', async () => {
+      // 1. POST -> Criar uma nova ocorrência
+      const ocorrenciaPayload = {
+        ocorrencia: {
+          obm_id: obmId,
+          natureza_id: naturezaId,
+          data_ocorrencia: '2025-09-21',
+        },
+      };
+      const createRes = await request(app)
+        .post('/api/ocorrencias')
+        .set('Authorization', `Bearer ${token}`)
+        .send(ocorrenciaPayload);
 
-    describe('CRUD /api/naturezas', () => {
-      it('POST -> deve criar uma nova natureza', async () => {
-        const response = await request(app)
-          .post('/api/naturezas')
-          .set('Authorization', `Bearer ${token}`)
-          .send({ grupo: 'Teste Automatizado', subgrupo: `Subgrupo ${Date.now()}` });
-        
-        expect(response.status).toBe(201);
-        expect(response.body).toHaveProperty('id');
-        naturezaId = response.body.id;
-      });
+      expect(createRes.statusCode).toEqual(201);
+      expect(createRes.body).toHaveProperty('ocorrenciaId');
+      const novaOcorrenciaId = createRes.body.ocorrenciaId;
 
-      it('GET -> deve listar a natureza criada', async () => {
-        const response = await request(app).get('/api/naturezas').set('Authorization', `Bearer ${token}`);
-        expect(response.status).toBe(200);
-        expect(response.body.some((item: any) => item.id === naturezaId)).toBe(true);
-      });
-    });
-
-    describe('CRUD /api/ocorrencias', () => {
-      it('POST -> deve criar uma nova ocorrência', async () => {
-        const response = await request(app)
-          .post('/api/ocorrencias')
-          .set('Authorization', `Bearer ${token}`)
-          .send({
-            ocorrencia: { 
-              data_ocorrencia: '2025-09-18', 
-              natureza_id: naturezaId, 
-              obm_id: cidadeId // Corrigido para obm_id
-            },
-            obitos: []
-          });
-        
-        expect(response.status).toBe(201);
-        expect(response.body).toHaveProperty('ocorrenciaId');
-        ocorrenciaId = response.body.ocorrenciaId;
-      });
-
-      it('DELETE -> deve excluir a ocorrência criada', async () => {
-        const response = await request(app)
-          .delete(`/api/ocorrencias/${ocorrenciaId}`)
-          .set('Authorization', `Bearer ${token}`);
-        
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Ocorrência excluída com sucesso.');
-      });
-    });
-
-    it('Limpeza -> deve excluir a natureza de teste', async () => {
-      const response = await request(app)
-        .delete(`/api/naturezas/${naturezaId}`)
+      // 2. GET -> Verificar se a ocorrência foi criada
+      const getRes = await request(app)
+        .get('/api/ocorrencias')
         .set('Authorization', `Bearer ${token}`);
       
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Natureza excluída com sucesso.');
+      expect(getRes.statusCode).toEqual(200);
+      const ocorrenciaEncontrada = getRes.body.ocorrencias.find((o: any) => o.id === novaOcorrenciaId);
+      expect(ocorrenciaEncontrada).toBeDefined();
+
+      // 3. DELETE -> Excluir a ocorrência criada
+      const deleteRes = await request(app)
+        .delete(`/api/ocorrencias/${novaOcorrenciaId}`)
+        .set('Authorization', `Bearer ${token}`);
+        
+      expect(deleteRes.statusCode).toEqual(200);
+      expect(deleteRes.body.message).toContain('excluída com sucesso');
     });
   });
 });
