@@ -1,15 +1,23 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth'; // Importa o hook de autenticação
+import { useAuth } from '../contexts/useAuth';
 
-// Componente de Ícone SVG (sem alterações)
+// --- CORREÇÃO NO COMPONENTE DE ÍCONE ---
+// Adicionamos um valor padrão robusto para o viewBox diretamente na definição do componente.
 const Icon = ({ path, size = 24 }: { path: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" // Valor padrão garantido
+    fill="currentColor" 
+    className="flex-shrink-0"
+  >
     <path d={path}></path>
   </svg>
 );
 
-// Mapeamento de ícones (sem alterações)
+// --- VERIFICAÇÃO DO MAPA DE ÍCONES ---
+// Todos os ícones devem ter um caminho (string) válido.
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -24,7 +32,8 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
 };
 
-// Componente de Botão de Navegação (sem alterações)
+// O restante do componente permanece exatamente o mesmo
+// ... (NavButton, SidebarProps, Sidebar, etc.) ...
 interface NavButtonProps {
   onClick: () => void;
   isCollapsed: boolean;
@@ -46,7 +55,6 @@ const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, t
   );
 };
 
-// Componente Principal da Sidebar (com a correção)
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
@@ -54,7 +62,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu }) => {
-  // Busca os dados do usuário e a função de logout diretamente do contexto
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
