@@ -3,7 +3,6 @@ import './config/envLoader';
 import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import http from 'http'; // Importe o módulo http
 
 // Importação das suas rotas
 import authRoutes from './routes/authRoutes';
@@ -63,17 +62,17 @@ app.get('/', (_req: Request, res: Response) => {
 // --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 3001;
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// Cria uma instância do servidor HTTP a partir do app Express
-const server = http.createServer(app );
+// Rota Raiz (movida para cima para garantir que seja registrada)
+app.get('/api', (_req: Request, res: Response) => {
+  res.send('API do Sistema de Controle de Ocorrências está no ar!');
+});
 
-// Verifica se o arquivo está sendo executado diretamente
-if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`Servidor rodando em http://0.0.0.0:${PORT}` );
+// A inicialização do servidor para desenvolvimento local permanece, mas não é usada pela Vercel.
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Servidor de desenvolvimento rodando em http://localhost:${PORT}` );
   });
 }
 
-// Exporta tanto o app quanto o servidor
-export { app, server };
-// ======================= FIM DA CORREÇÃO =======================
+// Esta é a exportação padrão que a Vercel usará para criar a Serverless Function.
+export default app;
