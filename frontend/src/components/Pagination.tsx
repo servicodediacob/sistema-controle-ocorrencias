@@ -1,35 +1,7 @@
 import { ReactElement } from 'react';
-import styled from 'styled-components';
 import { IPaginatedOcorrencias } from '../services/api';
 
-// --- Styled Components ---
-const Container = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 2rem;
-`;
-
-const PageButton = styled.button`
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border: 1px solid #555;
-  background-color: #2c2c2c;
-  color: white;
-  border-radius: 4px;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-`;
-
-const PageInfo = styled.span`
-  color: #aaa;
-`;
-
-// --- Component ---
+// Interface das props (sem alteração)
 interface PaginationProps {
   pagination: IPaginatedOcorrencias['pagination'];
   onPageChange: (newPage: number) => void;
@@ -38,28 +10,31 @@ interface PaginationProps {
 function Pagination({ pagination, onPageChange }: PaginationProps): ReactElement | null {
   const { page, totalPages } = pagination;
 
+  // Não renderiza nada se houver apenas uma página ou nenhuma
   if (totalPages <= 1) {
     return null;
   }
 
   return (
-    <Container>
-      <PageButton
+    <div className="mt-8 flex items-center justify-center gap-4">
+      <button
         onClick={() => onPageChange(page - 1)}
         disabled={page === 1}
+        className="rounded-md border border-gray-600 bg-gray-700 px-4 py-2 text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Anterior
-      </PageButton>
-      <PageInfo>
+      </button>
+      <span className="text-gray-400">
         Página {page} de {totalPages}
-      </PageInfo>
-      <PageButton
+      </span>
+      <button
         onClick={() => onPageChange(page + 1)}
         disabled={page === totalPages}
+        className="rounded-md border border-gray-600 bg-gray-700 px-4 py-2 text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Próxima
-      </PageButton>
-    </Container>
+      </button>
+    </div>
   );
 }
 

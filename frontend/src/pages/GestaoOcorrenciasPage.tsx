@@ -1,14 +1,6 @@
-// --- CORREÇÃO: 'React' foi removido da importação ---
 import { useState, useEffect, useCallback, ReactElement } from 'react';
-import { 
-  getOcorrencias, 
-  deleteOcorrencia, 
-  updateOcorrencia, 
-  IPaginatedOcorrencias, 
-  IOcorrencia 
-} from '../services/api';
+import { getOcorrencias, deleteOcorrencia, updateOcorrencia, IPaginatedOcorrencias, IOcorrencia } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
 import MainLayout from '../components/MainLayout';
 import OcorrenciaTable from '../components/OcorrenciaTable';
 import EditOcorrenciaModal from '../components/EditOcorrenciaModal';
@@ -63,7 +55,7 @@ function GestaoOcorrenciasPage(): ReactElement {
       const dataToUpdate = {
         data_ocorrencia: updatedOcorrencia.data_ocorrencia.split('T')[0],
         natureza_id: updatedOcorrencia.natureza_id,
-        cidade_id: updatedOcorrencia.cidade_id,
+        obm_id: updatedOcorrencia.obm_id,
       };
       await updateOcorrencia(updatedOcorrencia.id, dataToUpdate);
       
@@ -96,6 +88,7 @@ function GestaoOcorrenciasPage(): ReactElement {
 
   return (
     <MainLayout pageTitle="Gestão de Ocorrências">
+      {/* O componente OcorrenciaTable agora gerencia sua própria responsividade */}
       <OcorrenciaTable
         ocorrencias={data.ocorrencias}
         onEdit={handleEdit}

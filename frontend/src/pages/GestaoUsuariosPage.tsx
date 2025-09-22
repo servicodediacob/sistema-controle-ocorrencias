@@ -1,99 +1,36 @@
-// Caminho: frontend/src/pages/GestaoUsuariosPage.tsx (CORRIGIDO)
-
-import React, { useState, useEffect, ReactElement } from 'react';
+import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
+import UsuarioModal from '../components/UsuarioModal'; // Importando o novo modal
+import Spinner from '../components/Spinner';
 
-// --- Componente do Modal de Usuário ---
-interface UsuarioModalProps {
-  usuario: IUser | null;
-  onClose: () => void;
-  onSave: (formData: Omit<IUser, 'id' | 'criado_em'> & { senha?: string }) => void;
-}
-
-function UsuarioModal({ usuario, onClose, onSave }: UsuarioModalProps): ReactElement {
-  const [formData, setFormData] = useState({
-    nome: usuario?.nome || '',
-    email: usuario?.email || '',
-    senha: '',
-  });
-  const isEditing = !!usuario;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!isEditing && !formData.senha) {
-      alert('A senha é obrigatória para criar um novo usuário.');
-      return;
-    }
-    onSave(formData);
-  };
-
+// NOVO: Componente de Card para a lista de usuários
+const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () => void; }> = ({ usuario, onEdit, onDelete }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="mb-6 text-xl font-semibold">
-          {isEditing ? 'Editar Usuário' : 'Adicionar Novo Usuário'}
-        </h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="nome" className="text-sm text-gray-400">Nome</label>
-            <input
-              type="text"
-              id="nome"
-              name="nome"
-              value={formData.nome}
-              onChange={handleChange}
-              required
-              className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="text-sm text-gray-400">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {!isEditing && (
-            <div className="flex flex-col gap-2">
-              <label htmlFor="senha" className="text-sm text-gray-400">Senha</label>
-              <input
-                type="password"
-                id="senha"
-                name="senha"
-                value={formData.senha}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-          <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500">
-              Cancelar
-            </button>
-            <button type="submit" className="rounded-md bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-600">
-              Salvar
-            </button>
-          </div>
-        </form>
+    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 text-white">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <p className="font-bold">{usuario.nome}</p>
+          <p className="text-sm text-gray-400">{usuario.email}</p>
+          <p className="mt-1 text-xs text-gray-500">ID: {usuario.id}</p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-600 text-gray-200'}`}>
+          {usuario.role}
+        </span>
+      </div>
+      <div className="mt-4 flex gap-2 border-t border-gray-700 pt-4">
+        <button onClick={onEdit} className="flex-1 rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400">
+          Editar
+        </button>
+        <button onClick={onDelete} className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700">
+          Excluir
+        </button>
       </div>
     </div>
   );
-}
+};
 
-// --- Componente Principal da Página ---
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +38,7 @@ function GestaoUsuariosPage(): ReactElement {
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState<IUser | null>(null);
   const { addNotification } = useNotification();
 
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getUsuarios();
@@ -112,11 +49,11 @@ function GestaoUsuariosPage(): ReactElement {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
 
   useEffect(() => {
     fetchUsuarios();
-  }, []);
+  }, [fetchUsuarios]);
 
   const handleOpenModal = (usuario: IUser | null = null) => {
     setUsuarioEmEdicao(usuario);
@@ -128,14 +65,13 @@ function GestaoUsuariosPage(): ReactElement {
     setUsuarioEmEdicao(null);
   };
 
-  const handleSave = async (formData: { nome: string; email: string; senha?: string }) => {
+  const handleSave = async (formData: Partial<IUser> & { senha?: string }) => {
     try {
       if (usuarioEmEdicao) {
-        await updateUsuario(usuarioEmEdicao.id, { nome: formData.nome, email: formData.email });
+        await updateUsuario(usuarioEmEdicao.id, formData);
         addNotification('Usuário atualizado com sucesso!', 'success');
       } else {
-        const payload = { nome: formData.nome, email: formData.email, senha: formData.senha };
-        await criarUsuario(payload);
+        await criarUsuario(formData as Omit<IUser, 'id'> & { senha?: string });
         addNotification('Usuário criado com sucesso!', 'success');
       }
       handleCloseModal();
@@ -171,45 +107,52 @@ function GestaoUsuariosPage(): ReactElement {
       </div>
 
       {loading ? (
-        <p className="text-center text-gray-400">Carregando usuários...</p>
+        <div className="flex justify-center p-10"><Spinner text="Carregando usuários..." /></div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-700">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700 bg-gray-800">
-              {usuarios.map(user => (
-                <tr key={user.id}>
-                  <td className="whitespace-nowrap px-6 py-4">{user.id}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{user.nome}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{user.email}</td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => handleOpenModal(user)}
-                        className="rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </td>
+        <>
+          {/* Tabela para Desktop */}
+          <div className="hidden overflow-x-auto rounded-lg border border-gray-700 md:block">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-800">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Role</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-700 bg-gray-800">
+                {usuarios.map(user => (
+                  <tr key={user.id} className="hover:bg-gray-700/50">
+                    <td className="whitespace-nowrap px-6 py-4">{user.id}</td>
+                    <td className="whitespace-nowrap px-6 py-4">{user.nome}</td>
+                    <td className="whitespace-nowrap px-6 py-4">{user.email}</td>
+                    <td className="whitespace-nowrap px-6 py-4">{user.role}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button onClick={() => handleOpenModal(user)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        <button onClick={() => handleDelete(user.id)} className="rounded-md bg-red-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-700">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cards para Mobile */}
+          <div className="space-y-4 md:hidden">
+            {usuarios.map(user => (
+              <UsuarioCard
+                key={user.id}
+                usuario={user}
+                onEdit={() => handleOpenModal(user)}
+                onDelete={() => handleDelete(user.id)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {isModalOpen && (

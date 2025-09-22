@@ -1,17 +1,15 @@
-// frontend/src/components/Sidebar.tsx
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 
-// Componente de Ícone SVG reutilizável
+// Componente de Ícone SVG (sem alterações)
 const Icon = ({ path, size = 24 }: { path: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
     <path d={path}></path>
   </svg>
 );
 
-// Mapeamento de todos os ícones do menu
+// Mapeamento de ícones (sem alterações)
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -26,7 +24,7 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
 };
 
-// Componente de Botão de Navegação
+// Componente de Botão de Navegação (sem alterações na interface)
 interface NavButtonProps {
   onClick: () => void;
   isCollapsed: boolean;
@@ -48,7 +46,7 @@ const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, t
   );
 };
 
-// Componente Principal da Sidebar
+// Componente Principal da Sidebar (COM A CORREÇÃO)
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
@@ -91,14 +89,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
 
       <nav className="flex flex-col gap-2">
         {navItems.map(item => {
-          // Lógica de visibilidade: se o item for 'adminOnly', só mostra se o usuário for admin.
           if (item.adminOnly && usuario?.role !== 'admin') {
             return null;
           }
           return (
             <NavButton key={item.path} onClick={() => handleNavigate(item.path)} isCollapsed={isCollapsed} isActive={location.pathname === item.path} title={item.label}>
               <Icon path={item.icon} />
-              <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>{item.label}</span>
+              {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+              <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>
+                {item.label}
+              </span>
+              {/* ======================= FIM DA CORREÇÃO ======================= */}
             </NavButton>
           );
         })}
@@ -113,14 +114,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
       <div className="hidden lg:block mt-4">
         <NavButton onClick={() => setIsCollapsed(!isCollapsed)} isCollapsed={isCollapsed} isActive={false} title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}>
           <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>Recolher</span>
+          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>
+            Recolher
+          </span>
+          {/* ======================= FIM DA CORREÇÃO ======================= */}
         </NavButton>
       </div>
 
       <div className="mt-2">
         <NavButton onClick={handleLogout} isCollapsed={isCollapsed} isActive={false} title="Sair" className="!bg-red-600 hover:!bg-red-700">
           <Icon path={ICONS.logout} />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>Sair</span>
+          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>
+            Sair
+          </span>
+          {/* ======================= FIM DA CORREÇÃO ======================= */}
         </NavButton>
       </div>
     </aside>
