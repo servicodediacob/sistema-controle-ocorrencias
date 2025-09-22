@@ -19,7 +19,9 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.5"
+    "pg": "^8.11.5",
+    "pino": "^9.11.0",
+    "pino-pretty": "^13.1.1"
   },
   "devDependencies": {
     "@swc/core": "^1.7.3",
