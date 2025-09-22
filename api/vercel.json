@@ -1,6 +1,8 @@
-// Caminho: api/vercel.json
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/src/server.ts" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/src/server.ts"
+    }
   ]
 }
