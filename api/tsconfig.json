@@ -1,7 +1,6 @@
-// api/tsconfig.json
+// Caminho: api/tsconfig.json
 {
   "compilerOptions": {
-    /* Opções do Compilador */
     "target": "ES2020",
     "module": "CommonJS",
     "rootDir": "./src",
@@ -9,8 +8,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-
-    /* Checagem de Tipo Estrita */
     "strict": true,
     "skipLibCheck": true,
     "noUnusedLocals": true,
@@ -18,9 +15,14 @@
     "noImplicitReturns": true
   },
   "include": [
-    "src/**/*" // Este caminho relativo está correto
+    "src/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/tests",
+    "src/__tests__",
+    "src/__mocks__"
   ]
 }
