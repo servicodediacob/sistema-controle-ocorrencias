@@ -149,3 +149,5 @@ function DashboardPage(): ReactElement {
 }
 
 export default DashboardPage;
+
+// --- teste para forçar redeploy vercel ---
