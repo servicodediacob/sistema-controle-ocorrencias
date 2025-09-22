@@ -6,18 +6,18 @@ services:
     plan: free
     rootDir: api
     
-    # --- CORREÇÃO APLICADA AQUI ---
-    # A chave 'buildFilter' é o objeto pai, e 'paths' é uma de suas propriedades.
-    # Eles não devem estar no mesmo nível.
     buildFilter:
       paths:
         - "api/**/*"
-        - "render.yaml" # Adicionado: Também aciona um deploy se a própria configuração mudar.
+        - "render.yaml"
       ignoredPaths:
-        - "frontend/**/*" # Adicionado: Ignora explicitamente mudanças no frontend.
+        - "frontend/**/*"
 
     buildCommand: "npm install && npm run build"
     startCommand: "npm run start"
     
+    # --- CORREÇÃO APLICADA AQUI ---
+    # A chave 'healthCheck' deve conter um objeto 'http' com o 'path' dentro dele.
     healthCheck:
-      path: /api/health
+      http:
+        path: /api/health
