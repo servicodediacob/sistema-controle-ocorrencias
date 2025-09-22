@@ -1,98 +1,157 @@
-// Caminho: frontend/src/pages/DashboardPage.tsx
+// Caminho: frontend/src/pages/GestaoDadosApoioPage.tsx
 
 import React, { useState, useEffect, useCallback, ReactElement } from 'react';
-import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
+import {
+  getCidades, createUnidade, updateUnidade, deleteUnidade, getCrbms,
+  getNaturezas, createNatureza, updateNatureza, deleteNatureza,
+  IObm, ICrbm, IDataApoio
+} from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-
 import MainLayout from '../components/MainLayout';
-import DestaqueWidget from '../components/DestaqueWidget';
-import PlantaoWidget from '../components/PlantaoWidget';
-import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
-import RelatorioWidget from '../components/RelatorioWidget'; // Já refatorado
+import Spinner from '../components/Spinner';
 
-// --- Componentes Funcionais com Tailwind ---
+// --- Tipos e Interfaces ---
+type DataType = 'obm' | 'natureza';
+type ItemType = IObm | IDataApoio;
 
-interface StatCardProps {
-  title: string;
-  value: number | string;
-  loading: boolean;
+// --- Componente do Modal (Refatorado com Tailwind) ---
+interface DataModalProps {
+  item: ItemType | null;
+  type: DataType;
+  onClose: () => void;
+  onSave: (formData: any) => void;
+  crbms: ICrbm[];
 }
-function StatCard({ title, value, loading }: StatCardProps) {
+
+function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): ReactElement {
+  const isEditing = !!item;
+  const isObm = type === 'obm';
+  const title = `${isEditing ? 'Editar' : 'Adicionar'} ${isObm ? 'OBM' : 'Natureza'}`;
+
+  const getInitialState = () => {
+    if (isObm) {
+      const obmItem = item as IObm;
+      return {
+        nome: obmItem?.cidade_nome || '',
+        crbm_id: obmItem?.crbm_id || (crbms.length > 0 ? crbms[0].id : ''),
+      };
+    }
+    const naturezaItem = item as IDataApoio;
+    return {
+      grupo: naturezaItem?.grupo || '',
+      subgrupo: naturezaItem?.subgrupo || ''
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialState);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const finalValue = name === 'crbm_id' ? parseInt(value, 10) : value;
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 text-center min-w-[200px]">
-      <h3 className="text-base font-medium text-gray-400">{title}</h3>
-      <p className="mt-2 text-4xl font-bold">
-        {loading ? '...' : value}
-      </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h2 className="mb-6 text-xl font-semibold">{title}</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {isObm ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="crbm_id" className="text-sm text-gray-400">CRBM</label>
+                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                  {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="nome" className="text-sm text-gray-400">Nome da OBM (Unidade)</label>
+                <input type="text" id="nome" name="nome" value={(formData as any).nome} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="grupo" className="text-sm text-gray-400">Grupo da Natureza</label>
+                <input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="subgrupo" className="text-sm text-gray-400">Subgrupo da Natureza</label>
+                <input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </>
+          )}
+          <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onClose} className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500">Cancelar</button>
+            <button type="submit" className="rounded-md bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-600">Salvar</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-interface DataTableProps<T> {
-  title: string;
-  data: T[] | undefined;
-  columns: { header: string; key: keyof T }[];
-  loading: boolean;
+// --- Componente da Tabela Genérica ---
+interface DataTableProps {
+  data: ItemType[];
+  columns: { key: keyof ItemType; header: string }[];
+  onEdit: (item: ItemType) => void;
+  onDelete: (id: number) => void;
 }
-function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
+
+function DataTable({ data, columns, onEdit, onDelete }: DataTableProps) {
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 min-w-[300px]">
-      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold">
-        {title}
-      </h3>
-      {loading ? (
-        <p className="py-4 text-center text-gray-400">Carregando...</p>
-      ) : data && data.length > 0 ? (
-        <div className="mt-4 overflow-y-auto max-h-80">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {columns.map((col) => (
-                  <th key={String(col.key)} className="border-b border-gray-600 p-3 text-left text-sm font-medium text-gray-400">
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, index) => (
-                <tr key={index} className="border-b border-gray-700">
-                  {columns.map((col) => (
-                    <td key={String(col.key)} className="p-3">
-                      {String(row[col.key])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="py-8 text-center text-gray-500">Nenhum dado para exibir.</p>
-      )}
+    <div className="overflow-x-auto rounded-lg border border-gray-700">
+      <table className="min-w-full divide-y divide-gray-700">
+        <thead className="bg-gray-800">
+          <tr>
+            {columns.map(col => <th key={String(col.key)} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">{col.header}</th>)}
+            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">Ações</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-700 bg-gray-800">
+          {data.map(item => (
+            <tr key={item.id} className="hover:bg-gray-700/50">
+              {columns.map(col => <td key={String(col.key)} className="whitespace-nowrap px-6 py-4">{(item as any)[col.key]}</td>)}
+              <td className="whitespace-nowrap px-6 py-4 text-center">
+                <div className="flex justify-center gap-2">
+                  <button onClick={() => onEdit(item)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                  <button onClick={() => onDelete(item.id)} className="rounded-md bg-red-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-700">Excluir</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function DashboardPage(): ReactElement {
-  const { addNotification } = useNotification();
-  
-  const [stats, setStats] = useState<IDashboardStats | null>(null);
-  const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);
+// --- Componente Principal da Página ---
+function GestaoDadosApoioPage(): ReactElement {
+  const [activeTab, setActiveTab] = useState<DataType>('obm');
+  const [obms, setObms] = useState<IObm[]>([]);
+  const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
+  const [crbms, setCrbms] = useState<ICrbm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [itemEmEdicao, setItemEmEdicao] = useState<ItemType | null>(null);
+  const { addNotification } = useNotification();
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [statsData, plantaoInfo] = await Promise.all([
-        getDashboardStats(),
-        getPlantao()
-      ]);
-      setStats(statsData);
-      setPlantaoData(plantaoInfo);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Não foi possível carregar os dados do dashboard.';
-      addNotification(message, 'error');
+      const [obmsData, naturezasData, crbmsData] = await Promise.all([getCidades(), getNaturezas(), getCrbms()]);
+      setObms(obmsData);
+      setNaturezas(naturezasData);
+      setCrbms(crbmsData);
+    } catch (err) {
+      addNotification(err instanceof Error ? err.message : 'Falha ao buscar dados de apoio.', 'error');
     } finally {
       setLoading(false);
     }
@@ -102,45 +161,92 @@ function DashboardPage(): ReactElement {
     fetchData();
   }, [fetchData]);
 
+  const handleOpenModal = (item: ItemType | null = null) => {
+    setItemEmEdicao(item);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setItemEmEdicao(null);
+  };
+
+  const handleSave = async (formData: any) => {
+    const isEditing = !!itemEmEdicao;
+    const typeName = activeTab === 'obm' ? 'OBM' : 'Natureza';
+    const successMessage = `${typeName} ${isEditing ? 'atualizada' : 'criada'} com sucesso!`;
+
+    try {
+      if (activeTab === 'obm') {
+        const payload = { crbm_id: formData.crbm_id, nome: formData.nome };
+        isEditing ? await updateUnidade(itemEmEdicao!.id, payload) : await createUnidade(payload);
+      } else {
+        const payload = { grupo: formData.grupo, subgrupo: formData.subgrupo };
+        isEditing ? await updateNatureza(itemEmEdicao!.id, payload) : await createNatureza(payload);
+      }
+      addNotification(successMessage, 'success');
+      handleCloseModal();
+      fetchData();
+    } catch (err) {
+      addNotification(err instanceof Error ? err.message : 'Falha ao salvar dados.', 'error');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.')) {
+      try {
+        activeTab === 'obm' ? await deleteUnidade(id) : await deleteNatureza(id);
+        addNotification('Item excluído com sucesso!', 'success');
+        fetchData();
+      } catch (err) {
+        addNotification(err instanceof Error ? err.message : 'Falha ao excluir item.', 'error');
+      }
+    }
+  };
+
+  const renderTable = () => {
+    const isObm = activeTab === 'obm';
+    const data = isObm ? obms : naturezas;
+    const columns = isObm
+      ? [{ key: 'crbm_nome', header: 'CRBM' }, { key: 'cidade_nome', header: 'Nome da OBM' }]
+      : [{ key: 'grupo', header: 'Grupo' }, { key: 'subgrupo', header: 'Subgrupo' }];
+
+    return (
+      <>
+        <div className="mb-6">
+          <button onClick={() => handleOpenModal()} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
+            Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
+          </button>
+        </div>
+        <DataTable data={data} columns={columns as any} onEdit={handleOpenModal} onDelete={handleDelete} />
+      </>
+    );
+  };
+
   return (
-    <MainLayout pageTitle="Dashboard do Supervisor">
-      {/* Cards de Estatísticas */}
-      <div className="flex flex-col gap-6 md:flex-row">
-        <StatCard title="Total de Ocorrências" value={stats?.totalOcorrencias ?? 0} loading={loading} />
-        <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
+    <MainLayout pageTitle="Gerenciar Dados de Apoio">
+      <div className="mb-6 flex border-b border-gray-700">
+        <button onClick={() => setActiveTab('obm')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'obm' ? 'border-b-2 border-teal-400 text-teal-400' : 'text-gray-400 hover:text-white'}`}>
+          Gestão de OBMs
+        </button>
+        <button onClick={() => setActiveTab('natureza')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'natureza' ? 'border-b-2 border-teal-400 text-teal-400' : 'text-gray-400 hover:text-white'}`}>
+          Naturezas de Ocorrência
+        </button>
       </div>
 
-      {/* Relatório do Dia */}
-      <div className="mt-6 flex">
-        <RelatorioWidget />
-      </div>
+      {loading ? <Spinner text="Carregando dados..." /> : renderTable()}
 
-      {/* Widget de Óbitos */}
-      <ObitosDoDiaWidget />
-
-      {/* Tabelas de Dados */}
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-        <DataTable
-          title="Ocorrências por Natureza"
-          loading={loading}
-          data={stats?.ocorrenciasPorNatureza}
-          columns={[{ header: 'Natureza', key: 'nome' }, { header: 'Total', key: 'total' }]}
+      {isModalOpen && (
+        <DataModal
+          item={itemEmEdicao}
+          type={activeTab}
+          onClose={handleCloseModal}
+          onSave={handleSave}
+          crbms={crbms}
         />
-        <DataTable
-          title="Ocorrências por CRBM"
-          loading={loading}
-          data={stats?.ocorrenciasPorCrbm}
-          columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
-        />
-      </div>
-      
-      {/* Widgets de Plantão */}
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-        <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
-        <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
-      </div>
+      )}
     </MainLayout>
   );
 }
 
-export default DashboardPage;
+export default GestaoDadosApoioPage;

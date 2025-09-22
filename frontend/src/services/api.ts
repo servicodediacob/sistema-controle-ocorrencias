@@ -1,3 +1,5 @@
+// Caminho: frontend/src/services/api.ts
+
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
 
@@ -5,37 +7,32 @@ import { IUser } from '../contexts/AuthContext';
 // --- Interfaces de Tipos da API ---
 // ===============================================
 
-// Re-exporta a interface IUser para uso em outros lugares
 export type { IUser };
 
-// Interface genérica para dados de apoio (Naturezas, OBMs, CRBMs)
 export interface IDataApoio {
   id: number;
   nome?: string;
   grupo?: string;
   subgrupo?: string;
   abreviacao?: string | null;
-  descricao?: string; // Usado em alguns contextos
+  descricao?: string;
 }
 
-// Interface para OBMs (Unidades)
+// CORREÇÃO: A API retorna 'cidade_nome' para OBMs.
 export interface IObm {
   id: number;
-  obm_nome: string; // Nome padronizado
+  cidade_nome: string; // A API retorna este campo para o nome da OBM/Unidade
   crbm_id: number;
   crbm_nome: string;
 }
 
-// ICidade é um alias para IObm para manter a compatibilidade onde ainda é usado
 export type ICidade = IObm;
 
-// Interface para CRBMs
 export interface ICrbm {
   id: number;
   nome: string;
 }
 
-// Interface para o payload de criação de ocorrência
 export interface IOcorrenciaPayload {
   ocorrencia: {
     obm_id: number;
@@ -49,7 +46,6 @@ export interface IOcorrenciaPayload {
   }[];
 }
 
-// Interface para o objeto de ocorrência retornado pela API
 export interface IOcorrencia {
   id: number;
   data_ocorrencia: string;
@@ -57,11 +53,10 @@ export interface IOcorrencia {
   natureza_id: number;
   obm_id: number;
   natureza_descricao: string;
-  obm_nome: string; // Propriedade corrigida e padronizada
+  obm_nome: string;
   crbm_nome: string;
 }
 
-// Interface para a resposta paginada de ocorrências
 export interface IPaginatedOcorrencias {
   ocorrencias: IOcorrencia[];
   pagination: {
@@ -72,7 +67,6 @@ export interface IPaginatedOcorrencias {
   };
 }
 
-// Interface para as estatísticas do Dashboard
 export interface IDashboardStats {
   totalOcorrencias: number;
   totalObitos: number;
@@ -80,13 +74,12 @@ export interface IDashboardStats {
   ocorrenciasPorCrbm: { nome: string; total: number }[];
 }
 
-// Interface para os dados do plantão
 export interface IPlantao {
   ocorrenciaDestaque: {
     ocorrencia_id: number | null;
     data_ocorrencia: string | null;
     natureza_descricao: string | null;
-    obm_nome: string | null; // Corrigido de cidade_nome
+    obm_nome: string | null;
     crbm_nome: string | null;
   } | null;
   supervisorPlantao: {
@@ -95,13 +88,11 @@ export interface IPlantao {
   } | null;
 }
 
-// Interface para o objeto Supervisor
 export interface ISupervisor {
   id: number;
   nome: string;
 }
 
-// Interface para as linhas do relatório estatístico
 export interface IRelatorioRow {
   grupo: string;
   subgrupo: string;
@@ -114,7 +105,6 @@ export interface IRelatorioRow {
   total_geral: string;
 }
 
-// Interface para o payload de lançamento em lote
 export interface IEstatisticaLotePayload {
   data_registro: string;
   obm_id: number;
@@ -124,16 +114,14 @@ export interface IEstatisticaLotePayload {
   }[];
 }
 
-// Interface para os dados da tabela de lançamento
 export interface IEstatisticaAgrupada {
   crbm_nome: string;
-  cidade_nome: string; // Mantido aqui pois a view do BD pode retornar este nome
+  cidade_nome: string;
   natureza_nome: string;
   natureza_abreviacao: string | null;
   quantidade: number;
 }
 
-// Interface para o payload de registro de óbito
 export interface IObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
@@ -142,7 +130,6 @@ export interface IObitoRegistroPayload {
   quantidade_vitimas: number;
 }
 
-// Interface para o objeto de registro de óbito
 export interface IObitoRegistro {
   id: number;
   data_ocorrencia: string;
@@ -150,11 +137,10 @@ export interface IObitoRegistro {
   natureza_nome: string;
   numero_ocorrencia: string;
   obm_id: number;
-  obm_nome: string; // Nome da OBM
+  obm_nome: string;
   quantidade_vitimas: number;
 }
 
-// Interface para o payload de solicitação de acesso
 export interface ISolicitacaoAcessoPayload {
   nome: string;
   email: string;
@@ -162,7 +148,6 @@ export interface ISolicitacaoAcessoPayload {
   obm_id: number;
 }
 
-// Interface para o objeto de solicitação de acesso
 export interface ISolicitacao {
   id: number;
   nome: string;
@@ -172,7 +157,6 @@ export interface ISolicitacao {
   obm_nome: string;
 }
 
-// Interface para erros da API
 interface ApiError {
   message: string;
 }
@@ -290,3 +274,27 @@ export const criarObitoRegistro = async (payload: IObitoRegistroPayload): Promis
 export const atualizarObitoRegistro = async (id: number, payload: IObitoRegistroPayload): Promise<IObitoRegistro> => api.put(`/obitos-registros/${id}`, payload).then(res => res.data);
 export const deletarObitoRegistro = async (id: number): Promise<{ message: string }> => api.delete(`/obitos-registros/${id}`).then(res => res.data);
 export const limparRegistrosDoDia = async (data: string): Promise<{ message: string }> => api.delete('/obitos-registros', { params: { data } }).then(res => res.data);
+
+// ===================================================================
+// --- ADIÇÃO: Funções para Gerenciar Dados de Apoio (OBMs e Naturezas) ---
+// ===================================================================
+
+// OBMs (Unidades)
+export const createUnidade = async (data: { nome: string; crbm_id: number }): Promise<IObm> => 
+  api.post('/unidades', data).then(res => res.data);
+
+export const updateUnidade = async (id: number, data: { nome: string; crbm_id: number }): Promise<IObm> => 
+  api.put(`/unidades/${id}`, data).then(res => res.data);
+
+export const deleteUnidade = async (id: number): Promise<{ message: string }> => 
+  api.delete(`/unidades/${id}`).then(res => res.data);
+
+// Naturezas
+export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => 
+  api.post('/naturezas', data).then(res => res.data);
+
+export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => 
+  api.put(`/naturezas/${id}`, data).then(res => res.data);
+
+export const deleteNatureza = async (id: number): Promise<{ message: string }> => 
+  api.delete(`/naturezas/${id}`).then(res => res.data);
