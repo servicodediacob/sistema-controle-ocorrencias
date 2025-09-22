@@ -13,6 +13,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
+import { checkHealth } from './controllers/healthController'; // 1. Importação do Health Check
 
 // Importação da conexão com o banco de dados
 import './db';
@@ -22,12 +23,11 @@ const PORT = process.env.PORT || 3001;
 
 // --- Configuração de CORS ---
 const allowedOrigins = [
-  // URLs antigas (podem ser mantidas por segurança ou removidas)
+  // Domínios antigos (podem ser mantidos ou removidos)
   'https://sistema-controle-ocorrencias.vercel.app',
   'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app',
   
-  // ===== ATUALIZAÇÃO APLICADA AQUI =====
-  // Adiciona a nova URL do frontend da Vercel à lista de permissões.
+  // Domínio do novo frontend na Vercel
   'https://siscob-iota.vercel.app'
 ];
 
@@ -53,6 +53,10 @@ const corsOptions: cors.CorsOptions = {
 // --- Middlewares ---
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// --- Rota de Health Check ---
+// 2. Rota adicionada para verificação de saúde da API pelo Render
+app.get('/api/health', checkHealth);
 
 // --- Rotas da API ---
 app.use('/api/auth', authRoutes);
