@@ -5,13 +5,19 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
+    
     "dev": "nodemon",
-    "seed:dev": "ts-node --swc src/db/seed.ts",
-    "seed:prod": "dotenv -e .env.production -- ts-node --swc src/db/seed.ts",
+    
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js",
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
-    "smoke:test": "node scripts/smoke-test.mjs"
+    "smoke:test": "node scripts/smoke-test.mjs",
+    
+    "db:migrate": "ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
+    "db:seed:dev": "ts-node -r tsconfig-paths/register src/db/seed.ts",
+    
+    "db:prod:migrate": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
+    "db:prod:seed": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/db/seed.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -39,6 +45,7 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.3",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.4"
   }
 }

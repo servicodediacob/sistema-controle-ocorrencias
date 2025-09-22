@@ -1,4 +1,3 @@
-// Caminho: api/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -12,7 +11,13 @@
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+
+    // --- ADIÇÕES PARA RESOLVER O PROBLEMA DE CAMINHO ---
+    "baseUrl": "./src", // Define 'src' como o diretório base para as importações.
+    "paths": {
+      "@/*": ["*"] // Permite usar '@/' como um atalho para 'src/'.
+    }
   },
   "include": [
     "src/**/*"
