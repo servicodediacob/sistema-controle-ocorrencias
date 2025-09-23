@@ -1,8 +1,8 @@
 import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { getCidades, getNaturezas, ICidade, IDataApoio } from '../services/api';
-// A importação do 'useAuth' foi removida, pois não é mais necessária aqui.
+import { useAuth } from './useAuth'; // 1. Importe o hook de autenticação
 
-// Interface para o valor do contexto
+// Interfaces
 interface IDataContext {
   cidades: ICidade[];
   naturezas: IDataApoio[];
@@ -10,27 +10,31 @@ interface IDataContext {
   refetchData: () => void;
 }
 
-// Interface para as props do provedor
 interface DataProviderProps {
   children: ReactNode;
 }
 
-// Criação do contexto
+// Contexto
 const DataContext = createContext<IDataContext | null>(null);
 
-// Componente Provedor com a lógica corrigida
+// Provedor (COM A CORREÇÃO)
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  // O estado de autenticação foi removido daqui.
+  const { isAuthenticated } = useAuth(); // 2. Obtenha o estado de autenticação
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // A função de busca agora não depende mais do status de autenticação.
   const fetchDadosDeApoio = useCallback(async () => {
-    console.log('[DataProvider] Buscando dados de apoio...');
+    // 3. VERIFICAÇÃO CRÍTICA: Só busca os dados se o usuário estiver autenticado
+    if (!isAuthenticated) {
+      setLoading(false); // Se não está autenticado, não há nada para carregar
+      return;
+    }
+
+    console.log('[DataProvider] Usuário autenticado. Buscando dados de apoio...');
     setLoading(true);
     try {
-      // Busca os dados em paralelo para otimizar o tempo de carregamento.
+      // O Promise.all busca os dados em paralelo
       const [cidadesData, naturezasData] = await Promise.all([
         getCidades(),
         getNaturezas(),
@@ -38,19 +42,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setCidades(cidadesData);
       setNaturezas(naturezasData);
     } catch (error) {
+      // Este erro agora é esperado se o token expirar, por exemplo.
       console.error('Falha ao carregar dados de apoio globais:', error);
-      // Em caso de erro, limpa os dados para evitar inconsistências.
+      // Em caso de erro (ex: token expirado), limpa os dados para evitar inconsistências
       setCidades([]);
       setNaturezas([]);
     } finally {
       setLoading(false);
     }
-  }, []); // A dependência 'isAuthenticated' foi removida.
+  }, [isAuthenticated]); // 4. Adicione 'isAuthenticated' como dependência do useCallback
 
-  // O useEffect agora chama a função de busca uma única vez, no carregamento do componente.
   useEffect(() => {
     fetchDadosDeApoio();
-  }, [fetchDadosDeApoio]);
+  }, [fetchDadosDeApoio]); // 5. O useEffect agora depende da função que depende do 'isAuthenticated'
 
   const value = {
     cidades,
@@ -62,7 +66,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Hook para consumir o contexto (permanece igual)
+// Hook
 export const useData = (): IDataContext => {
   const context = useContext(DataContext);
   if (!context) {

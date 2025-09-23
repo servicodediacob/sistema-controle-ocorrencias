@@ -1,10 +1,14 @@
-// backend/src/controllers/acessoController.ts
 import { Request, Response } from 'express';
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Importamos a interface RequestWithUser
+import { RequestWithUser } from '../middleware/authMiddleware';
+// --- FIM DA CORREÇÃO ---
 import db from '../db';
 import bcrypt from 'bcryptjs';
 
-// 1. Controlador para criar uma nova solicitação de acesso
+// 2. Usamos a interface importada onde necessário
 export const solicitarAcesso = async (req: Request, res: Response): Promise<void> => {
+    // ... (código interno sem alteração)
     const { nome, email, senha, obm_id } = req.body;
 
     if (!nome || !email || !senha || !obm_id) {
@@ -13,7 +17,6 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
     }
 
     try {
-        // Verifica se o e-mail já existe na tabela de usuários ou de solicitações
         const emailExists = await db.query(
             `(SELECT email FROM usuarios WHERE email = $1)
              UNION
@@ -47,8 +50,8 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
     }
 };
 
-// 2. Controlador para listar todas as solicitações (apenas para admins)
 export const listarSolicitacoes = async (_req: Request, res: Response): Promise<void> => {
+    // ... (código interno sem alteração)
     try {
         const query = `
             SELECT s.id, s.nome, s.email, s.status, s.data_solicitacao, o.nome as obm_nome
@@ -64,11 +67,11 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
     }
 };
 
-// 3. Controlador para gerenciar (aprovar/recusar) uma solicitação
-export const gerenciarSolicitacao = async (req: Request, res: Response): Promise<void> => {
+// 3. Usamos a interface importada na função que precisa dela
+export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response): Promise<void> => {
     const { id } = req.params;
-    const { acao } = req.body; // 'aprovar' ou 'recusar'
-    const aprovador_id = req.usuario?.id;
+    const { acao } = req.body;
+    const aprovador_id = req.usuario?.id; // Agora esta linha é válida
 
     if (!acao || !['aprovar', 'recusar'].includes(acao)) {
         res.status(400).json({ message: "A ação é obrigatória e deve ser 'aprovar' ou 'recusar'." });
@@ -80,7 +83,6 @@ export const gerenciarSolicitacao = async (req: Request, res: Response): Promise
     try {
         await client.query('BEGIN');
 
-        // Busca a solicitação
         const solicitacaoResult = await client.query('SELECT * FROM solicitacoes_acesso WHERE id = $1 AND status = \'pendente\'', [id]);
         if (solicitacaoResult.rows.length === 0) {
             await client.query('ROLLBACK');
@@ -90,13 +92,11 @@ export const gerenciarSolicitacao = async (req: Request, res: Response): Promise
         const solicitacao = solicitacaoResult.rows[0];
 
         if (acao === 'aprovar') {
-            // Insere o novo usuário na tabela 'usuarios'
             await client.query(
                 `INSERT INTO usuarios (nome, email, senha_hash, role, obm_id) VALUES ($1, $2, $3, 'user', $4)`,
                 [solicitacao.nome, solicitacao.email, solicitacao.senha_hash, solicitacao.obm_id]
             );
 
-            // Atualiza o status da solicitação para 'aprovado'
             await client.query(
                 `UPDATE solicitacoes_acesso SET status = 'aprovado', aprovador_id = $1, data_aprovacao = CURRENT_TIMESTAMP WHERE id = $2`,
                 [aprovador_id, id]
@@ -106,7 +106,6 @@ export const gerenciarSolicitacao = async (req: Request, res: Response): Promise
             res.status(200).json({ message: `Usuário ${solicitacao.nome} aprovado e criado com sucesso.` });
 
         } else { // acao === 'recusar'
-            // Apenas atualiza o status para 'recusado'
             await client.query(
                 `UPDATE solicitacoes_acesso SET status = 'recusado', aprovador_id = $1, data_aprovacao = CURRENT_TIMESTAMP WHERE id = $2`,
                 [aprovador_id, id]

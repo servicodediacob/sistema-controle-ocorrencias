@@ -1,8 +1,12 @@
-// backend/src/middleware/roleMiddleware.ts
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Importamos a interface RequestWithUser que criamos no outro arquivo
+import { RequestWithUser } from './authMiddleware';
+// --- FIM DA CORREÇÃO ---
 import db from '../db';
 
-export const isAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 2. Usamos a interface importada na assinatura da função
+export const isAdmin = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
     const usuarioId = req.usuario?.id;
 
     if (!usuarioId) {
@@ -14,7 +18,7 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction): 
         const { rows } = await db.query('SELECT role FROM usuarios WHERE id = $1', [usuarioId]);
 
         if (rows.length > 0 && rows[0].role === 'admin') {
-            next(); // O usuário é um admin, pode prosseguir
+            next();
         } else {
             res.status(403).json({ message: 'Acesso negado. Permissão de administrador necessária.' });
         }

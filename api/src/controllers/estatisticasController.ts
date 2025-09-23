@@ -1,18 +1,22 @@
-// api/src/controllers/estatisticasController.ts
-import { Request, Response } from 'express';
+import { Response } from 'express';
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Importamos a interface RequestWithUser que criamos no authMiddleware
+import { RequestWithUser } from '../middleware/authMiddleware';
+// --- FIM DA CORREÇÃO ---
 import db from '../db';
 
 interface EstatisticaPayload {
   data_registro: string;
-  obm_id: number; // Atualizado de cidade_id
+  obm_id: number;
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
 
-export const registrarEstatisticasLote = async (req: Request, res: Response): Promise<void> => {
-  const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload; // Atualizado
-  const usuario_id = req.usuario?.id;
+// 2. Usamos a interface importada na assinatura da função
+export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
+  const usuario_id = req.usuario?.id; // Agora o TypeScript entende esta linha
 
-  if (!data_registro || !obm_id || !estatisticas) { // Atualizado
+  if (!data_registro || !obm_id || !estatisticas) {
     res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
     return;
   }
@@ -22,13 +26,11 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
   try {
     await client.query('BEGIN');
 
-    // CORREÇÃO: Usa obm_id
     await client.query(
       `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`,
       [data_registro, obm_id]
     );
 
-    // CORREÇÃO: Usa obm_id
     const query = `
       INSERT INTO estatisticas_diarias (data_registro, obm_id, natureza_id, quantidade, usuario_id)
       VALUES ($1, $2, $3, $4, $5);
@@ -40,7 +42,6 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
       const quantidade = Number(stat.quantidade);
       if (!quantidade || quantidade <= 0) continue;
       
-      // CORREÇÃO: Usa obm_id
       const values = [data_registro, obm_id, stat.natureza_id, quantidade, usuario_id];
       await client.query(query, values);
       totalRegistrosCriados++;
@@ -64,7 +65,10 @@ export const registrarEstatisticasLote = async (req: Request, res: Response): Pr
   }
 };
 
-export const getRelatorioEstatisticas = async (req: Request, res: Response): Promise<void> => {
+// O restante do arquivo (getRelatorioEstatisticas, etc.) não precisa de alteração,
+// pois eles não usam req.usuario.
+// ... (código restante do arquivo) ...
+export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
 
   if (!data_inicio || !data_fim) {
@@ -73,7 +77,6 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
   }
 
   try {
-    // CORREÇÃO: Troca 'cidades' por 'obms' e 'c.nome' por 'o.nome', etc.
     const query = `
       SELECT
         n.grupo,
@@ -99,7 +102,7 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
       GROUP BY n.grupo, n.subgrupo
       ORDER BY n.grupo, n.subgrupo;
     `;
-    const { rows } = await db.query(query, [data_inicio, data_fim]);
+    const { rows } = await db.query(query, [data_inicio as string, data_fim as string]);
     res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao gerar relatório de estatísticas:', error);
@@ -107,7 +110,7 @@ export const getRelatorioEstatisticas = async (req: Request, res: Response): Pro
   }
 };
 
-export const getEstatisticasAgrupadasPorData = async (req: Request, res: Response): Promise<void> => {
+export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória.' });
@@ -115,7 +118,6 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
   }
 
   try {
-    // CORREÇÃO: Troca todas as referências de 'cidades' para 'obms' e 'cidade_id' para 'obm_id'
     const query = `
       WITH 
       dados_lote AS (
@@ -172,8 +174,8 @@ export const getEstatisticasAgrupadasPorData = async (req: Request, res: Respons
   }
 };
 
-export const limparEstatisticasDoDia = async (req: Request, res: Response): Promise<void> => {
-  const { data, obm_id } = req.query; // Atualizado de cidade_id
+export const limparEstatisticasDoDia = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { data, obm_id } = req.query;
 
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
@@ -183,7 +185,6 @@ export const limparEstatisticasDoDia = async (req: Request, res: Response): Prom
   try {
     let result;
     if (obm_id && typeof obm_id === 'string') {
-      // CORREÇÃO: Usa obm_id
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`, 
         [data, obm_id]

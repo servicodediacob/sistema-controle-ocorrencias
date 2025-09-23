@@ -12,15 +12,17 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-
-    // --- ADIÇÕES PARA RESOLVER O PROBLEMA DE CAMINHO ---
-    "baseUrl": "./src", // Define 'src' como o diretório base para as importações.
+    "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"] // Permite usar '@/' como um atalho para 'src/'.
-    }
+      "@/*": ["*"]
+    },
+    // --- ADIÇÃO CRÍTICA AQUI ---
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": [
-    "src/**/*"
+    // --- ADIÇÃO CRÍTICA AQUI ---
+    "src/**/*.ts", 
+    "src/**/*.d.ts" 
   ],
   "exclude": [
     "node_modules",

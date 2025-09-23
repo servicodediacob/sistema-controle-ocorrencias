@@ -1,5 +1,3 @@
-// Caminho: frontend/src/services/api.ts
-
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthContext';
 
@@ -53,7 +51,7 @@ export interface IOcorrencia {
   natureza_id: number;
   obm_id: number;
   natureza_descricao: string;
-  obm_nome: string;
+  obm_nome: string; // CORREÇÃO: Adicionado para consistência com a resposta da API
   crbm_nome: string;
 }
 
@@ -166,7 +164,7 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
 
 const api = axios.create({ baseURL });
 

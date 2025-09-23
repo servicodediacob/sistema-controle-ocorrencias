@@ -1,22 +1,26 @@
-// api/src/controllers/obitosRegistrosController.ts
-import { Request, Response } from 'express';
+import { Response } from 'express';
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Importamos a interface RequestWithUser
+import { RequestWithUser } from '../middleware/authMiddleware';
+// --- FIM DA CORREÇÃO ---
 import db from '../db';
 
 interface ObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
   numero_ocorrencia: string;
-  obm_id: number; // Atualizado
+  obm_id: number;
   quantidade_vitimas: number;
 }
 
-export const getObitosPorData = async (req: Request, res: Response) => {
+// 2. Usamos a interface importada nas funções que precisam dela
+export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
+  // ... (código interno sem alteração)
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
     return res.status(400).json({ message: 'A data é obrigatória.' });
   }
   try {
-    // CORREÇÃO: Usa obm_id e junta com a tabela obms
     const query = `
       SELECT 
         obr.id,
@@ -24,8 +28,8 @@ export const getObitosPorData = async (req: Request, res: Response) => {
         obr.natureza_id,
         n.subgrupo as natureza_nome,
         obr.numero_ocorrencia,
-        o.nome as obm_nome, -- Nome da OBM
-        obr.obm_id, -- ID da OBM
+        o.nome as obm_nome,
+        obr.obm_id,
         obr.quantidade_vitimas
       FROM obitos_registros obr
       JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
@@ -41,16 +45,15 @@ export const getObitosPorData = async (req: Request, res: Response) => {
   }
 };
 
-export const criarObitoRegistro = async (req: Request, res: Response) => {
+export const criarObitoRegistro = async (req: RequestWithUser, res: Response) => {
   const payload = req.body as ObitoRegistroPayload;
-  const usuario_id = req.usuario?.id || null;
+  const usuario_id = req.usuario?.id || null; // Agora funciona
 
   if (usuario_id === null) {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
 
   try {
-    // CORREÇÃO: A query agora insere obm_id diretamente
     const obitoRegistroQuery = `
       INSERT INTO obitos_registros 
         (data_ocorrencia, natureza_id, numero_ocorrencia, obm_id, quantidade_vitimas, usuario_id)
@@ -76,17 +79,16 @@ export const criarObitoRegistro = async (req: Request, res: Response) => {
   }
 };
 
-export const atualizarObitoRegistro = async (req: Request, res: Response) => {
+export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
     const payload = req.body as ObitoRegistroPayload;
-    const usuario_id = req.usuario?.id || null;
+    const usuario_id = req.usuario?.id || null; // Agora funciona
 
     if (usuario_id === null) {
         return res.status(401).json({ message: 'Usuário não autenticado.' });
     }
 
     try {
-        // CORREÇÃO: Query atualizada para usar obm_id
         const query = `
             UPDATE obitos_registros SET
                 data_ocorrencia = $1,
@@ -120,8 +122,8 @@ export const atualizarObitoRegistro = async (req: Request, res: Response) => {
     }
 };
 
-// As funções 'deletarObitoRegistro' e 'limparRegistrosPorData' não precisam de alteração.
-export const deletarObitoRegistro = async (req: Request, res: Response) => {
+// ... (resto do arquivo sem alterações)
+export const deletarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
     try {
         const result = await db.query('DELETE FROM obitos_registros WHERE id = $1', [id]);
@@ -133,11 +135,11 @@ export const deletarObitoRegistro = async (req: Request, res: Response) => {
     }
 };
 
-export const limparRegistrosPorData = async (req: Request, res: Response) => {
+export const limparRegistrosPorData = async (req: RequestWithUser, res: Response) => {
     const { data } = req.query;
     if (!data || typeof data !== 'string') return res.status(400).json({ message: 'A data é obrigatória.' });
     try {
-        const result = await db.query('DELETE FROM obitos_registros WHERE data_ocorrencia = $1', [data]);
+        const result = await db.query('DELETE FROM obitos_registros WHERE data_ocorrencia = $1', [data as string]);
         return res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros foram excluídos.` });
     } catch (error) {
         console.error('Erro ao limpar registros de óbito por data:', error);

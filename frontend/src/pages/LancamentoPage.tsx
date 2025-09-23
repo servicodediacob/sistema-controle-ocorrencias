@@ -1,5 +1,3 @@
-// frontend/src/pages/LancamentoPage.tsx
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ICidade,
@@ -14,6 +12,7 @@ import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
 import LancamentoTabela from '../components/LancamentoTabela';
 
+// Constante que define a ordem e abreviação das colunas na tabela
 const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
     { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
@@ -27,26 +26,28 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
     { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
     { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
-    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
-    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, // Corrigido para corresponder à abreviação
+    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, // Corrigido para corresponder à abreviação
+    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, // Corrigido para corresponder à abreviação
+    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, // Corrigido para corresponder à abreviação
 ];
 
 function LancamentoPage() {
+  // Hooks para obter dados globais e notificações
   const { cidades, naturezas } = useData();
   const { addNotification } = useNotification();
 
+  // Estados locais do componente
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
-  const colunasNatureza = ORDEM_COLUNAS;
-
   const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
-  
   const [filtroCrbm, setFiltroCrbm] = useState<string>('todos');
 
+  const colunasNatureza = ORDEM_COLUNAS;
+
+  // Função para buscar os dados da tabela principal
   const fetchDadosTabela = useCallback(async () => {
     if (!dataRegistro) return;
     setLoading(true);
@@ -54,23 +55,22 @@ function LancamentoPage() {
       const dados = await getEstatisticasAgrupadasPorData(dataRegistro);
       setDadosTabela(dados);
     } catch (error) {
-      addNotification('Falha ao carregar lançamentos do dia.', 'error');
+      addNotification('Falha ao carregar lançamentos do dia. Verifique se o servidor backend está rodando.', 'error');
     } finally {
       setLoading(false);
     }
   }, [dataRegistro, addNotification]);
 
+  // Efeito para buscar os dados quando a data muda
   useEffect(() => {
     fetchDadosTabela();
   }, [fetchDadosTabela]);
 
+  // Função para salvar (criar ou editar) um lançamento
   const handleSave = async (formData: any) => {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // O payload agora usa 'obm_id' em vez de 'cidade_id' para corresponder à interface.
-    // O valor vem de formData.cidade_id, que é o ID da OBM selecionada no modal.
     const payload = {
       data_registro: formData.data_ocorrencia,
-      obm_id: formData.cidade_id, // <-- CORREÇÃO APLICADA AQUI
+      obm_id: formData.cidade_id,
       estatisticas: Object.entries(formData.quantidades)
         .map(([natureza_id, quantidadeStr]) => ({
           natureza_id: parseInt(natureza_id, 10),
@@ -78,7 +78,6 @@ function LancamentoPage() {
         }))
         .filter(({ quantidade }) => quantidade > 0),
     };
-    // ======================= FIM DA CORREÇÃO =======================
 
     if (payload.estatisticas.length === 0 && !itemParaEditar) {
       addNotification('Nenhum valor foi preenchido.', 'info');
@@ -86,8 +85,9 @@ function LancamentoPage() {
     }
 
     try {
+      // Se estiver editando, primeiro limpa os registros existentes para aquela OBM naquele dia.
+      // A API de lote já faz isso, mas garantimos aqui para o caso de a lógica mudar.
       if (itemParaEditar) {
-        // A função limparEstatisticasDoDia espera o ID da OBM (cidade)
         await limparEstatisticasDoDia(payload.data_registro, payload.obm_id);
       }
       
@@ -103,11 +103,13 @@ function LancamentoPage() {
     }
   };
 
+  // Função para abrir o modal em modo de edição
   const handleEdit = (cidade: ICidade, dadosAtuais: Record<string, number>) => {
     setItemParaEditar({ cidade, dados: dadosAtuais });
     setIsModalOpen(true);
   };
 
+  // Função para limpar todos os lançamentos do dia
   const handleLimparTabela = async () => {
     const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     if (window.confirm(`Tem certeza que deseja excluir TODOS os lançamentos do dia ${dataFormatada}? Esta ação não pode ser desfeita.`)) {
@@ -124,6 +126,7 @@ function LancamentoPage() {
     }
   };
 
+  // Memoização para evitar recálculos desnecessários
   const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
 
   const cidadesFiltradas = useMemo(() => {
@@ -178,7 +181,7 @@ function LancamentoPage() {
           </button>
           <button
             onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
-            disabled={cidades.length === 0}
+            disabled={loading} // CORREÇÃO: O botão só é desabilitado durante o carregamento da tabela.
             className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Adicionar Lançamento

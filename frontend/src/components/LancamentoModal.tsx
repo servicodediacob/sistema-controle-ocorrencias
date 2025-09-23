@@ -1,5 +1,3 @@
-// frontend/src/components/LancamentoModal.tsx
-
 import React, { useState, useEffect } from 'react';
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
