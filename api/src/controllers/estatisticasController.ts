@@ -65,9 +65,6 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
   }
 };
 
-// O restante do arquivo (getRelatorioEstatisticas, etc.) não precisa de alteração,
-// pois eles não usam req.usuario.
-// ... (código restante do arquivo) ...
 export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
 
