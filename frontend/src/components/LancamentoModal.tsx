@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+// Caminho: frontend/src/components/LancamentoModal.tsx
+
+import React, { useState, useEffect, useMemo } from 'react'; // 1. Adicionado useMemo
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth'; // 1. Importe o useAuth
+import { useAuth } from '../contexts/useAuth';
 
 function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }: any) {
   const { addNotification } = useNotification();
-  const { usuario } = useAuth(); // 2. Obtenha os dados do usuário logado
+  const { usuario } = useAuth();
   const isEditing = !!itemParaEditar;
 
   const getInitialQuantidades = () => {
@@ -26,8 +28,20 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
   const [cidadeId, setCidadeId] = useState<number | ''>(isEditing ? itemParaEditar.cidade.id : '');
   const [quantidades, setQuantidades] = useState<Record<string, string>>(getInitialQuantidades());
 
+  // ======================= INÍCIO DA CORREÇÃO =======================
+
+  // 2. Calcula o total de ocorrências usando useMemo para otimização
+  const totalOcorrencias = useMemo(() => {
+    return Object.values(quantidades).reduce((acc, valor) => {
+      const num = parseInt(valor, 10);
+      return acc + (isNaN(num) ? 0 : num);
+    }, 0);
+  }, [quantidades]); // Recalcula apenas quando 'quantidades' mudar
+
+  // ======================= FIM DA CORREÇÃO =======================
+
+
   useEffect(() => {
-    // Se for um usuário comum, trava o seletor na OBM dele
     if (usuario?.role === 'user' && usuario.obm_id) {
       setCidadeId(usuario.obm_id);
     } else {
@@ -62,7 +76,6 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
     return acc;
   }, {} as { [key: string]: IDataApoio[] });
 
-  // 3. Filtra a lista de cidades se o usuário não for admin
   const cidadesDisponiveis = usuario?.role === 'admin'
     ? cidades
     : cidades.filter((c: ICidade) => c.id === usuario?.obm_id);
@@ -70,9 +83,22 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
       <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-gray-800 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="flex-shrink-0 border-b border-gray-700 p-6 text-xl font-semibold">
-          {isEditing ? `Editando Lançamentos de ${itemParaEditar.cidade.cidade_nome}` : 'Formulário de Lançamento de Ocorrências'}
-        </h2>
+        
+        {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+        
+        {/* 3. Cabeçalho agora inclui o totalizador */}
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-700 p-6">
+            <h2 className="text-xl font-semibold">
+            {isEditing ? `Editando Lançamentos de ${itemParaEditar.cidade.cidade_nome}` : 'Formulário de Lançamento de Ocorrências'}
+            </h2>
+            <div className="text-right">
+                <span className="text-sm text-gray-400">Total Lançado</span>
+                <p className="text-2xl font-bold text-teal-400">{totalOcorrencias}</p>
+            </div>
+        </div>
+
+        {/* ======================= FIM DA CORREÇÃO ======================= */}
+
         <form id="lancamento-form" onSubmit={handleSubmit} className="flex flex-grow flex-col gap-6 overflow-y-auto p-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
@@ -81,7 +107,6 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
                 id="cidade_id" name="cidade_id" value={cidadeId}
                 onChange={e => setCidadeId(Number(e.target.value))}
                 required
-                // 4. Desabilita o seletor se for edição OU se for usuário comum
                 disabled={isEditing || usuario?.role === 'user'}
                 className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
