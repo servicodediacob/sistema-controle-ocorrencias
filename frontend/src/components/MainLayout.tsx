@@ -26,6 +26,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
+      {/* O 'overflow-hidden' aqui é crucial para evitar a rolagem da página inteira */}
       <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-gray-900">
         {/* Sidebar */}
         <div
@@ -46,6 +47,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         </div>
 
         {/* Contêiner de Conteúdo Principal */}
+        {/* O 'overflow-hidden' neste flex container ajuda a conter o cabeçalho e o main */}
         <div className="flex flex-col overflow-hidden">
           {/* Cabeçalho */}
           <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 bg-gray-800 px-6 md:px-10">
@@ -68,6 +70,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           </header>
 
           {/* Corpo da Página */}
+          {/* O 'overflow-auto' aqui permite que o conteúdo interno (incluindo a tabela) role conforme necessário */}
           <main className="flex-grow overflow-auto p-6 md:p-8">
             {children}
           </main>

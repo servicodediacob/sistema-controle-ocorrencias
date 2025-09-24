@@ -66,7 +66,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
 };
 
 
-// --- Componente Principal da Tabela (COM A NOVA CORREÇÃO) ---
+// --- Componente Principal da Tabela ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -165,8 +165,8 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
       {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
       {/* VISUALIZAÇÃO DESKTOP */}
-      {/* O 'overflow-x-auto' foi removido deste div */}
-      <div className="mt-8 hidden rounded-lg border border-gray-700 bg-gray-800 md:block">
+      {/* A classe 'overflow-x-auto' foi adicionada a este div para encapsular a rolagem da tabela */}
+      <div className="mt-8 hidden rounded-lg border border-gray-700 bg-gray-800 md:block overflow-x-auto">
         <table className="min-w-[1300px] w-full border-collapse">
           <thead className="bg-gray-700 text-white">
             <tr>
