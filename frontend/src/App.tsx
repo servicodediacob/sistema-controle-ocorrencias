@@ -62,3 +62,6 @@ function App(): React.ReactElement {
 }
 
 export default App;
+
+// Em qualquer lugar do App.tsx
+// Forçando o deploy na Vercel
