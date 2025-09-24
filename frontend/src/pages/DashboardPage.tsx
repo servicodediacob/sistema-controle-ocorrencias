@@ -1,6 +1,5 @@
 // Caminho: frontend/src/pages/DashboardPage.tsx
 
-// A importação de 'React' foi removida daqui, pois não é mais necessária.
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
@@ -12,8 +11,9 @@ import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 import RelatorioWidget from '../components/RelatorioWidget';
 import LancamentoWidget from '../components/LancamentoWidget';
 
-// --- Componentes Funcionais com Tailwind (StatCard, DataTable - sem alterações) ---
+// ======================= INÍCIO DA CORREÇÃO =======================
 
+// --- Componente StatCard com Cores de Tema ---
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -21,15 +21,19 @@ interface StatCardProps {
 }
 function StatCard({ title, value, loading }: StatCardProps) {
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 text-center min-w-[200px]">
-      <h3 className="text-base font-medium text-gray-400">{title}</h3>
-      <p className="mt-2 text-4xl font-bold">
+    // Trocado 'bg-gray-800' por 'bg-surface'
+    <div className="flex-1 rounded-lg bg-surface p-6 text-center min-w-[200px] border border-border">
+      {/* Trocado 'text-gray-400' por 'text-text' */}
+      <h3 className="text-base font-medium text-text">{title}</h3>
+      {/* Trocado 'text-white' (implícito) por 'text-text-strong' */}
+      <p className="mt-2 text-4xl font-bold text-text-strong">
         {loading ? '...' : value}
       </p>
     </div>
   );
 }
 
+// --- Componente DataTable com Cores de Tema ---
 interface DataTableProps<T> {
   title: string;
   data: T[] | undefined;
@@ -38,19 +42,22 @@ interface DataTableProps<T> {
 }
 function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 min-w-[300px]">
-      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold">
+    // Trocado 'bg-gray-800' por 'bg-surface' e adicionado borda
+    <div className="flex-1 rounded-lg bg-surface p-6 min-w-[300px] border border-border">
+      {/* Trocado 'border-gray-700' por 'border-border' */}
+      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         {title}
       </h3>
       {loading ? (
-        <p className="py-4 text-center text-gray-400">Carregando...</p>
+        <p className="py-4 text-center text-text">Carregando...</p>
       ) : data && data.length > 0 ? (
         <div className="mt-4 overflow-y-auto max-h-80">
           <table className="w-full border-collapse">
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={String(col.key)} className="border-b border-gray-600 p-3 text-left text-sm font-medium text-gray-400">
+                  // Trocado 'border-gray-600' e 'text-gray-400'
+                  <th key={String(col.key)} className="border-b border-border p-3 text-left text-sm font-medium text-text">
                     {col.header}
                   </th>
                 ))}
@@ -58,9 +65,10 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
             </thead>
             <tbody>
               {data.map((row, index) => (
-                <tr key={index} className="border-b border-gray-700">
+                // Trocado 'border-gray-700'
+                <tr key={index} className="border-b border-border">
                   {columns.map((col) => (
-                    <td key={String(col.key)} className="p-3">
+                    <td key={String(col.key)} className="p-3 text-text-strong">
                       {String(row[col.key])}
                     </td>
                   ))}
@@ -70,11 +78,14 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
           </table>
         </div>
       ) : (
-        <p className="py-8 text-center text-gray-500">Nenhum dado para exibir.</p>
+        <p className="py-8 text-center text-text">Nenhum dado para exibir.</p>
       )}
     </div>
   );
 }
+
+// ======================= FIM DA CORREÇÃO =======================
+
 
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
@@ -149,5 +160,3 @@ function DashboardPage(): ReactElement {
 }
 
 export default DashboardPage;
-
-// --- teste para forçar redeploy vercel ---

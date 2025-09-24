@@ -1,8 +1,10 @@
+// Caminho: frontend/src/components/LancamentoTabela.tsx
+
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
 
-// --- Interfaces ---
+// --- Interfaces (sem alterações) ---
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
@@ -12,7 +14,7 @@ interface LancamentoTabelaProps {
   showActions?: boolean;
 }
 
-// --- Componente de Card para a Visualização Mobile ---
+// --- Componente MobileCard (sem alterações) ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
@@ -25,29 +27,35 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
 
+  // Classes de cor dinâmicas para o card
+  const cardClasses = hasData 
+    ? 'border-green-700/50 dark:bg-green-900/20 bg-green-50' 
+    : 'border-red-800/50 dark:bg-red-900/20 bg-red-50';
+  const totalColor = hasData ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+
   return (
-    <div className={`rounded-lg border ${hasData ? 'border-gray-600 bg-gray-800' : 'border-red-800/50 bg-red-900/20'}`}>
+    <div className={`rounded-lg border ${cardClasses}`}>
       <div 
         className="flex items-center justify-between p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div>
-          <p className="font-bold text-white">{cidade.cidade_nome}</p>
-          <p className="text-sm text-gray-400">{cidade.crbm_nome}</p>
+          <p className="font-bold text-text-strong">{cidade.cidade_nome}</p>
+          <p className="text-sm text-text">{cidade.crbm_nome}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-400">Total</p>
-          <p className={`text-xl font-bold ${hasData ? 'text-teal-400' : 'text-red-400'}`}>{total}</p>
+          <p className="text-sm text-text">Total</p>
+          <p className={`text-xl font-bold ${totalColor}`}>{total}</p>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-gray-700 p-4">
+        <div className="border-t border-border p-4">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {Object.entries(ocorrencias).map(([natureza, qtd]) => (
-              <div key={natureza} className="flex justify-between border-b border-dashed border-gray-600 py-1">
-                <span className="text-gray-400">{natureza}</span>
-                <span className="font-semibold text-white">{qtd}</span>
+              <div key={natureza} className="flex justify-between border-b border-dashed border-border py-1">
+                <span className="text-text">{natureza}</span>
+                <span className="font-semibold text-text-strong">{qtd}</span>
               </div>
             ))}
           </div>
@@ -77,7 +85,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="mt-8 flex items-center justify-center rounded-lg bg-gray-800 p-12">
+      <div className="mt-8 flex items-center justify-center rounded-lg bg-surface p-12">
         <Spinner size="lg" text="Carregando dados da tabela..." />
       </div>
     );
@@ -137,17 +145,15 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
   return (
     <>
-      {/* VISUALIZAÇÃO MOBILE (sem alterações) */}
+      {/* VISUALIZAÇÃO MOBILE */}
       <div className="mt-4 space-y-4 md:hidden">
         {cidades.map(cidade => {
           const ocorrências: Record<string, number> = {};
           let totalLinha = 0;
           naturezas.forEach(nat => {
             const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-            if (qtd > 0) {
-              ocorrências[nat.subgrupo] = qtd;
-              totalLinha += qtd;
-            }
+            ocorrências[nat.subgrupo] = qtd;
+            totalLinha += qtd;
           });
           
           return (
@@ -163,15 +169,13 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
         })}
       </div>
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
       {/* VISUALIZAÇÃO DESKTOP */}
-      {/* A classe 'overflow-x-auto' foi adicionada a este div para encapsular a rolagem da tabela */}
-      <div className="mt-8 hidden rounded-lg border border-gray-700 bg-gray-800 md:block overflow-x-auto">
+      <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
         <table className="min-w-[1300px] w-full border-collapse">
           <thead className="bg-gray-700 text-white">
             <tr>
-              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-gray-800 p-3 text-left font-bold uppercase">CRBM</th>
-              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-gray-800 p-3 text-left font-bold uppercase">Quartel / Cidade</th>
+              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
+              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
                 <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
               ))}
@@ -183,7 +187,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
           </thead>
           
           {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
-            <tbody key={crbm} className="bg-gray-800">
+            <tbody key={crbm} className="bg-surface">
               {listaCidades.map((cidade, index) => {
                 const ocorrências: Record<string, number> = {};
                 let totalLinha = 0;
@@ -193,25 +197,29 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                   totalLinha += qtd;
                 });
 
+                const cellClass = totalLinha > 0
+                  ? 'dark:bg-green-900/30 dark:text-green-300 bg-green-100 text-green-800'
+                  : 'dark:bg-red-900/50 dark:text-red-300 bg-red-100 text-red-800';
+
                 return (
-                  <tr key={cidade.id} className="text-center hover:bg-gray-700/50">
+                  <tr key={cidade.id} className="text-center hover:bg-border/50">
                     {index === 0 && (
-                      <td rowSpan={listaCidades.length} className="sticky left-0 z-10 border-b border-r border-gray-700 bg-gray-800 p-3 text-left align-top font-bold">{crbm}</td>
+                      <td rowSpan={listaCidades.length} className="sticky left-0 z-10 border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
                     )}
-                    <td className={`sticky left-[150px] z-10 border-b border-r border-gray-700 p-3 text-left font-bold ${totalLinha === 0 ? 'bg-red-900/50 text-red-200' : 'bg-gray-800'}`}>{cidade.cidade_nome}</td>
+                    <td className={`sticky left-[150px] z-10 border-b border-r border-border p-3 text-left font-bold ${cellClass}`}>{cidade.cidade_nome}</td>
                     {naturezas.map(nat => (
-                      <td key={nat.subgrupo} className="whitespace-nowrap border-x border-gray-700 p-3">{ocorrências[nat.subgrupo]}</td>
+                      <td key={nat.subgrupo} className="whitespace-nowrap border-x border-border p-3">{ocorrências[nat.subgrupo]}</td>
                     ))}
-                    <td className="sticky right-0 whitespace-nowrap border-l border-gray-700 bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
+                    <td className="sticky right-0 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
-                      <td className="sticky right-0 whitespace-nowrap border-l border-gray-700 p-3">
+                      <td className="sticky right-0 whitespace-nowrap border-l border-border p-3">
                         <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
                       </td>
                     )}
                   </tr>
                 );
               })}
-              {/* Linha de Subtotal agora dentro do tbody */}
+              {/* Linha de Subtotal */}
               <tr className="bg-blue-800 font-bold text-white">
                 <td colSpan={2} className="sticky left-0 z-10 border-b border-r border-gray-700 bg-blue-800 p-3 text-center">
                   SUB TOTAL
@@ -237,8 +245,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
           </tfoot>
         </table>
       </div>
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
-    </>
+    </> // ======================= CORREÇÃO APLICADA =======================
   );
 };
 

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// Interface para os itens que o componente pode receber
 interface Item {
   id: number;
   nome: string;
@@ -14,6 +13,7 @@ interface SearchableSelectProps {
   onSelect: (id: number) => void;
   placeholder?: string;
   disabled?: boolean;
+  highlightedIds?: Set<number>; // <-- Nova prop para os IDs a serem destacados
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -22,12 +22,12 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   onSelect,
   placeholder = 'Selecione um item',
   disabled = false,
+  highlightedIds = new Set(), // <-- Valor padrão
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Encontra o nome do item selecionado para exibir no input
   useEffect(() => {
     if (selectedId) {
       const selectedItem = items.find(item => item.id === selectedId);
@@ -37,17 +37,14 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     }
   }, [selectedId, items]);
 
-  // Filtra os itens com base no termo de busca
   const filteredItems = items.filter(item =>
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Fecha o dropdown se o usuário clicar fora dele
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        // Se o dropdown for fechado sem uma seleção válida, reverte para o nome do item selecionado
         const selectedItem = items.find(item => item.id === selectedId);
         setSearchTerm(selectedItem ? selectedItem.nome : '');
       }
@@ -79,15 +76,22 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       {isOpen && !disabled && (
         <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-600 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
           {filteredItems.length > 0 ? (
-            filteredItems.map(item => (
-              <li
-                key={item.id}
-                onClick={() => handleSelect(item)}
-                className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-white hover:bg-blue-600"
-              >
-                {item.nome}
-              </li>
-            ))
+            filteredItems.map(item => {
+              // Verifica se o ID do item atual está no conjunto de IDs destacados
+              const isHighlighted = highlightedIds.has(item.id);
+              return (
+                <li
+                  key={item.id}
+                  onClick={() => handleSelect(item)}
+                  // Aplica a classe de destaque condicionalmente
+                  className={`relative cursor-pointer select-none py-2 pl-3 pr-9 text-white hover:bg-blue-600 ${isHighlighted ? 'font-bold text-teal-300' : ''}`}
+                >
+                  {item.nome}
+                  {/* Adiciona um indicador visual (círculo verde) */}
+                  {isHighlighted && <span className="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-green-400"></span>}
+                </li>
+              );
+            })
           ) : (
             <li className="px-3 py-2 text-gray-400">Nenhuma OBM encontrada.</li>
           )}

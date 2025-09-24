@@ -4,13 +4,48 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/useAuth';
-import SearchableSelect from './SearchableSelect'; // 1. Importe o novo componente
+import SearchableSelect from './SearchableSelect';
 
-function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }: any) {
+// ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO =======================
+
+// 1. Define a ordem exata dos grupos e subgrupos conforme a imagem.
+const ORDEM_GRUPOS = [
+  'Resgate',
+  'Incêndio',
+  'Busca e Salvamento',
+  'Atividades Preventivas',
+  'Atividades Técnicas',
+  'Produtos Perigosos',
+  'Defesa Civil',
+];
+
+// ======================= FIM DA CORREÇÃO 1 =======================
+
+
+// Interface para a nova prop que receberá as OBMs com dados
+interface LancamentoModalProps {
+  cidades: ICidade[];
+  naturezas: IDataApoio[];
+  onClose: () => void;
+  onSave: (formData: any) => void;
+  itemParaEditar: any | null;
+  obmsComDados: Set<number>; // <-- Nova prop para o destaque
+}
+
+
+function LancamentoModal({
+  cidades,
+  naturezas,
+  onClose,
+  onSave,
+  itemParaEditar,
+  obmsComDados, // <-- Nova prop
+}: LancamentoModalProps) {
   const { addNotification } = useNotification();
   const { usuario } = useAuth();
   const isEditing = !!itemParaEditar;
 
+  // ... (lógica de estados e handlers permanece a mesma) ...
   const getInitialQuantidades = () => {
     if (isEditing && itemParaEditar) {
       const quantidadesIniciais: Record<string, string> = {};
@@ -63,23 +98,25 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
     setQuantidades({});
     addNotification('Campos de quantidade foram limpos.', 'info');
   };
+  // ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO =======================
 
-  const naturezasAgrupadas = naturezas.reduce((acc: any, nat: IDataApoio) => {
-    const grupo = nat.grupo || 'Outros';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(nat);
-    return acc;
-  }, {} as { [key: string]: IDataApoio[] });
+  // 2. Agrupa as naturezas normalmente, mas usaremos a constante de ordem para renderizar.
+  const naturezasAgrupadas = useMemo(() => 
+    naturezas.reduce((acc: any, nat: IDataApoio) => {
+      const grupo = nat.grupo || 'Outros';
+      if (!acc[grupo]) acc[grupo] = [];
+      acc[grupo].push(nat);
+      return acc;
+    }, {} as { [key: string]: IDataApoio[] }),
+    [naturezas]
+  );
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
+  // ======================= FIM DA CORREÇÃO 1 =======================
 
-  // 2. Prepara os dados para o SearchableSelect
   const obmsParaSelecao = useMemo(() =>
     cidades.map((c: ICidade) => ({ id: c.id, nome: c.cidade_nome })),
     [cidades]
   );
-
-  // ======================= FIM DA CORREÇÃO =======================
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
@@ -95,10 +132,6 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
         </div>
         <form id="lancamento-form" onSubmit={handleSubmit} className="flex flex-grow flex-col gap-6 overflow-y-auto p-6">
           <div className="flex flex-wrap items-end gap-4">
-            
-            {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-            
-            {/* 3. Substitui o <select> pelo novo componente */}
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="cidade_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
               <SearchableSelect
@@ -107,11 +140,9 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
                 onSelect={(id) => setCidadeId(id)}
                 placeholder="Digite para buscar uma OBM"
                 disabled={isEditing || usuario?.role === 'user'}
+                highlightedIds={obmsComDados} // <-- Passa a nova prop para o destaque
               />
             </div>
-
-            {/* ======================= FIM DA CORREÇÃO ======================= */}
-
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="data_ocorrencia" className="text-sm text-gray-400">Data da Ocorrência</label>
               <input
@@ -121,24 +152,36 @@ function LancamentoModal({ cidades, naturezas, onClose, onSave, itemParaEditar }
               />
             </div>
           </div>
-          {Object.entries(naturezasAgrupadas).map(([grupo, nats]) => (
-            <fieldset key={grupo} className="rounded-lg border border-gray-700 p-6">
-              <legend className="px-2 text-lg font-bold text-yellow-400">{grupo}</legend>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 pt-2">
-                {(nats as IDataApoio[]).map((nat: IDataApoio) => (
-                  <div key={nat.id} className="flex flex-col gap-2">
-                    <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
-                    <input
-                      id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
-                      value={quantidades[nat.id] || ''}
-                      onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
-                      className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-          ))}
+          
+          {/* ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO ======================= */}
+
+          {/* 3. Itera sobre a constante de ordem para renderizar os grupos na sequência correta */}
+          {ORDEM_GRUPOS.map(grupo => {
+            const natsDoGrupo = naturezasAgrupadas[grupo];
+            if (!natsDoGrupo) return null;
+
+            return (
+              <fieldset key={grupo} className="rounded-lg border border-gray-700 p-6">
+                <legend className="px-2 text-lg font-bold text-yellow-400">{grupo}</legend>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 pt-2">
+                  {natsDoGrupo.map((nat: IDataApoio) => (
+                    <div key={nat.id} className="flex flex-col gap-2">
+                      <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
+                      <input
+                        id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
+                        value={quantidades[nat.id] || ''}
+                        onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
+                        className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+          
+          {/* ======================= FIM DA CORREÇÃO 1 ======================= */}
+
         </form>
         <div className="flex flex-shrink-0 items-center justify-end gap-4 border-t border-gray-700 p-6">
           <button type="button" onClick={limparFormulario} className="mr-auto rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700">

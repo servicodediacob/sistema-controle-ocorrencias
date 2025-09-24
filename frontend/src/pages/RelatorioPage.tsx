@@ -47,7 +47,6 @@ function RelatorioPage() {
     return acc;
   }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
 
-  // ======================= INÍCIO DA CORREÇÃO DE TIPO =======================
   const totalGeralRow: IRelatorioRow = {
     grupo: 'TOTAL GERAL',
     subgrupo: 'TOTAL GERAL',
@@ -65,19 +64,18 @@ function RelatorioPage() {
     "8º CRBM": String(totals["8º CRBM"]),
     "9º CRBM": String(totals["9º CRBM"]),
   };
-  // ======================= FIM DA CORREÇÃO DE TIPO =======================
 
   return (
     <MainLayout pageTitle="Relatório Estatístico de Ocorrências">
-      {/* Controles de Filtro */}
-      <div className="mb-8 flex flex-wrap items-end gap-4 rounded-lg bg-gray-800 p-6">
+      {/* ======================= CORREÇÃO APLICADA ======================= */}
+      <div className="mb-8 flex flex-wrap items-end gap-4 rounded-lg bg-surface border border-border p-6">
         <div className="flex flex-col gap-2">
-          <label htmlFor="data-inicio" className="text-sm text-gray-400">Data de Início</label>
-          <input id="data-inicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="rounded-md border border-gray-600 bg-gray-700 p-2.5 text-white" />
+          <label htmlFor="data-inicio" className="text-sm text-text">Data de Início</label>
+          <input id="data-inicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="data-fim" className="text-sm text-gray-400">Data de Fim</label>
-          <input id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rounded-md border border-gray-600 bg-gray-700 p-2.5 text-white" />
+          <label htmlFor="data-fim" className="text-sm text-text">Data de Fim</label>
+          <input id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
         </div>
         <button onClick={handleGenerateReport} disabled={loading} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
           {loading ? 'Gerando...' : 'Gerar Relatório'}
@@ -87,12 +85,12 @@ function RelatorioPage() {
       {loading && <div className="flex justify-center p-10"><Spinner text="Gerando relatório..." /></div>}
 
       {!loading && reportData.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-gray-700">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
           <table className="min-w-full w-full border-collapse text-sm">
-            <thead className="bg-gray-700 text-white">
+            <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
               <tr>
-                <th className="sticky left-0 top-0 z-20 w-[250px] border-r border-gray-600 bg-gray-700 p-3 text-left">GRUPO</th>
-                <th className="sticky left-[250px] top-0 z-20 w-[250px] border-r border-gray-600 bg-gray-700 p-3 text-left">NATUREZA (SUBGRUPO)</th>
+                <th className="sticky left-0 top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">GRUPO</th>
+                <th className="sticky left-[250px] top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">NATUREZA (SUBGRUPO)</th>
                 <th className="hidden lg:table-cell p-2">DIURNO</th>
                 <th className="hidden lg:table-cell p-2">NOTURNO</th>
                 <th className="p-2">TOTAL CAPITAL</th>
@@ -110,7 +108,6 @@ function RelatorioPage() {
                   return acc;
                 }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
 
-                // ======================= INÍCIO DA CORREÇÃO DE TIPO =======================
                 const subtotalRow: IRelatorioRow = {
                   grupo: grupo,
                   subgrupo: 'SUB TOTAL',
@@ -128,7 +125,6 @@ function RelatorioPage() {
                   "8º CRBM": String(subtotalGrupo["8º CRBM"]),
                   "9º CRBM": String(subtotalGrupo["9º CRBM"]),
                 };
-                // ======================= FIM DA CORREÇÃO DE TIPO =======================
 
                 return (
                   <React.Fragment key={grupo}>

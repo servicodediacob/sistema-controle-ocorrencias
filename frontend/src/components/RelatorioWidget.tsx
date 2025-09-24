@@ -1,9 +1,9 @@
 // Caminho: frontend/src/components/RelatorioWidget.tsx
 
 import React, { useState, useEffect, ReactElement } from 'react';
-// Não precisamos mais de 'styled-components'
 import { getRelatorio, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import Spinner from './Spinner'; // Importando o Spinner
 
 type CrbmKey = "1º CRBM" | "2º CRBM" | "3º CRBM" | "4º CRBM" | "5º CRBM" | "6º CRBM" | "7º CRBM" | "8º CRBM" | "9º CRBM";
 
@@ -46,41 +46,44 @@ function RelatorioWidget(): ReactElement {
   }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
 
   return (
-    <div className="w-full flex-1 rounded-lg bg-gray-800 p-6">
-      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold">
+    // ======================= CORREÇÃO APLICADA =======================
+    <div className="w-full flex-1 rounded-lg bg-surface border border-border p-6 text-text">
+      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         Relatório Estatístico do Dia
       </h3>
       {loading ? (
-        <p className="py-4 text-center text-gray-400">Carregando relatório...</p>
+        <div className="flex justify-center p-10">
+          <Spinner text="Carregando relatório..." />
+        </div>
       ) : reportData.length > 0 ? (
-        <div className="mt-4 overflow-x-auto border border-gray-700 rounded-md">
+        <div className="mt-4 overflow-x-auto border border-border rounded-md">
           <table className="min-w-[1200px] w-full border-collapse text-sm">
-            <thead className="bg-gray-700 text-white">
+            <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
               <tr>
-                <th rowSpan={2} className="sticky left-0 z-20 w-[150px] border-r border-gray-600 bg-gray-700 p-2 text-left">GRUPO</th>
-                <th rowSpan={2} className="sticky left-[150px] z-20 w-[200px] border-r border-gray-600 bg-gray-700 p-2 text-left">NATUREZA (SUBGRUPO)</th>
-                <th colSpan={3} className="border-b border-gray-600 p-2">ESTATÍSTICA CAPITAL</th>
-                <th colSpan={9} className="border-b border-gray-600 p-2">ESTATÍSTICA POR CRBM (INTERIOR)</th>
+                <th rowSpan={2} className="sticky left-0 z-20 w-[150px] border-r border-border bg-surface p-2 text-left">GRUPO</th>
+                <th rowSpan={2} className="sticky left-[150px] z-20 w-[200px] border-r border-border bg-surface p-2 text-left">NATUREZA (SUBGRUPO)</th>
+                <th colSpan={3} className="border-b border-border p-2">ESTATÍSTICA CAPITAL</th>
+                <th colSpan={9} className="border-b border-border p-2">ESTATÍSTICA POR CRBM (INTERIOR)</th>
                 <th rowSpan={2} className="p-2">TOTAL GERAL</th>
               </tr>
               <tr className="text-xs">
-                <th className="p-2">DIURNO</th>
-                <th className="p-2">NOTURNO</th>
-                <th className="p-2">TOTAL</th>
-                {crbmHeaders.map(h => <th key={h} className="p-2">{h}</th>)}
+                <th className="p-2 border-t border-border">DIURNO</th>
+                <th className="p-2 border-t border-border">NOTURNO</th>
+                <th className="p-2 border-t border-border">TOTAL</th>
+                {crbmHeaders.map(h => <th key={h} className="p-2 border-t border-border">{h}</th>)}
               </tr>
             </thead>
-            <tbody className="bg-gray-800">
+            <tbody className="bg-surface">
               {Object.entries(groupedData).map(([grupo, subgrupos]) => (
                 <React.Fragment key={grupo}>
                   {subgrupos.map((row, index) => (
-                    <tr key={`${grupo}-${row.subgrupo}`} className="border-b border-gray-700 text-center">
+                    <tr key={`${grupo}-${row.subgrupo}`} className="border-b border-border text-center">
                       {index === 0 && (
-                        <td rowSpan={subgrupos.length} className="sticky left-0 z-10 border-r border-gray-700 bg-gray-800 p-2 text-left align-middle font-bold">
+                        <td rowSpan={subgrupos.length} className="sticky left-0 z-10 border-r border-border bg-surface p-2 text-left align-middle font-bold text-text-strong">
                           {grupo}
                         </td>
                       )}
-                      <td className="sticky left-[150px] z-10 border-r border-gray-700 bg-gray-800 p-2 text-left">
+                      <td className="sticky left-[150px] z-10 border-r border-border bg-surface p-2 text-left text-text-strong">
                         {row.subgrupo}
                       </td>
                       <td>{row.diurno}</td>
@@ -92,7 +95,7 @@ function RelatorioWidget(): ReactElement {
                   ))}
                 </React.Fragment>
               ))}
-              <tr className="sticky bottom-0 z-10 bg-blue-800 text-center font-bold text-white">
+              <tr className="sticky bottom-0 z-10 bg-blue-100 dark:bg-blue-800 text-center font-bold text-blue-900 dark:text-white">
                 <td colSpan={2} className="p-2 text-right">SUB TOTAL</td>
                 <td>{totals.diurno}</td>
                 <td>{totals.noturno}</td>
@@ -104,7 +107,7 @@ function RelatorioWidget(): ReactElement {
           </table>
         </div>
       ) : (
-        <p className="py-8 text-center text-gray-500">Nenhum dado para exibir no relatório do dia.</p>
+        <p className="py-8 text-center text-text">Nenhum dado para exibir no relatório do dia.</p>
       )}
     </div>
   );

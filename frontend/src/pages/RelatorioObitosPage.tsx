@@ -16,10 +16,9 @@ import {
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import RegistroObitoModal from '../components/RegistroObitoModal';
-import ObitoNaturezaCard from '../components/ObitoNaturezaCard'; // 1. IMPORTAMOS O NOVO CARD
-import Spinner from '../components/Spinner'; // Importamos o Spinner para um feedback melhor
+import ObitoNaturezaCard from '../components/ObitoNaturezaCard';
+import Spinner from '../components/Spinner';
 
-// --- Constante (sem alterações) ---
 const NATUREZAS_FIXAS_NOMES = [
   'ACIDENTE DE TRÂNSITO',
   'AFOGAMENTO OU CADÁVER',
@@ -30,9 +29,7 @@ const NATUREZAS_FIXAS_NOMES = [
   'OUTROS'
 ];
 
-// --- Componente Principal ---
 function RelatorioObitosPage(): ReactElement {
-  // --- Lógica e Estados (sem alterações) ---
   const [dataRelatorio, setDataRelatorio] = useState(new Date().toISOString().split('T')[0]);
   const [naturezasDoRelatorio, setNaturezasDoRelatorio] = useState<IDataApoio[]>([]);
   const [cidades, setCidades] = useState<ICidade[]>([]);
@@ -135,19 +132,18 @@ function RelatorioObitosPage(): ReactElement {
 
   const totalGeral = dadosTabela.reduce((acc, curr) => acc + curr.quantidade, 0);
 
-  // --- JSX Refatorado com Tailwind CSS ---
   return (
     <MainLayout pageTitle="Lançamento de Óbitos para Relatório">
-      {/* Controles (sem alteração) */}
-      <div className="mb-8 flex flex-col items-stretch gap-4 rounded-lg bg-gray-800 p-6 md:flex-row md:items-end md:justify-between">
+      {/* ======================= CORREÇÃO APLICADA ======================= */}
+      <div className="mb-8 flex flex-col items-stretch gap-4 rounded-lg bg-surface border border-border p-6 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
-          <label htmlFor="data-relatorio" className="text-sm text-gray-400">Data do Relatório</label>
+          <label htmlFor="data-relatorio" className="text-sm text-text">Data do Relatório</label>
           <input
             id="data-relatorio"
             type="date"
             value={dataRelatorio}
             onChange={e => setDataRelatorio(e.target.value)}
-            className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
+            className="rounded-md border border-border bg-background p-3 text-text-strong"
           />
         </div>
         <div className="flex flex-col gap-4 sm:flex-row">
@@ -168,29 +164,24 @@ function RelatorioObitosPage(): ReactElement {
         </div>
       </div>
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
       {loading ? (
         <div className="flex justify-center p-10"><Spinner text="Carregando registros..." /></div>
       ) : (
         <>
-          {/* 2. VISUALIZAÇÃO MOBILE (usando o novo Card) */}
           <div className="space-y-4 md:hidden">
             {dadosTabela.map((item) => (
               <ObitoNaturezaCard key={item.nome} item={item} onEditClick={handleEditClick} />
             ))}
-            {/* Mensagem se não houver nenhum registro */}
             {totalGeral === 0 && (
-              <div className="py-10 text-center text-gray-500">Nenhum óbito registrado para esta data.</div>
+              <div className="py-10 text-center text-text">Nenhum óbito registrado para esta data.</div>
             )}
-            {/* Totalizador Mobile */}
             <div className="rounded-lg bg-red-800 p-4 text-center font-bold text-white">
               TOTAL GERAL: {totalGeral}
             </div>
           </div>
 
-          {/* 3. VISUALIZAÇÃO DESKTOP (a tabela original, agora oculta em telas pequenas) */}
           <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-[600px] w-full border-collapse overflow-hidden rounded-lg bg-gray-800">
+            <table className="min-w-[600px] w-full border-collapse overflow-hidden rounded-lg bg-surface border border-border text-text">
               <thead>
                 <tr>
                   <th className="bg-red-700 p-4 text-left text-sm font-bold uppercase text-white">Natureza</th>
@@ -200,15 +191,15 @@ function RelatorioObitosPage(): ReactElement {
               </thead>
               <tbody>
                 {dadosTabela.map((item) => (
-                  <tr key={item.nome} className="border-b border-gray-700">
-                    <td className="p-4">{item.nome}</td>
+                  <tr key={item.nome} className="border-b border-border">
+                    <td className="p-4 text-text-strong">{item.nome}</td>
                     <td className="p-4">{item.quantidade}</td>
                     <td className="p-4">
                       {item.registros.map((r, index) => (
                         <React.Fragment key={r.id}>
                           <span
                             onClick={() => handleEditClick(r)}
-                            className="cursor-pointer text-cyan-400 underline decoration-dotted hover:text-cyan-300"
+                            className="cursor-pointer text-cyan-600 dark:text-cyan-400 underline decoration-dotted hover:text-cyan-500 dark:hover:text-cyan-300"
                           >
                             {`(${r.numero_ocorrencia || 'N/A'}) - ${r.obm_nome || 'N/A'} (${r.quantidade_vitimas})`}
                           </span>
@@ -228,7 +219,6 @@ function RelatorioObitosPage(): ReactElement {
           </div>
         </>
       )}
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
 
       {isModalOpen && (
         <RegistroObitoModal

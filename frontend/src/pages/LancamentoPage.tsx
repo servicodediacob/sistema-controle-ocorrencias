@@ -1,3 +1,5 @@
+// Caminho: frontend/src/pages/LancamentoPage.tsx
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ICidade,
@@ -10,9 +12,11 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
+// ======================= CORREÇÃO APLICADA =======================
+// A importação padrão agora funciona, pois o componente LancamentoTabela está sintaticamente correto.
 import LancamentoTabela from '../components/LancamentoTabela';
 
-// Constante que define a ordem e abreviação das colunas na tabela
+// ... (constante ORDEM_COLUNAS permanece a mesma) ...
 const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
     { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
@@ -26,18 +30,17 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
     { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
     { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, // Corrigido para corresponder à abreviação
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, // Corrigido para corresponder à abreviação
-    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, // Corrigido para corresponder à abreviação
-    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, // Corrigido para corresponder à abreviação
+    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, 
+    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, 
+    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, 
+    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
 ];
 
+
 function LancamentoPage() {
-  // Hooks para obter dados globais e notificações
   const { cidades, naturezas } = useData();
   const { addNotification } = useNotification();
 
-  // Estados locais do componente
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
   const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +50,6 @@ function LancamentoPage() {
 
   const colunasNatureza = ORDEM_COLUNAS;
 
-  // Função para buscar os dados da tabela principal
   const fetchDadosTabela = useCallback(async () => {
     if (!dataRegistro) return;
     setLoading(true);
@@ -61,12 +63,18 @@ function LancamentoPage() {
     }
   }, [dataRegistro, addNotification]);
 
-  // Efeito para buscar os dados quando a data muda
   useEffect(() => {
     fetchDadosTabela();
   }, [fetchDadosTabela]);
 
-  // Função para salvar (criar ou editar) um lançamento
+  const obmsComDados = useMemo(() => {
+    const ids = dadosTabela.map(dado => {
+      const cidade = cidades.find(c => c.cidade_nome === dado.cidade_nome);
+      return cidade ? cidade.id : null;
+    }).filter((id): id is number => id !== null);
+    return new Set(ids);
+  }, [dadosTabela, cidades]);
+
   const handleSave = async (formData: any) => {
     const payload = {
       data_registro: formData.data_ocorrencia,
@@ -85,8 +93,6 @@ function LancamentoPage() {
     }
 
     try {
-      // Se estiver editando, primeiro limpa os registros existentes para aquela OBM naquele dia.
-      // A API de lote já faz isso, mas garantimos aqui para o caso de a lógica mudar.
       if (itemParaEditar) {
         await limparEstatisticasDoDia(payload.data_registro, payload.obm_id);
       }
@@ -103,13 +109,11 @@ function LancamentoPage() {
     }
   };
 
-  // Função para abrir o modal em modo de edição
   const handleEdit = (cidade: ICidade, dadosAtuais: Record<string, number>) => {
     setItemParaEditar({ cidade, dados: dadosAtuais });
     setIsModalOpen(true);
   };
 
-  // Função para limpar todos os lançamentos do dia
   const handleLimparTabela = async () => {
     const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     if (window.confirm(`Tem certeza que deseja excluir TODOS os lançamentos do dia ${dataFormatada}? Esta ação não pode ser desfeita.`)) {
@@ -126,7 +130,6 @@ function LancamentoPage() {
     }
   };
 
-  // Memoização para evitar recálculos desnecessários
   const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
 
   const cidadesFiltradas = useMemo(() => {
@@ -138,10 +141,10 @@ function LancamentoPage() {
 
   return (
     <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-gray-800 p-6">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-surface p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="data-registro" className="text-sm text-gray-400">
+            <label htmlFor="data-registro" className="text-sm text-text">
               Data de Visualização
             </label>
             <input
@@ -149,19 +152,19 @@ function LancamentoPage() {
               type="date"
               value={dataRegistro}
               onChange={e => setDataRegistro(e.target.value)}
-              className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
+              className="rounded-md border border-border bg-surface p-3 text-text-strong"
             />
           </div>
           
           <div className="flex flex-col gap-2">
-            <label htmlFor="filtro-crbm" className="text-sm text-gray-400">
+            <label htmlFor="filtro-crbm" className="text-sm text-text">
               Filtrar por CRBM
             </label>
             <select
               id="filtro-crbm"
               value={filtroCrbm}
               onChange={e => setFiltroCrbm(e.target.value)}
-              className="min-w-[200px] rounded-md border border-gray-600 bg-gray-700 p-3 text-white"
+              className="min-w-[200px] rounded-md border border-border bg-surface p-3 text-text-strong"
             >
               <option value="todos">Todos os CRBMs</option>
               {crbmsUnicos.map(crbm => (
@@ -181,7 +184,7 @@ function LancamentoPage() {
           </button>
           <button
             onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
-            disabled={loading} // CORREÇÃO: O botão só é desabilitado durante o carregamento da tabela.
+            disabled={loading}
             className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Adicionar Lançamento
@@ -204,6 +207,7 @@ function LancamentoPage() {
           cidades={cidades}
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
           itemParaEditar={itemParaEditar}
+          obmsComDados={obmsComDados}
         />
       )}
     </MainLayout>

@@ -26,8 +26,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      {/* O 'overflow-hidden' aqui é crucial para evitar a rolagem da página inteira */}
-      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-gray-900">
+      {/* Container principal com a cor de fundo do tema */}
+      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background">
         {/* Sidebar */}
         <div
           className={`
@@ -47,30 +47,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         </div>
 
         {/* Contêiner de Conteúdo Principal */}
-        {/* O 'overflow-hidden' neste flex container ajuda a conter o cabeçalho e o main */}
         <div className="flex flex-col overflow-hidden">
-          {/* Cabeçalho */}
-          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 bg-gray-800 px-6 md:px-10">
+          {/* Cabeçalho com cores de superfície e borda do tema */}
+          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10">
             <div className="flex items-center">
               {/* Botão Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="text-white lg:hidden"
+                className="text-text-strong lg:hidden"
                 aria-label="Abrir menu"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
               </button>
-              {/* Título da Página */}
-              <h1 className="ml-4 text-2xl font-medium text-gray-200 lg:ml-0 md:text-3xl">
+              {/* Título da Página com cor de texto forte do tema */}
+              <h1 className="ml-4 text-2xl font-medium text-text-strong lg:ml-0 md:text-3xl">
                 {pageTitle}
               </h1>
             </div>
           </header>
 
           {/* Corpo da Página */}
-          {/* O 'overflow-auto' aqui permite que o conteúdo interno (incluindo a tabela) role conforme necessário */}
           <main className="flex-grow overflow-auto p-6 md:p-8">
             {children}
           </main>

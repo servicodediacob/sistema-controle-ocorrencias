@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getObitosPorData, getNaturezasPorNomes, IObitoRegistro, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import ObitoNaturezaCard from './ObitoNaturezaCard'; // IMPORTAMOS O CARD
+import ObitoNaturezaCard from './ObitoNaturezaCard';
 import Spinner from './Spinner';
 
 const NATUREZAS_FIXAS_NOMES = [
@@ -19,7 +19,6 @@ function ObitosDoDiaWidget() {
   const { addNotification } = useNotification();
 
   const fetchDados = useCallback(async () => {
-    // Não mostra o spinner em atualizações automáticas, apenas na primeira carga
     if (registrosDoDia.length === 0) {
       setLoading(true);
     }
@@ -39,7 +38,7 @@ function ObitosDoDiaWidget() {
 
   useEffect(() => {
     fetchDados();
-    const interval = setInterval(fetchDados, 60000); // Atualiza a cada 60 segundos
+    const interval = setInterval(fetchDados, 60000);
     return () => clearInterval(interval);
   }, [fetchDados]);
 
@@ -55,14 +54,14 @@ function ObitosDoDiaWidget() {
 
   const totalGeral = dadosTabela.reduce((acc, curr) => acc + curr.quantidade, 0);
 
-  // Placeholder para a função de edição, já que não editamos a partir do widget
   const handleEditPlaceholder = () => {
     addNotification('Para editar, acesse a página "Relatório de Óbitos".', 'info');
   };
 
   return (
-    <div className="mt-6 w-full rounded-lg bg-gray-800 p-6">
-      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold text-gray-200">
+    // ======================= CORREÇÃO APLICADA =======================
+    <div className="mt-6 w-full rounded-lg bg-surface border border-border p-6 text-text">
+      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         Relatório de Óbitos do Dia
       </h3>
       
@@ -70,15 +69,13 @@ function ObitosDoDiaWidget() {
         <div className="flex justify-center p-10"><Spinner text="Carregando óbitos do dia..." /></div>
       ) : (
         <div className="mt-4">
-          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-
           {/* VISUALIZAÇÃO MOBILE (Cards) */}
           <div className="space-y-4 md:hidden">
             {dadosTabela.map((item) => (
               <ObitoNaturezaCard key={item.nome} item={item} onEditClick={handleEditPlaceholder} />
             ))}
             {totalGeral === 0 && (
-              <div className="py-10 text-center text-gray-500">Nenhum óbito registrado para esta data.</div>
+              <div className="py-10 text-center text-text">Nenhum óbito registrado para esta data.</div>
             )}
             <div className="rounded-lg bg-red-800 p-4 text-center font-bold text-white">
               TOTAL GERAL: {totalGeral}
@@ -97,8 +94,8 @@ function ObitosDoDiaWidget() {
               </thead>
               <tbody>
                 {dadosTabela.map((item) => (
-                  <tr key={item.nome} className="border-b border-gray-700">
-                    <td className="p-3">{item.nome}</td>
+                  <tr key={item.nome} className="border-b border-border">
+                    <td className="p-3 text-text-strong">{item.nome}</td>
                     <td className="p-3">{item.quantidade}</td>
                     <td className="p-3">
                       {item.registros.map((r, index) => (
@@ -123,7 +120,6 @@ function ObitosDoDiaWidget() {
               </tbody>
             </table>
           </div>
-          {/* ======================= FIM DA CORREÇÃO ======================= */}
         </div>
       )}
     </div>

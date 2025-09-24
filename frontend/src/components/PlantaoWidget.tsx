@@ -1,38 +1,9 @@
+// Caminho: frontend/src/components/PlantaoWidget.tsx
+
 import React, { useState, useEffect, ReactElement } from 'react';
-import styled from 'styled-components';
 import { IPlantao, ISupervisor, getSupervisores, setSupervisorPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
-// --- Styled Components ---
-const WidgetContainer = styled.div`
-  background-color: #2c2c2c;
-  padding: 1.5rem;
-  border-radius: 8px;
-  flex: 1;
-  min-width: 300px;
-`;
-
-const Title = styled.h3`
-  margin-top: 0;
-  border-bottom: 1px solid #444;
-  padding-bottom: 1rem;
-`;
-
-const Content = styled.div`
-  margin-top: 1rem;
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #3a3a3a;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 4px;
-  margin-top: 1rem;
-`;
-
-// --- Component ---
 interface PlantaoWidgetProps {
   supervisor: IPlantao['supervisorPlantao'] | null;
   onUpdate: () => void;
@@ -76,23 +47,27 @@ function PlantaoWidget({ supervisor, onUpdate }: PlantaoWidgetProps): ReactEleme
   };
 
   return (
-    <WidgetContainer>
-      <Title>Supervisor de Plantão</Title>
-      <Content>
+    // ======================= CORREÇÃO APLICADA =======================
+    <div className="flex-1 rounded-lg bg-surface border border-border p-6 text-text min-w-[300px]">
+      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
+        Supervisor de Plantão
+      </h3>
+      <div className="mt-4">
         <p>
-          <strong>Atual:</strong> {supervisor?.supervisor_nome || 'Nenhum supervisor definido'}
+          <strong className="text-text-strong">Atual:</strong> {supervisor?.supervisor_nome || 'Nenhum supervisor definido'}
         </p>
-        <Select
+        <select
           value={selectedSupervisor}
           onChange={handleSelectChange}
+          className="mt-4 w-full rounded-md border border-border bg-surface p-3 text-text-strong focus:ring-2 focus:ring-blue-500"
         >
           <option value="">-- Selecione para assumir/liberar --</option>
           {supervisoresList.map(s => (
             <option key={s.id} value={s.id}>{s.nome}</option>
           ))}
-        </Select>
-      </Content>
-    </WidgetContainer>
+        </select>
+      </div>
+    </div>
   );
 }
 

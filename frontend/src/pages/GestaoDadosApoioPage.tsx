@@ -10,11 +10,9 @@ import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import Spinner from '../components/Spinner';
 
-// --- Tipos e Interfaces ---
 type DataType = 'obm' | 'natureza';
 type ItemType = IObm | IDataApoio;
 
-// --- Componente do Modal (Refatorado com Tailwind) ---
 interface DataModalProps {
   item: ItemType | null;
   type: DataType;
@@ -58,36 +56,36 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="mb-6 text-xl font-semibold">{title}</h2>
+      <div className="w-full max-w-md rounded-lg bg-surface border border-border p-6 text-text shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h2 className="mb-6 text-xl font-semibold text-text-strong">{title}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isObm ? (
             <>
               <div className="flex flex-col gap-2">
-                <label htmlFor="crbm_id" className="text-sm text-gray-400">CRBM</label>
-                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                <label htmlFor="crbm_id" className="text-sm text-text">CRBM</label>
+                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                   {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="nome" className="text-sm text-gray-400">Nome da OBM (Unidade)</label>
-                <input type="text" id="nome" name="nome" value={(formData as any).nome} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+                <label htmlFor="nome" className="text-sm text-text">Nome da OBM (Unidade)</label>
+                <input type="text" id="nome" name="nome" value={(formData as any).nome} onChange={handleChange} required className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
               </div>
             </>
           ) : (
             <>
               <div className="flex flex-col gap-2">
-                <label htmlFor="grupo" className="text-sm text-gray-400">Grupo da Natureza</label>
-                <input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+                <label htmlFor="grupo" className="text-sm text-text">Grupo da Natureza</label>
+                <input type="text" id="grupo" name="grupo" value={(formData as any).grupo} onChange={handleChange} required className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="subgrupo" className="text-sm text-gray-400">Subgrupo da Natureza</label>
-                <input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+                <label htmlFor="subgrupo" className="text-sm text-text">Subgrupo da Natureza</label>
+                <input type="text" id="subgrupo" name="subgrupo" value={(formData as any).subgrupo} onChange={handleChange} required className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
               </div>
             </>
           )}
           <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500">Cancelar</button>
+            <button type="button" onClick={onClose} className="rounded-md bg-gray-500 px-6 py-3 font-semibold text-white transition hover:bg-gray-600">Cancelar</button>
             <button type="submit" className="rounded-md bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-600">Salvar</button>
           </div>
         </form>
@@ -96,7 +94,6 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
   );
 }
 
-// --- Componente da Tabela Genérica ---
 interface DataTableProps {
   data: ItemType[];
   columns: { key: keyof ItemType; header: string }[];
@@ -106,17 +103,17 @@ interface DataTableProps {
 
 function DataTable({ data, columns, onEdit, onDelete }: DataTableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-700">
-      <table className="min-w-full divide-y divide-gray-700">
-        <thead className="bg-gray-800">
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-gray-200 dark:bg-gray-800">
           <tr>
-            {columns.map(col => <th key={String(col.key)} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">{col.header}</th>)}
-            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">Ações</th>
+            {columns.map(col => <th key={String(col.key)} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">{col.header}</th>)}
+            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-700 bg-gray-800">
+        <tbody className="divide-y divide-border bg-surface">
           {data.map(item => (
-            <tr key={item.id} className="hover:bg-gray-700/50">
+            <tr key={item.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50 text-text-strong">
               {columns.map(col => <td key={String(col.key)} className="whitespace-nowrap px-6 py-4">{(item as any)[col.key]}</td>)}
               <td className="whitespace-nowrap px-6 py-4 text-center">
                 <div className="flex justify-center gap-2">
@@ -132,7 +129,6 @@ function DataTable({ data, columns, onEdit, onDelete }: DataTableProps) {
   );
 }
 
-// --- Componente Principal da Página ---
 function GestaoDadosApoioPage(): ReactElement {
   const [activeTab, setActiveTab] = useState<DataType>('obm');
   const [obms, setObms] = useState<IObm[]>([]);
@@ -212,24 +208,25 @@ function GestaoDadosApoioPage(): ReactElement {
       : [{ key: 'grupo', header: 'Grupo' }, { key: 'subgrupo', header: 'Subgrupo' }];
 
     return (
-      <>
+      // ======================= CORREÇÃO APLICADA =======================
+      <div className="bg-surface border border-border rounded-lg p-4 md:p-6">
         <div className="mb-6">
           <button onClick={() => handleOpenModal()} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
             Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
           </button>
         </div>
         <DataTable data={data} columns={columns as any} onEdit={handleOpenModal} onDelete={handleDelete} />
-      </>
+      </div>
     );
   };
 
   return (
     <MainLayout pageTitle="Gerenciar Dados de Apoio">
-      <div className="mb-6 flex border-b border-gray-700">
-        <button onClick={() => setActiveTab('obm')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'obm' ? 'border-b-2 border-teal-400 text-teal-400' : 'text-gray-400 hover:text-white'}`}>
+      <div className="mb-6 flex border-b border-border">
+        <button onClick={() => setActiveTab('obm')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'obm' ? 'border-b-2 border-teal-500 text-teal-500' : 'text-text hover:text-text-strong'}`}>
           Gestão de OBMs
         </button>
-        <button onClick={() => setActiveTab('natureza')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'natureza' ? 'border-b-2 border-teal-400 text-teal-400' : 'text-gray-400 hover:text-white'}`}>
+        <button onClick={() => setActiveTab('natureza')} className={`px-6 py-3 text-lg font-medium transition-colors ${activeTab === 'natureza' ? 'border-b-2 border-teal-500 text-teal-500' : 'text-text hover:text-text-strong'}`}>
           Naturezas de Ocorrência
         </button>
       </div>

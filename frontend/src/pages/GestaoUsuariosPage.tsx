@@ -1,25 +1,26 @@
+// Caminho: frontend/src/pages/GestaoUsuariosPage.tsx
+
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
-import UsuarioModal from '../components/UsuarioModal'; // Importando o novo modal
+import UsuarioModal from '../components/UsuarioModal';
 import Spinner from '../components/Spinner';
 
-// NOVO: Componente de Card para a lista de usuários
 const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () => void; }> = ({ usuario, onEdit, onDelete }) => {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 text-white">
+    <div className="rounded-lg border border-border bg-surface p-4 text-text">
       <div className="flex justify-between items-start gap-4">
         <div>
-          <p className="font-bold">{usuario.nome}</p>
-          <p className="text-sm text-gray-400">{usuario.email}</p>
+          <p className="font-bold text-text-strong">{usuario.nome}</p>
+          <p className="text-sm">{usuario.email}</p>
           <p className="mt-1 text-xs text-gray-500">ID: {usuario.id}</p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-600 text-gray-200'}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200'}`}>
           {usuario.role}
         </span>
       </div>
-      <div className="mt-4 flex gap-2 border-t border-gray-700 pt-4">
+      <div className="mt-4 flex gap-2 border-t border-border pt-4">
         <button onClick={onEdit} className="flex-1 rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400">
           Editar
         </button>
@@ -109,26 +110,26 @@ function GestaoUsuariosPage(): ReactElement {
       {loading ? (
         <div className="flex justify-center p-10"><Spinner text="Carregando usuários..." /></div>
       ) : (
-        <>
+        <div className="bg-surface border border-border rounded-lg p-0 md:border-none md:bg-transparent">
           {/* Tabela para Desktop */}
-          <div className="hidden overflow-x-auto rounded-lg border border-gray-700 md:block">
-            <table className="min-w-full divide-y divide-gray-700">
-              <thead className="bg-gray-800">
+          <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-gray-200 dark:bg-gray-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Nome</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Role</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Role</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700 bg-gray-800">
+              <tbody className="divide-y divide-border bg-surface">
                 {usuarios.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-700/50">
-                    <td className="whitespace-nowrap px-6 py-4">{user.id}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{user.nome}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{user.email}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{user.role}</td>
+                  <tr key={user.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                    <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.id}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.nome}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text">{user.email}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text">{user.role}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-center">
                       <div className="flex justify-center gap-2">
                         <button onClick={() => handleOpenModal(user)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
@@ -152,7 +153,7 @@ function GestaoUsuariosPage(): ReactElement {
               />
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {isModalOpen && (

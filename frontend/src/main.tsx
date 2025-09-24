@@ -6,21 +6,23 @@ import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './contexts/AuthProvider.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
-import { DataProvider } from './contexts/DataProvider.tsx'; // 1. Importe o novo provedor
+import { DataProvider } from './contexts/DataProvider.tsx';
+import { ThemeProvider } from './contexts/ThemeProvider.tsx'; // Caminho corrigido
 
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <AuthProvider>
-        <NotificationProvider>
-          {/* 2. Envolva o App com o DataProvider */}
-          <DataProvider>
-            <App />
-          </DataProvider>
-        </NotificationProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <DataProvider>
+              <App />
+            </DataProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </React.StrictMode>,
   );
 } else {

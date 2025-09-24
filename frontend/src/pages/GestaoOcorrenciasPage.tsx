@@ -1,3 +1,5 @@
+// Caminho: frontend/src/pages/GestaoOcorrenciasPage.tsx
+
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getOcorrencias, deleteOcorrencia, updateOcorrencia, IPaginatedOcorrencias, IOcorrencia } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
@@ -88,13 +90,16 @@ function GestaoOcorrenciasPage(): ReactElement {
 
   return (
     <MainLayout pageTitle="Gestão de Ocorrências">
-      {/* O componente OcorrenciaTable agora gerencia sua própria responsividade */}
-      <OcorrenciaTable
-        ocorrencias={data.ocorrencias}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        loading={loading}
-      />
+      {/* ======================= CORREÇÃO APLICADA ======================= */}
+      {/* O componente da tabela agora está dentro de um contêiner que usa as cores do tema */}
+      <div className="bg-surface border border-border rounded-lg p-4 md:p-6">
+        <OcorrenciaTable
+          ocorrencias={data.ocorrencias}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          loading={loading}
+        />
+      </div>
 
       <Pagination
         pagination={data.pagination}
