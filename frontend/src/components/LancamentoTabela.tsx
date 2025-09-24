@@ -172,14 +172,14 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
       {/* VISUALIZAÇÃO DESKTOP */}
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
         <table className="min-w-[1300px] w-full border-collapse">
-          <thead className="bg-gray-700 text-white">
+          <thead className="bg-gray-700 text-white dark:bg-gray-700 dark:text-white light:bg-blue-600 light:text-white">
             <tr>
-              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
-              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
+              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong light:bg-blue-600 light:text-white">CRBM</th>
+              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong light:bg-blue-600 light:text-white">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
+                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase light:bg-blue-600 light:text-white">{nat.abreviacao}</th>
               ))}
-              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
+              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase light:bg-blue-600 light:text-white">TOTAL</th>
               {showActions && (
                 <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
               )}

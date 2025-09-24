@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/useAuth'; // <-- Importa o hook de autenticação
 
 import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
@@ -10,10 +11,10 @@ import PlantaoWidget from '../components/PlantaoWidget';
 import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 import RelatorioWidget from '../components/RelatorioWidget';
 import LancamentoWidget from '../components/LancamentoWidget';
+import LoggedInUsersWidget from '../components/LoggedInUsersWidget'; // <-- Importa o novo widget
 
-// ======================= INÍCIO DA CORREÇÃO =======================
+// --- Componentes Funcionais (StatCard, DataTable - sem alterações ) ---
 
-// --- Componente StatCard com Cores de Tema ---
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -21,19 +22,15 @@ interface StatCardProps {
 }
 function StatCard({ title, value, loading }: StatCardProps) {
   return (
-    // Trocado 'bg-gray-800' por 'bg-surface'
-    <div className="flex-1 rounded-lg bg-surface p-6 text-center min-w-[200px] border border-border">
-      {/* Trocado 'text-gray-400' por 'text-text' */}
-      <h3 className="text-base font-medium text-text">{title}</h3>
-      {/* Trocado 'text-white' (implícito) por 'text-text-strong' */}
-      <p className="mt-2 text-4xl font-bold text-text-strong">
+    <div className="flex-1 rounded-lg bg-gray-800 p-6 text-center min-w-[200px]">
+      <h3 className="text-base font-medium text-gray-400">{title}</h3>
+      <p className="mt-2 text-4xl font-bold">
         {loading ? '...' : value}
       </p>
     </div>
   );
 }
 
-// --- Componente DataTable com Cores de Tema ---
 interface DataTableProps<T> {
   title: string;
   data: T[] | undefined;
@@ -42,22 +39,19 @@ interface DataTableProps<T> {
 }
 function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   return (
-    // Trocado 'bg-gray-800' por 'bg-surface' e adicionado borda
-    <div className="flex-1 rounded-lg bg-surface p-6 min-w-[300px] border border-border">
-      {/* Trocado 'border-gray-700' por 'border-border' */}
-      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
+    <div className="flex-1 rounded-lg bg-gray-800 p-6 min-w-[300px]">
+      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold">
         {title}
       </h3>
       {loading ? (
-        <p className="py-4 text-center text-text">Carregando...</p>
+        <p className="py-4 text-center text-gray-400">Carregando...</p>
       ) : data && data.length > 0 ? (
         <div className="mt-4 overflow-y-auto max-h-80">
           <table className="w-full border-collapse">
             <thead>
               <tr>
                 {columns.map((col) => (
-                  // Trocado 'border-gray-600' e 'text-gray-400'
-                  <th key={String(col.key)} className="border-b border-border p-3 text-left text-sm font-medium text-text">
+                  <th key={String(col.key)} className="border-b border-gray-600 p-3 text-left text-sm font-medium text-gray-400">
                     {col.header}
                   </th>
                 ))}
@@ -65,10 +59,9 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
             </thead>
             <tbody>
               {data.map((row, index) => (
-                // Trocado 'border-gray-700'
-                <tr key={index} className="border-b border-border">
+                <tr key={index} className="border-b border-gray-700">
                   {columns.map((col) => (
-                    <td key={String(col.key)} className="p-3 text-text-strong">
+                    <td key={String(col.key)} className="p-3">
                       {String(row[col.key])}
                     </td>
                   ))}
@@ -78,17 +71,15 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
           </table>
         </div>
       ) : (
-        <p className="py-8 text-center text-text">Nenhum dado para exibir.</p>
+        <p className="py-8 text-center text-gray-500">Nenhum dado para exibir.</p>
       )}
     </div>
   );
 }
 
-// ======================= FIM DA CORREÇÃO =======================
-
-
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
+  const { usuario } = useAuth(); // <-- Obtém o usuário logado para verificar a role
   
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);
@@ -150,10 +141,13 @@ function DashboardPage(): ReactElement {
         />
       </div>
       
-      {/* Widgets de Plantão */}
+      {/* Widgets de Plantão e Usuários Online */}
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
         <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
+        
+        {/* Renderização condicional do widget de usuários online */}
+        {usuario?.role === 'admin' && <LoggedInUsersWidget />}
       </div>
     </MainLayout>
   );

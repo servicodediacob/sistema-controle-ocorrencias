@@ -2,7 +2,9 @@
 
 import { useState, ReactNode } from 'react';
 import { useAuth } from '../contexts/useAuth';
+import { useSocket } from '../hooks/useSocket'; // 1. Importe o hook do socket
 import Sidebar from './Sidebar';
+import OnlineUsersPopover from './OnlineUsersPopover'; // 2. Importe o novo componente
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -10,7 +12,10 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
-  const { usuario, logout } = useAuth();
+  const { usuario } = useAuth();
+  // 3. Chame o hook useSocket para estabelecer a conexão e obter a função de logout
+  const { logoutWithSocket } = useSocket(); 
+  
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -26,7 +31,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      {/* Container principal com a cor de fundo do tema */}
       <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background">
         {/* Sidebar */}
         <div
@@ -38,7 +42,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           `}
         >
           <Sidebar
-            onLogout={logout}
+            // 4. Use a nova função de logout que notifica o socket
+            onLogout={logoutWithSocket} 
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
             closeMobileMenu={() => setMobileMenuOpen(false)}
@@ -46,26 +51,33 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           />
         </div>
 
-        {/* Contêiner de Conteúdo Principal */}
         <div className="flex flex-col overflow-hidden">
-          {/* Cabeçalho com cores de superfície e borda do tema */}
+          {/* Cabeçalho */}
           <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10">
             <div className="flex items-center">
               {/* Botão Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="text-text-strong lg:hidden"
+                className="text-white lg:hidden"
                 aria-label="Abrir menu"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
               </button>
-              {/* Título da Página com cor de texto forte do tema */}
+              {/* Título da Página */}
               <h1 className="ml-4 text-2xl font-medium text-text-strong lg:ml-0 md:text-3xl">
                 {pageTitle}
               </h1>
             </div>
+            
+            {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
+            {/* 5. Adiciona o popover de usuários online no cabeçalho */}
+            <div className="flex items-center">
+              <OnlineUsersPopover />
+            </div>
+            {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
+
           </header>
 
           {/* Corpo da Página */}

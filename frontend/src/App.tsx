@@ -1,7 +1,9 @@
-// frontend/src/App.tsx
+// Caminho: frontend/src/App.tsx
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/useAuth';
+
+// Importação das Páginas
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import GestaoOcorrenciasPage from './pages/GestaoOcorrenciasPage';
@@ -13,6 +15,14 @@ import RelatorioObitosPage from './pages/RelatorioObitosPage';
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import GestaoAcessoPage from './pages/GestaoAcessoPage';
 
+// ======================= INÍCIO DA CORREÇÃO =======================
+// Importação de Componentes Globais SEM a extensão .tsx
+import ChatContainer from './components/ChatContainer';
+// ======================= FIM DA CORREÇÃO =======================
+
+/**
+ * Componente de Rota Privada
+ */
 interface PrivateRouteProps {
   children: React.ReactElement;
 }
@@ -22,13 +32,18 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
+/**
+ * Componente Principal da Aplicação
+ */
 function App(): React.ReactElement {
   const { isAuthenticated } = useAuth();
 
   return (
     <Router>
+      {isAuthenticated && <ChatContainer />}
+      
       <Routes>
-        {/* Rotas Públicas */}
+        {/* --- Rotas Públicas --- */}
         <Route 
           path="/login" 
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
@@ -38,13 +53,13 @@ function App(): React.ReactElement {
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <SolicitarAcessoPage />}
         />
         
-        {/* Rota Raiz */}
+        {/* --- Rota Raiz --- */}
         <Route 
           path="/"
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
         />
 
-        {/* Rotas Privadas */}
+        {/* --- Rotas Privadas --- */}
         <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
         <Route path="/lancamento" element={<PrivateRoute><LancamentoPage /></PrivateRoute>} />
         <Route path="/relatorio" element={<PrivateRoute><RelatorioPage /></PrivateRoute>} />
@@ -54,7 +69,7 @@ function App(): React.ReactElement {
         <Route path="/gestao-acesso" element={<PrivateRoute><GestaoAcessoPage /></PrivateRoute>} />
         <Route path="/gestao-dados" element={<PrivateRoute><GestaoDadosApoioPage /></PrivateRoute>} />
         
-        {/* Rota de fallback para qualquer caminho não encontrado */}
+        {/* --- Rota de Fallback --- */}
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
       </Routes>
     </Router>
@@ -62,6 +77,3 @@ function App(): React.ReactElement {
 }
 
 export default App;
-
-// Em qualquer lugar do App.tsx
-// Forçando o deploy na Vercel

@@ -5,17 +5,13 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    
     "dev": "nodemon",
-    
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js",
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
     "smoke:test": "node scripts/smoke-test.mjs",
-    
     "db:migrate": "ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
     "db:seed:dev": "ts-node -r tsconfig-paths/register src/db/seed.ts",
-    
     "db:prod:migrate": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
     "db:prod:seed": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/db/seed.ts"
   },
@@ -27,7 +23,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.5",
-    "pino": "^9.2.0"
+    "pino": "^9.2.0",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@swc/core": "^1.7.3",
