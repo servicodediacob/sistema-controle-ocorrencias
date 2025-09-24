@@ -1,7 +1,7 @@
 // frontend/src/pages/LoginPage.tsx
 
 import { useState, useEffect, ReactElement } from 'react';
-import { Link } from 'react-router-dom'; // <-- 1. Importe o Link
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { z } from 'zod';
 
@@ -25,12 +25,16 @@ const Spinner = (): ReactElement => (
 
 function LoginPage(): ReactElement {
   const [formData, setFormData] = useState({
-    email: 'admin@cbm.pe.gov.br', // Mudei para o usuário admin
+    email: 'admin@cbm.pe.gov.br',
     senha: 'admin123',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // ======================= INÍCIO DA MODIFICAÇÃO =======================
+  const [showPassword, setShowPassword] = useState(false); // 1. Estado para controlar a visibilidade
+  // ======================= FIM DA MODIFICAÇÃO =======================
 
   const { login } = useAuth();
 
@@ -96,13 +100,33 @@ function LoginPage(): ReactElement {
           </div>
 
           <div>
+            {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
             <input
-              type="password" name="senha" placeholder="Senha"
+              // 2. O tipo do input agora é dinâmico
+              type={showPassword ? 'text' : 'password'} 
+              name="senha" placeholder="Senha"
               value={formData.senha} onChange={handleChange} required disabled={loading}
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
+            {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
             <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.senha || ''}</p>
           </div>
+
+          {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
+          {/* 3. Adicionando o checkbox */}
+          <div className="flex items-center gap-2 self-start">
+            <input
+              type="checkbox"
+              id="show-password"
+              checked={showPassword}
+              onChange={() => setShowPassword(!showPassword)}
+              className="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="show-password" className="text-sm text-gray-300">
+              Mostrar senha
+            </label>
+          </div>
+          {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
 
           <button
             type="submit" disabled={loading || isFormInvalid}
@@ -114,7 +138,6 @@ function LoginPage(): ReactElement {
           {apiError && <p className="mt-4 text-center text-sm text-red-500">{apiError}</p>}
         </form>
 
-        {/* 2. Adicione o divisor e o novo botão/link */}
         <div className="my-6 flex items-center gap-4">
           <hr className="flex-grow border-t border-gray-600" />
           <span className="text-gray-400">OU</span>

@@ -22,12 +22,12 @@ const Icon: React.FC<IconProps> = ({ path, iconName, size = 24, className = '' }
       `Verifique se a chave existe e se o valor do path do SVG é uma string válida.`
     );
 
-    // 2. Em vez de quebrar, renderizamos um ícone de erro substituto.
+    // 2. Em vez de quebrar, renderizamos um ícone de erro substituto com um viewBox válido.
     return (
       <svg
         width={size}
         height={size}
-        viewBox="0 0 24 24"
+        viewBox="0 0 24 24" // viewBox válido
         fill="red" // Cor vermelha para chamar a atenção
         className={`flex-shrink-0 ${className}`}
         aria-label={`Ícone de erro para ${iconName}`}
@@ -37,12 +37,12 @@ const Icon: React.FC<IconProps> = ({ path, iconName, size = 24, className = '' }
     );
   }
 
-  // Se o path for válido, renderiza o ícone normalmente.
+  // Se o path for válido, renderiza o ícone normalmente com um viewBox válido.
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 24 24" // viewBox válido
       fill="currentColor"
       className={`flex-shrink-0 ${className}`}
     >

@@ -1,3 +1,5 @@
+// api/src/routes/unidadesRoutes.ts
+
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import {
@@ -10,19 +12,17 @@ import {
 
 const router = Router();
 
-// Rota para a coleção de unidades
-// GET para listar todas, POST para criar uma nova.
+// ======================= INÍCIO DA CORREÇÃO =======================
+// A rota GET /unidades agora é PÚBLICA. As outras (POST, PUT, DELETE) continuam protegidas.
 router.route('/unidades')
-  .get(proteger, getUnidades)
-  .post(proteger, criarUnidade);
+  .get(getUnidades) // Rota pública para listagem
+  .post(proteger, criarUnidade); // Rota protegida para criação
+// ======================= FIM DA CORREÇÃO =======================
 
-// Rota para um recurso específico de unidade (identificado pelo ID da cidade)
-// PUT para atualizar, DELETE para excluir.
 router.route('/unidades/:id')
   .put(proteger, atualizarUnidade)
   .delete(proteger, excluirUnidade);
 
-// Rota para buscar apenas os CRBMs (para preencher dropdowns)
 router.route('/crbms')
   .get(proteger, getCrbms);
 
