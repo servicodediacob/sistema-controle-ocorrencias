@@ -1,8 +1,8 @@
 import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { getCidades, getNaturezas, ICidade, IDataApoio } from '../services/api';
-import { useAuth } from './useAuth'; // 1. Importe o hook de autenticação
+import { useAuth } from './useAuth';
 
-// Interfaces
+// Interfaces (sem alteração)
 interface IDataContext {
   cidades: ICidade[];
   naturezas: IDataApoio[];
@@ -14,27 +14,25 @@ interface DataProviderProps {
   children: ReactNode;
 }
 
-// Contexto
+// Contexto (sem alteração)
 const DataContext = createContext<IDataContext | null>(null);
 
 // Provedor (COM A CORREÇÃO)
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth(); // 2. Obtenha o estado de autenticação
+  const { isAuthenticated } = useAuth();
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Inicia como true
 
   const fetchDadosDeApoio = useCallback(async () => {
-    // 3. VERIFICAÇÃO CRÍTICA: Só busca os dados se o usuário estiver autenticado
     if (!isAuthenticated) {
-      setLoading(false); // Se não está autenticado, não há nada para carregar
+      setLoading(false);
       return;
     }
 
     console.log('[DataProvider] Usuário autenticado. Buscando dados de apoio...');
-    setLoading(true);
+    setLoading(true); // Garante que o loading seja true no início da busca
     try {
-      // O Promise.all busca os dados em paralelo
       const [cidadesData, naturezasData] = await Promise.all([
         getCidades(),
         getNaturezas(),
@@ -42,19 +40,17 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setCidades(cidadesData);
       setNaturezas(naturezasData);
     } catch (error) {
-      // Este erro agora é esperado se o token expirar, por exemplo.
       console.error('Falha ao carregar dados de apoio globais:', error);
-      // Em caso de erro (ex: token expirado), limpa os dados para evitar inconsistências
       setCidades([]);
       setNaturezas([]);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]); // 4. Adicione 'isAuthenticated' como dependência do useCallback
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchDadosDeApoio();
-  }, [fetchDadosDeApoio]); // 5. O useEffect agora depende da função que depende do 'isAuthenticated'
+  }, [fetchDadosDeApoio]);
 
   const value = {
     cidades,
@@ -63,10 +59,31 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refetchData: fetchDadosDeApoio,
   };
 
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // Enquanto os dados essenciais estiverem carregando, exibimos uma tela de loading
+  // em vez de tentar renderizar os componentes filhos com dados vazios.
+  // Isso impede que os componentes que dependem desses dados quebrem durante a inicialização.
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#1a202c',
+        color: 'white',
+        fontFamily: 'sans-serif'
+      }}>
+        Carregando dados essenciais...
+      </div>
+    );
+  }
+  // ======================= FIM DA CORREÇÃO =======================
+
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Hook
+// Hook (sem alteração)
 export const useData = (): IDataContext => {
   const context = useContext(DataContext);
   if (!context) {
