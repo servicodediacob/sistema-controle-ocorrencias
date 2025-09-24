@@ -1,8 +1,10 @@
+// Caminho: frontend/src/pages/RelatorioPage.tsx
+
 import React, { useState } from 'react';
 import { getRelatorio, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
-import ReportRow from '../components/ReportRow'; // Importa o novo componente
+import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
 
 function RelatorioPage() {
@@ -45,11 +47,29 @@ function RelatorioPage() {
     return acc;
   }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
 
-  const totalInteriorGeral = crbmHeaders.reduce((acc, crbm) => acc + totals[crbm as keyof typeof totals], 0);
+  // ======================= INÍCIO DA CORREÇÃO DE TIPO =======================
+  const totalGeralRow: IRelatorioRow = {
+    grupo: 'TOTAL GERAL',
+    subgrupo: 'TOTAL GERAL',
+    diurno: String(totals.diurno),
+    noturno: String(totals.noturno),
+    total_capital: String(totals.total_capital),
+    total_geral: String(totals.total_geral),
+    "1º CRBM": String(totals["1º CRBM"]),
+    "2º CRBM": String(totals["2º CRBM"]),
+    "3º CRBM": String(totals["3º CRBM"]),
+    "4º CRBM": String(totals["4º CRBM"]),
+    "5º CRBM": String(totals["5º CRBM"]),
+    "6º CRBM": String(totals["6º CRBM"]),
+    "7º CRBM": String(totals["7º CRBM"]),
+    "8º CRBM": String(totals["8º CRBM"]),
+    "9º CRBM": String(totals["9º CRBM"]),
+  };
+  // ======================= FIM DA CORREÇÃO DE TIPO =======================
 
   return (
     <MainLayout pageTitle="Relatório Estatístico de Ocorrências">
-      {/* Controles de Filtro (sem alteração) */}
+      {/* Controles de Filtro */}
       <div className="mb-8 flex flex-wrap items-end gap-4 rounded-lg bg-gray-800 p-6">
         <div className="flex flex-col gap-2">
           <label htmlFor="data-inicio" className="text-sm text-gray-400">Data de Início</label>
@@ -71,37 +91,58 @@ function RelatorioPage() {
           <table className="min-w-full w-full border-collapse text-sm">
             <thead className="bg-gray-700 text-white">
               <tr>
-                <th className="sticky left-0 z-20 w-[250px] border-r border-gray-600 bg-gray-700 p-3 text-left">NATUREZA (SUBGRUPO)</th>
-                {/* Cabeçalhos Desktop */}
+                <th className="sticky left-0 top-0 z-20 w-[250px] border-r border-gray-600 bg-gray-700 p-3 text-left">GRUPO</th>
+                <th className="sticky left-[250px] top-0 z-20 w-[250px] border-r border-gray-600 bg-gray-700 p-3 text-left">NATUREZA (SUBGRUPO)</th>
                 <th className="hidden lg:table-cell p-2">DIURNO</th>
                 <th className="hidden lg:table-cell p-2">NOTURNO</th>
                 <th className="p-2">TOTAL CAPITAL</th>
                 {crbmHeaders.map(h => <th key={h} className="hidden lg:table-cell p-2">{h}</th>)}
-                {/* Cabeçalho Mobile */}
                 <th className="p-2 lg:hidden">TOTAL INTERIOR</th>
                 <th className="p-2">TOTAL GERAL</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(groupedData).map(([grupo, subgrupos]) => (
-                <React.Fragment key={grupo}>
-                  <ReportRow row={{ grupo } as IRelatorioRow} isGroupHeader />
-                  {subgrupos.map(row => (
-                    <ReportRow key={row.subgrupo} row={row} crbmHeaders={crbmHeaders} />
-                  ))}
-                </React.Fragment>
-              ))}
-              {/* Linha de Total */}
-              <tr className="sticky bottom-0 z-10 bg-blue-800 text-center font-bold text-white">
-                <td className="sticky left-0 z-10 border-r border-gray-700 bg-blue-800 p-3 text-right">SUB TOTAL</td>
-                <td className="hidden lg:table-cell">{totals.diurno}</td>
-                <td className="hidden lg:table-cell">{totals.noturno}</td>
-                <td>{totals.total_capital}</td>
-                {crbmHeaders.map(h => <td key={h} className="hidden lg:table-cell">{totals[h as keyof typeof totals]}</td>)}
-                <td className="lg:hidden">{totalInteriorGeral}</td>
-                <td>{totals.total_geral}</td>
-              </tr>
+              {Object.entries(groupedData).map(([grupo, subgrupos]) => {
+                const subtotalGrupo = subgrupos.reduce((acc, row) => {
+                  (Object.keys(acc) as Array<keyof typeof acc>).forEach(key => {
+                    acc[key] += Number(row[key as keyof IRelatorioRow]) || 0;
+                  });
+                  return acc;
+                }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
+
+                // ======================= INÍCIO DA CORREÇÃO DE TIPO =======================
+                const subtotalRow: IRelatorioRow = {
+                  grupo: grupo,
+                  subgrupo: 'SUB TOTAL',
+                  diurno: String(subtotalGrupo.diurno),
+                  noturno: String(subtotalGrupo.noturno),
+                  total_capital: String(subtotalGrupo.total_capital),
+                  total_geral: String(subtotalGrupo.total_geral),
+                  "1º CRBM": String(subtotalGrupo["1º CRBM"]),
+                  "2º CRBM": String(subtotalGrupo["2º CRBM"]),
+                  "3º CRBM": String(subtotalGrupo["3º CRBM"]),
+                  "4º CRBM": String(subtotalGrupo["4º CRBM"]),
+                  "5º CRBM": String(subtotalGrupo["5º CRBM"]),
+                  "6º CRBM": String(subtotalGrupo["6º CRBM"]),
+                  "7º CRBM": String(subtotalGrupo["7º CRBM"]),
+                  "8º CRBM": String(subtotalGrupo["8º CRBM"]),
+                  "9º CRBM": String(subtotalGrupo["9º CRBM"]),
+                };
+                // ======================= FIM DA CORREÇÃO DE TIPO =======================
+
+                return (
+                  <React.Fragment key={grupo}>
+                    {subgrupos.map((row, index) => (
+                      <ReportRow key={row.subgrupo} row={row} crbmHeaders={crbmHeaders} isFirstInGroup={index === 0} groupSize={subgrupos.length} />
+                    ))}
+                    <ReportRow row={subtotalRow} crbmHeaders={crbmHeaders} isSubtotal />
+                  </React.Fragment>
+                )
+              })}
             </tbody>
+            <tfoot>
+              <ReportRow row={totalGeralRow} crbmHeaders={crbmHeaders} isTotalGeral />
+            </tfoot>
           </table>
         </div>
       )}

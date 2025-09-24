@@ -1,30 +1,11 @@
-// frontend/src/components/Sidebar.tsx
+// Caminho: frontend/src/components/Sidebar.tsx
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
+import Icon from './Icon'; // Assumindo que você tem um componente Icon separado
 
-// ======================= INÍCIO DO CÓDIGO DE DIAGNÓSTICO =======================
-const Icon = ({ path, iconName, size = 24 }: { path: string | undefined, iconName: string, size?: number }) => {
-  // Se o path do ícone for inválido, renderiza um ícone de erro e loga uma mensagem clara.
-  if (!path) {
-    console.error(`[DIAGNÓSTICO DE ÍCONE] O ícone para a chave "${iconName}" não foi encontrado no objeto ICONS. Verifique se a chave e o valor estão corretos.`);
-    // Ícone de alerta em SVG
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="red">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path>
-      </svg>
-    );
-  }
-  // Se o path for válido, renderiza normalmente.
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
-      <path d={path}></path>
-    </svg>
-  );
-};
-// ======================= FIM DO CÓDIGO DE DIAGNÓSTICO =======================
-
+// --- Interfaces e Constantes (sem alteração) ---
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -39,7 +20,6 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
 };
 
-// O resto do componente continua igual...
 interface NavButtonProps {
   onClick: () => void; isCollapsed: boolean; isActive: boolean; title: string; children: React.ReactNode; className?: string;
 }
@@ -50,11 +30,18 @@ const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, t
   return (<button onClick={onClick} title={title} className={`${baseClasses} ${activeClasses} ${collapsedClasses} ${className}`}>{children}</button>);
 };
 
+// ======================= INÍCIO DA CORREÇÃO =======================
 interface SidebarProps {
-  isCollapsed: boolean; setIsCollapsed: (isCollapsed: boolean) => void; closeMobileMenu: () => void; userName: string | undefined;
+  isCollapsed: boolean;
+  setIsCollapsed: (isCollapsed: boolean) => void;
+  closeMobileMenu: () => void;
+  userName: string | undefined;
+  onLogout: () => void; // Propriedade 'onLogout' adicionada aqui
 }
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu, userName }) => {
-  const { usuario, logout } = useAuth();
+
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu, userName, onLogout }) => {
+// ======================= FIM DA CORREÇÃO =======================
+  const { usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -70,7 +57,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
   ];
 
   const handleNavigate = (path: string) => { navigate(path); closeMobileMenu(); };
-  const handleLogout = () => { logout(); closeMobileMenu(); };
+  
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // A função de logout agora usa a prop recebida
+  const handleLogout = () => { onLogout(); closeMobileMenu(); };
+  // ======================= FIM DA CORREÇÃO =======================
+
   const sidebarWidth = isCollapsed ? 'w-[80px]' : 'w-[250px]';
 
   return (

@@ -1,5 +1,7 @@
+// Caminho: frontend/src/components/MainLayout.tsx
+
 import { useState, ReactNode } from 'react';
-// A importação do useAuth foi removida, pois não é mais necessária aqui.
+import { useAuth } from '../contexts/useAuth';
 import Sidebar from './Sidebar';
 
 interface MainLayoutProps {
@@ -8,7 +10,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
-  // Os dados do usuário e a função de logout foram removidos daqui.
+  const { usuario, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -24,7 +26,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden">
+      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-gray-900">
         {/* Sidebar */}
         <div
           className={`
@@ -34,18 +36,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
         >
-          {/* As props 'userName' e 'onLogout' foram removidas da chamada do Sidebar */}
           <Sidebar
+            onLogout={logout}
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
             closeMobileMenu={() => setMobileMenuOpen(false)}
+            userName={usuario?.nome}
           />
         </div>
 
         {/* Contêiner de Conteúdo Principal */}
         <div className="flex flex-col overflow-hidden">
           {/* Cabeçalho */}
-          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 px-6 md:px-10">
+          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-gray-700 bg-gray-800 px-6 md:px-10">
             <div className="flex items-center">
               {/* Botão Hamburger */}
               <button
@@ -53,7 +56,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
                 className="text-white lg:hidden"
                 aria-label="Abrir menu"
               >
-                <svg width="24" height="24" viewBox="0 0 24" fill="currentColor">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
               </button>
@@ -65,7 +68,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           </header>
 
           {/* Corpo da Página */}
-          <main className="flex-grow overflow-y-auto p-6 md:p-8">
+          <main className="flex-grow overflow-auto p-6 md:p-8">
             {children}
           </main>
         </div>

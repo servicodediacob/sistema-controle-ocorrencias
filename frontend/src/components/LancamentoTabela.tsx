@@ -66,7 +66,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
 };
 
 
-// --- Componente Principal da Tabela (COM A CORREÇÃO) ---
+// --- Componente Principal da Tabela (COM A NOVA CORREÇÃO) ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -83,16 +83,13 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     );
   }
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // Adicionadas as arrays de dependências aos hooks useMemo.
-  
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc, item) => {
       const key = `${item.cidade_nome}|${item.natureza_nome}`;
       acc[key] = item.quantidade;
       return acc;
     }, {} as Record<string, number>);
-  }, [dadosApi]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
+  }, [dadosApi]);
 
   const cidadesAgrupadas = useMemo(() => {
     return cidades.reduce((acc, cidade) => {
@@ -101,7 +98,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
       acc[crbm].push(cidade);
       return acc;
     }, {} as Record<string, ICidade[]>);
-  }, [cidades]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
+  }, [cidades]);
 
   const totais = useMemo(() => {
     const totaisCrbm: Record<string, Record<string, number>> = {};
@@ -135,12 +132,12 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     });
 
     return { crbm: totaisCrbm, geral: totaisGeral };
-  }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]); // <-- ARRAY DE DEPENDÊNCIA CORRIGIDA
-  // ======================= FIM DA CORREÇÃO =======================
+  }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]);
+
 
   return (
     <>
-      {/* ===== VISUALIZAÇÃO MOBILE (CARDS) ===== */}
+      {/* VISUALIZAÇÃO MOBILE (sem alterações) */}
       <div className="mt-4 space-y-4 md:hidden">
         {cidades.map(cidade => {
           const ocorrências: Record<string, number> = {};
@@ -166,73 +163,81 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
         })}
       </div>
 
-      {/* ===== VISUALIZAÇÃO DESKTOP (TABELA) ===== */}
-      <div className="mt-8 hidden overflow-x-auto rounded-lg border border-gray-700 bg-gray-800 md:block">
+      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+      {/* VISUALIZAÇÃO DESKTOP */}
+      {/* O 'overflow-x-auto' foi removido deste div */}
+      <div className="mt-8 hidden rounded-lg border border-gray-700 bg-gray-800 md:block">
         <table className="min-w-[1300px] w-full border-collapse">
-          <thead>
+          <thead className="bg-gray-700 text-white">
             <tr>
-              <th className="sticky left-0 top-0 z-20 w-[150px] border border-gray-700 bg-gray-800 p-3 text-left font-bold uppercase">CRBM</th>
-              <th className="sticky left-[150px] top-0 z-10 w-[250px] border border-gray-700 bg-gray-800 p-3 text-left font-bold uppercase">Quartel / Cidade</th>
+              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-gray-800 p-3 text-left font-bold uppercase">CRBM</th>
+              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-gray-800 p-3 text-left font-bold uppercase">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.subgrupo} className="sticky top-0 border border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
+                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
               ))}
-              <th className="sticky top-0 border border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
+              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
               {showActions && (
-                <th className="sticky top-0 border border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
+                <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
               )}
             </tr>
           </thead>
-          <tbody>
-            {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
-              <React.Fragment key={crbm}>
-                {listaCidades.map((cidade, index) => {
-                  const ocorrências: Record<string, number> = {};
-                  let totalLinha = 0;
-                  naturezas.forEach(nat => {
-                    const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-                    ocorrências[nat.subgrupo] = qtd;
-                    totalLinha += qtd;
-                  });
+          
+          {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
+            <tbody key={crbm} className="bg-gray-800">
+              {listaCidades.map((cidade, index) => {
+                const ocorrências: Record<string, number> = {};
+                let totalLinha = 0;
+                naturezas.forEach(nat => {
+                  const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
+                  ocorrências[nat.subgrupo] = qtd;
+                  totalLinha += qtd;
+                });
 
-                  return (
-                    <tr key={cidade.id} className="text-center hover:bg-gray-700/50">
-                      {index === 0 && (
-                        <td rowSpan={listaCidades.length + 1} className="sticky left-0 z-10 border border-gray-700 bg-gray-800 p-3 text-left align-middle font-bold">{crbm}</td>
-                      )}
-                      <td className={`sticky left-[150px] border border-gray-700 p-3 text-left font-bold ${totalLinha === 0 ? 'bg-red-900/50 text-red-200' : 'bg-gray-800'}`}>{cidade.cidade_nome}</td>
-                      {naturezas.map(nat => (
-                        <td key={nat.subgrupo} className="whitespace-nowrap border border-gray-700 p-3">{ocorrências[nat.subgrupo]}</td>
-                      ))}
-                      <td className="whitespace-nowrap border border-gray-700 bg-blue-900/50 p-3 font-bold">{totalLinha}</td>
-                      {showActions && (
-                        <td className="whitespace-nowrap border border-gray-700 p-3">
-                          <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-                <tr className="bg-blue-800 font-bold text-white">
-                  <td className="sticky left-[150px] border border-gray-700 p-3 text-center">TOTAL</td>
-                  {naturezas.map(nat => (
-                    <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
-                  ))}
-                  <td className="border border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
-                  {showActions && <td className="border border-gray-700 p-3"></td>}
-                </tr>
-              </React.Fragment>
-            ))}
+                return (
+                  <tr key={cidade.id} className="text-center hover:bg-gray-700/50">
+                    {index === 0 && (
+                      <td rowSpan={listaCidades.length} className="sticky left-0 z-10 border-b border-r border-gray-700 bg-gray-800 p-3 text-left align-top font-bold">{crbm}</td>
+                    )}
+                    <td className={`sticky left-[150px] z-10 border-b border-r border-gray-700 p-3 text-left font-bold ${totalLinha === 0 ? 'bg-red-900/50 text-red-200' : 'bg-gray-800'}`}>{cidade.cidade_nome}</td>
+                    {naturezas.map(nat => (
+                      <td key={nat.subgrupo} className="whitespace-nowrap border-x border-gray-700 p-3">{ocorrências[nat.subgrupo]}</td>
+                    ))}
+                    <td className="sticky right-0 whitespace-nowrap border-l border-gray-700 bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
+                    {showActions && (
+                      <td className="sticky right-0 whitespace-nowrap border-l border-gray-700 p-3">
+                        <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {/* Linha de Subtotal agora dentro do tbody */}
+              <tr className="bg-blue-800 font-bold text-white">
+                <td colSpan={2} className="sticky left-0 z-10 border-b border-r border-gray-700 bg-blue-800 p-3 text-center">
+                  SUB TOTAL
+                </td>
+                {naturezas.map(nat => (
+                  <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
+                ))}
+                <td className="sticky right-0 border-l border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
+                {showActions && <td className="sticky right-0 border-l border-gray-700 p-3"></td>}
+              </tr>
+            </tbody>
+          ))}
+
+          <tfoot className="sticky bottom-0 z-20">
             <tr className="bg-yellow-600 font-bold text-black">
-              <td colSpan={2} className="sticky left-0 border border-gray-700 p-3 text-center">TOTAL GERAL</td>
+              <td colSpan={2} className="sticky left-0 z-10 border-r border-gray-600 bg-yellow-600 p-3 text-center">TOTAL GERAL</td>
               {naturezas.map(nat => (
-                <td key={nat.subgrupo} className="border border-gray-700 p-3 text-center">{totais.geral[nat.subgrupo] || 0}</td>
+                <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.geral[nat.subgrupo] || 0}</td>
               ))}
-              <td className="border border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
-              {showActions && <td className="border border-gray-700 p-3"></td>}
+              <td className="sticky right-0 border-l border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
+              {showActions && <td className="sticky right-0 border-l border-gray-700 p-3"></td>}
             </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
+      {/* ======================= FIM DA CORREÇÃO ======================= */}
     </>
   );
 };

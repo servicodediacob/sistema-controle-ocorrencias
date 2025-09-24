@@ -1,43 +1,95 @@
+// Caminho: frontend/src/components/ReportRow.tsx
+
 import React, { useState } from 'react';
 import { IRelatorioRow } from '../services/api';
 
-// Interface das props (COM A CORREÇÃO)
 interface ReportRowProps {
   row: IRelatorioRow;
-  isGroupHeader?: boolean;
-  // ======================= CORREÇÃO APLICADA AQUI =======================
-  // A prop agora é opcional, pois não é usada no cabeçalho do grupo.
   crbmHeaders?: string[];
-  // ======================================================================
+  isFirstInGroup?: boolean;
+  groupSize?: number;
+  isSubtotal?: boolean;
+  isTotalGeral?: boolean;
 }
 
-const ReportRow: React.FC<ReportRowProps> = ({ row, isGroupHeader = false, crbmHeaders = [] }) => {
+const ReportRow: React.FC<ReportRowProps> = ({
+  row,
+  crbmHeaders = [],
+  isFirstInGroup = false,
+  groupSize = 1,
+  isSubtotal = false,
+  isTotalGeral = false,
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // O valor padrão `[]` no destructuring acima garante que o código abaixo não quebre.
   const totalInterior = crbmHeaders.reduce((acc, crbm) => acc + Number(row[crbm as keyof IRelatorioRow] || 0), 0);
 
-  if (isGroupHeader) {
+  // Define as classes de estilo com base no tipo de linha
+  let rowClasses = 'text-center';
+  let firstCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-gray-800 p-3 text-left align-top';
+  let secondCellClasses = 'sticky left-[250px] z-10 border-r border-gray-600 bg-gray-800 p-3 text-left';
+
+  if (isSubtotal) {
+    rowClasses += ' bg-blue-800 font-bold text-white';
+    firstCellClasses = ''; // Não renderiza a primeira célula no subtotal
+    secondCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-blue-800 p-3 text-right';
+  } else if (isTotalGeral) {
+    rowClasses += ' bg-yellow-600 font-bold text-black';
+    firstCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-yellow-600 p-3 text-center';
+    secondCellClasses = ''; // Não renderiza a segunda célula no total geral
+  } else {
+    rowClasses += ' border-b border-gray-700 hover:bg-gray-700/50';
+  }
+
+  // Renderização para a linha de TOTAL GERAL
+  if (isTotalGeral) {
     return (
-      <tr className="bg-gray-900">
-        <td colSpan={14} className="p-3 font-bold text-yellow-400 uppercase">
+      <tr className={rowClasses}>
+        <td colSpan={2} className={firstCellClasses}>
           {row.grupo}
         </td>
+        <td className="hidden lg:table-cell">{row.diurno}</td>
+        <td className="hidden lg:table-cell">{row.noturno}</td>
+        <td>{row.total_capital}</td>
+        {crbmHeaders.map(h => <td key={h} className="hidden lg:table-cell">{row[h as keyof IRelatorioRow]}</td>)}
+        <td className="lg:hidden">{totalInterior}</td>
+        <td className="bg-yellow-700">{row.total_geral}</td>
       </tr>
     );
   }
 
+  // Renderização para a linha de SUBTOTAL
+  if (isSubtotal) {
+    return (
+      <tr className={rowClasses}>
+        <td colSpan={2} className={secondCellClasses}>
+          {row.subgrupo}
+        </td>
+        <td className="hidden lg:table-cell">{row.diurno}</td>
+        <td className="hidden lg:table-cell">{row.noturno}</td>
+        <td>{row.total_capital}</td>
+        {crbmHeaders.map(h => <td key={h} className="hidden lg:table-cell">{row[h as keyof IRelatorioRow]}</td>)}
+        <td className="lg:hidden">{totalInterior}</td>
+        <td className="bg-blue-900">{row.total_geral}</td>
+      </tr>
+    );
+  }
+
+  // Renderização para linhas de DADOS normais
   return (
     <>
-      {/* Linha Principal (visível em todos os tamanhos) */}
-      <tr className="border-b border-gray-700 text-center hover:bg-gray-700/50" onClick={() => setIsExpanded(!isExpanded)}>
-        <td className="sticky left-0 z-10 border-r border-gray-700 bg-gray-800 p-3 text-left">
+      <tr className={rowClasses} onClick={() => setIsExpanded(!isExpanded)}>
+        {isFirstInGroup && (
+          <td rowSpan={groupSize} className={firstCellClasses}>
+            {row.grupo}
+          </td>
+        )}
+        <td className={secondCellClasses}>
           <button className="flex items-center gap-2 w-full text-left cursor-pointer">
             <span className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
             {row.subgrupo}
           </button>
         </td>
-        
         <td className="hidden lg:table-cell">{row.diurno}</td>
         <td className="hidden lg:table-cell">{row.noturno}</td>
         <td className="font-semibold">{row.total_capital}</td>
@@ -46,7 +98,7 @@ const ReportRow: React.FC<ReportRowProps> = ({ row, isGroupHeader = false, crbmH
         <td className="font-bold bg-blue-900/30">{row.total_geral}</td>
       </tr>
 
-      {/* Linha de Detalhes (expansível, visível apenas em Mobile/Tablet) */}
+      {/* Linha de Detalhes Expansível para Mobile */}
       {isExpanded && (
         <tr className="lg:hidden bg-gray-900/50">
           <td colSpan={4} className="p-4">
