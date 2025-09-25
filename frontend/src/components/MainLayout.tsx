@@ -4,7 +4,7 @@ import { useState, ReactNode } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import Sidebar from './Sidebar';
 import OnlineUsersPopover from './OnlineUsersPopover';
-import ChatContainer from './ChatContainer'; // Importa o ChatContainer
+import ChatContainer from './ChatContainer';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -19,7 +19,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
 
   return (
     <>
-      {/* Backdrop para o menu mobile */}
       <div
         className={`
           fixed inset-0 bg-black bg-opacity-50 z-40
@@ -30,7 +29,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
       />
 
       <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text">
-        {/* Sidebar */}
         <div
           className={`
             absolute top-0 left-0 h-full z-50
@@ -48,10 +46,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         </div>
 
         <div className="flex flex-col overflow-hidden">
-          {/* Cabeçalho */}
           <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10">
             <div className="flex items-center">
-              {/* Botão Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="text-text-strong lg:hidden"
@@ -61,25 +57,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
                   <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
               </button>
-              {/* Título da Página */}
               <h1 className="ml-4 text-2xl font-medium text-text-strong lg:ml-0 md:text-3xl">
                 {pageTitle}
               </h1>
             </div>
             
-            {/* Adiciona o popover de usuários online no cabeçalho */}
             <div className="flex items-center">
               <OnlineUsersPopover />
             </div>
           </header>
 
-          {/* Corpo da Página */}
           <main className="flex-grow overflow-auto p-6 md:p-8">
             {children}
           </main>
         </div>
       </div>
-      <ChatContainer /> {/* Adiciona o ChatContainer aqui */}
+      <ChatContainer />
     </>
   );
 };

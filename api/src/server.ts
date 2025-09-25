@@ -8,10 +8,7 @@ import logger from './config/logger';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// O caminho agora é relativo à pasta 'src', onde o server.ts está.
 import { onSocketConnection } from './services/socketService'; 
-// ======================= FIM DA CORREÇÃO =======================
 
 // Importação das suas rotas
 import authRoutes from './routes/authRoutes';
@@ -39,7 +36,7 @@ const allowedOrigins = [
   'https://sistema-ocorrencias-api-1jzi.onrender.com'
 ];
 
-if (process.env.NODE_ENV !== 'production'  ) {
+if (process.env.NODE_ENV !== 'production' ) {
   allowedOrigins.push('http://localhost:5173' );
 }
 

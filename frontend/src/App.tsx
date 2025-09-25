@@ -36,7 +36,7 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
  * Sua única responsabilidade é chamar o hook useSocket.
  */
 const SocketInitializer: React.FC = () => {
-  useSocket(); // 2. Ativa o hook, estabelecendo a conexão do socket
+  useSocket(); // Ativa o hook, estabelecendo a conexão do socket
   return null; // Este componente não renderiza nada na tela
 };
 
@@ -48,7 +48,7 @@ function App(): React.ReactElement {
 
   return (
     <Router>
-      {/* 3. Renderiza os componentes globais apenas se o usuário estiver autenticado */}
+      {/* Renderiza os componentes globais apenas se o usuário estiver autenticado */}
       {isAuthenticated && (
         <>
           <SocketInitializer />

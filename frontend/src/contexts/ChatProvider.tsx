@@ -61,28 +61,39 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const sendMessage = useCallback((recipientId: number, text: string) => {
     if (socket) {
-      console.log(`[ChatProvider] Enviando mensagem para ${recipientId}`);
       socket.emit('send-private-message', { recipientId, text });
     } else {
       console.error('[ChatProvider] Tentativa de enviar mensagem sem socket.');
     }
   }, [socket]);
 
+  // Função para solicitar permissão de notificação
+  const requestNotificationPermission = useCallback(() => {
+    if (!('Notification' in window)) {
+      console.warn('Este navegador não suporta notificações de desktop.');
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('Permissão para notificações concedida.');
+        } else {
+          console.warn('Permissão para notificações negada.');
+        }
+      });
+    }
+  }, []);
+
   useEffect(() => {
-    // Adicionado log para verificar o estado do socket e do usuário
-    console.log('[ChatProvider Effect] Socket:', socket ? 'Ativo' : 'Inativo', '| Usuário:', usuario ? usuario.nome : 'Nenhum');
+    // Solicita permissão de notificação ao carregar o componente
+    requestNotificationPermission();
 
     if (socket && usuario) {
-      console.log('[ChatProvider] Socket e usuário OK. Configurando listeners...');
-
       const handleUpdateUsers = (users: LoggedInUser[]) => {
-        // Log detalhado para o evento de atualização de usuários
-        console.log('[ChatProvider] Evento \'update-logged-in-users\' recebido. Usuários:', users);
         setOnlineUsers(users);
       };
 
       const handleNewMessage = (message: ChatMessage) => {
-        console.log('[ChatProvider] Evento \'new-private-message\' recebido:', message);
         const partnerId = message.senderId === usuario.id ? message.recipientId : message.senderId;
 
         setConversations(prev => ({
@@ -93,31 +104,34 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         openChatWith(partnerId);
 
         if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
+          // Notificação sonora
+          const audio = new Audio("/sounds/notification.mp3");
+          audio.play().catch(e => console.warn("Não foi possível tocar o som de notificação:", e));
+
+          // Notificação do sistema operacional
+          if (Notification.permission === 'granted') {
+            new Notification(`Nova mensagem de ${message.senderName}`, {
+              body: message.text,
+              icon: '/favicon.ico', // Ícone da notificação
+            });
+          }
+
+          // Notificação na tela do sistema (já existente)
           addNotification(`Nova mensagem de ${message.senderName}`, 'info');
-          const audio = new Audio('/sounds/notification.mp3');
-          audio.play().catch(e => console.warn('Não foi possível tocar o som de notificação:', e));
         }
       };
 
-      // Registra os listeners
       socket.on('update-logged-in-users', handleUpdateUsers);
       socket.on('new-private-message', handleNewMessage);
 
-      // Emite o evento para solicitar a lista de usuários
-      console.log('[ChatProvider] Emitindo \'request-logged-in-users\'...');
       socket.emit('request-logged-in-users');
 
-      // Função de limpeza
       return () => {
-        console.log('[ChatProvider] Limpando listeners de chat.');
         socket.off('update-logged-in-users', handleUpdateUsers);
         socket.off('new-private-message', handleNewMessage);
       };
     }
-  }, [socket, usuario, addNotification, openChatWith]); // Dependências do efeito
-
-  // Log para verificar o estado atual dos usuários online
-  console.log('[ChatProvider Render] Usuários Online Atuais:', onlineUsers);
+  }, [socket, usuario, addNotification, openChatWith, requestNotificationPermission]);
 
   return (
     <ChatContext.Provider value={{ conversations, openChats, onlineUsers, openChatWith, closeChat, sendMessage }}>
