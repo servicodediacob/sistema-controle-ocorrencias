@@ -1,9 +1,9 @@
-// Caminho: frontend/src/pages/DashboardPage.tsx
+// frontend/src/pages/DashboardPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth'; // <-- Importa o hook de autenticação
+import { useAuth } from '../contexts/useAuth';
 
 import MainLayout from '../components/MainLayout';
 import DestaqueWidget from '../components/DestaqueWidget';
@@ -11,10 +11,9 @@ import PlantaoWidget from '../components/PlantaoWidget';
 import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 import RelatorioWidget from '../components/RelatorioWidget';
 import LancamentoWidget from '../components/LancamentoWidget';
-import LoggedInUsersWidget from '../components/LoggedInUsersWidget'; // <-- Importa o novo widget
+import LoggedInUsersWidget from '../components/LoggedInUsersWidget';
 
-// --- Componentes Funcionais (StatCard, DataTable - sem alterações ) ---
-
+// --- Componentes Funcionais (StatCard, DataTable - sem alterações) ---
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -22,9 +21,9 @@ interface StatCardProps {
 }
 function StatCard({ title, value, loading }: StatCardProps) {
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 text-center min-w-[200px]">
-      <h3 className="text-base font-medium text-gray-400">{title}</h3>
-      <p className="mt-2 text-4xl font-bold">
+    <div className="flex-1 rounded-lg bg-surface border border-border p-6 text-center min-w-[200px]">
+      <h3 className="text-base font-medium text-text">{title}</h3>
+      <p className="mt-2 text-4xl font-bold text-text-strong">
         {loading ? '...' : value}
       </p>
     </div>
@@ -39,31 +38,27 @@ interface DataTableProps<T> {
 }
 function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   return (
-    <div className="flex-1 rounded-lg bg-gray-800 p-6 min-w-[300px]">
-      <h3 className="mt-0 border-b border-gray-700 pb-4 text-lg font-semibold">
+    <div className="flex-1 rounded-lg bg-surface border border-border p-6 min-w-[300px]">
+      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         {title}
       </h3>
       {loading ? (
-        <p className="py-4 text-center text-gray-400">Carregando...</p>
+        <p className="py-4 text-center text-text">Carregando...</p>
       ) : data && data.length > 0 ? (
         <div className="mt-4 overflow-y-auto max-h-80">
           <table className="w-full border-collapse">
-            <thead>
+            <thead className="bg-gray-800">
               <tr>
                 {columns.map((col) => (
-                  <th key={String(col.key)} className="border-b border-gray-600 p-3 text-left text-sm font-medium text-gray-400">
-                    {col.header}
-                  </th>
+                  <th key={String(col.key)} className="border-b border-border p-3 text-left text-sm font-medium text-text">{col.header}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {data.map((row, index) => (
-                <tr key={index} className="border-b border-gray-700">
+                <tr key={index} className="hover:bg-gray-700/50">
                   {columns.map((col) => (
-                    <td key={String(col.key)} className="p-3">
-                      {String(row[col.key])}
-                    </td>
+                    <td key={String(col.key)} className="p-3 text-text-strong">{String(row[col.key])}</td>
                   ))}
                 </tr>
               ))}
@@ -71,7 +66,7 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
           </table>
         </div>
       ) : (
-        <p className="py-8 text-center text-gray-500">Nenhum dado para exibir.</p>
+        <p className="py-8 text-center text-text">Nenhum dado para exibir.</p>
       )}
     </div>
   );
@@ -79,7 +74,7 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
 
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
-  const { usuario } = useAuth(); // <-- Obtém o usuário logado para verificar a role
+  const { usuario } = useAuth();
   
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);
@@ -114,15 +109,9 @@ function DashboardPage(): ReactElement {
         <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
       </div>
 
-      {/* Relatório do Dia */}
-      <div className="mt-6 flex">
-        <RelatorioWidget />
-      </div>
-
-      {/* Widget de Óbitos */}
+      {/* Widgets de Relatórios */}
+      <RelatorioWidget />
       <ObitosDoDiaWidget />
-      
-      {/* Espelho de Lançamentos */}
       <LancamentoWidget />
 
       {/* Tabelas de Dados */}
@@ -141,14 +130,14 @@ function DashboardPage(): ReactElement {
         />
       </div>
       
-      {/* Widgets de Plantão e Usuários Online */}
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+      {/* ======================= CORREÇÃO DE ALINHAMENTO ======================= */}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-stretch">
         <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
         <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
         
-        {/* Renderização condicional do widget de usuários online */}
         {usuario?.role === 'admin' && <LoggedInUsersWidget />}
       </div>
+      {/* ======================= FIM DA CORREÇÃO ======================= */}
     </MainLayout>
   );
 }

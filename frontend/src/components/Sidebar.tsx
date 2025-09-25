@@ -1,12 +1,12 @@
-// Caminho: frontend/src/components/Sidebar.tsx
+// frontend/src/components/Sidebar.tsx
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import Icon from './Icon';
-import ThemeToggle from './ThemeToggle';
+// A importação do ThemeToggle foi REMOVIDA.
 
-// Ícones (sem alterações)
+// Ícones (sem alteração)
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -21,18 +21,16 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
 };
 
-// Componente NavButton (sem alterações)
 interface NavButtonProps {
   onClick: () => void; isCollapsed: boolean; isActive: boolean; title: string; children: React.ReactNode; className?: string;
 }
 const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, title, children, className = '' }) => {
   const baseClasses = "w-full flex items-center gap-4 p-3 rounded-md text-left transition-colors duration-200";
-  const activeClasses = isActive ? 'bg-blue-600 text-white' : 'text-text hover:bg-gray-200 dark:hover:bg-gray-700';
+  const activeClasses = isActive ? 'bg-blue-600 text-white' : 'text-text hover:bg-gray-700';
   const collapsedClasses = isCollapsed ? "justify-center px-3" : "px-4";
   return (<button onClick={onClick} title={title} className={`${baseClasses} ${activeClasses} ${collapsedClasses} ${className}`}>{children}</button>);
 };
 
-// Props da Sidebar
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
@@ -81,9 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
 
       <div className="flex-grow" />
 
-      <div className="mt-4">
-        <ThemeToggle />
-      </div>
+      {/* A DIV que continha o ThemeToggle foi completamente removida */}
 
       <div className={`border-t border-border pt-4 mt-4 text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
         <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>

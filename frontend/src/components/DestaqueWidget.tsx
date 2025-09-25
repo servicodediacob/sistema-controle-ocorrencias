@@ -1,4 +1,4 @@
-// Caminho: frontend/src/components/DestaqueWidget.tsx
+// frontend/src/components/DestaqueWidget.tsx
 
 import { useState, ReactElement } from 'react';
 import { IPlantao, setOcorrenciaDestaque } from '../services/api';
@@ -34,12 +34,13 @@ function DestaqueWidget({ destaque, onUpdate }: DestaqueWidgetProps): ReactEleme
   };
 
   return (
-    // ======================= CORREÇÃO APLICADA =======================
-    <div className="flex-1 rounded-lg bg-surface border border-border p-6 text-text min-w-[300px]">
+    // CORREÇÃO: Adicionado 'flex flex-col' para o layout vertical interno.
+    <div className="flex flex-col flex-1 rounded-lg bg-surface border border-border p-6 text-text min-w-[300px]">
       <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         Ocorrência de Destaque
       </h3>
-      <div className="mt-4">
+      {/* CORREÇÃO: Adicionado 'flex-grow' para que esta área ocupe o espaço vertical disponível. */}
+      <div className="mt-4 flex-grow">
         {destaque?.ocorrencia_id ? (
           <div className="bg-background p-4 rounded-md">
             <p><strong className="text-text-strong">ID:</strong> {destaque.ocorrencia_id}</p>
@@ -49,21 +50,21 @@ function DestaqueWidget({ destaque, onUpdate }: DestaqueWidgetProps): ReactEleme
         ) : (
           <p>Nenhuma ocorrência em destaque.</p>
         )}
-        <div className="flex gap-2 mt-4">
-          <input
-            type="number"
-            placeholder="ID da Ocorrência"
-            value={ocorrenciaIdInput}
-            onChange={(e) => setOcorrenciaIdInput(e.target.value)}
-            className="flex-1 rounded-md border border-border bg-surface p-2 text-text-strong focus:ring-2 focus:ring-blue-500"
-          />
-          <button 
-            onClick={handleDefinirDestaque}
-            className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
-          >
-            Definir
-          </button>
-        </div>
+      </div>
+      <div className="flex gap-2 mt-4">
+        <input
+          type="number"
+          placeholder="ID da Ocorrência"
+          value={ocorrenciaIdInput}
+          onChange={(e) => setOcorrenciaIdInput(e.target.value)}
+          className="flex-1 rounded-md border border-border bg-background p-2 text-text-strong focus:ring-2 focus:ring-blue-500"
+        />
+        <button 
+          onClick={handleDefinirDestaque}
+          className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
+        >
+          Definir
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// Caminho: frontend/src/components/PlantaoWidget.tsx
+// frontend/src/components/PlantaoWidget.tsx
 
 import React, { useState, useEffect, ReactElement } from 'react';
 import { IPlantao, ISupervisor, getSupervisores, setSupervisorPlantao } from '../services/api';
@@ -47,26 +47,27 @@ function PlantaoWidget({ supervisor, onUpdate }: PlantaoWidgetProps): ReactEleme
   };
 
   return (
-    // ======================= CORREÇÃO APLICADA =======================
-    <div className="flex-1 rounded-lg bg-surface border border-border p-6 text-text min-w-[300px]">
+    // CORREÇÃO: Adicionado 'flex flex-col'.
+    <div className="flex flex-col flex-1 rounded-lg bg-surface border border-border p-6 text-text min-w-[300px]">
       <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
         Supervisor de Plantão
       </h3>
-      <div className="mt-4">
+      {/* CORREÇÃO: Adicionado 'flex-grow'. */}
+      <div className="mt-4 flex-grow">
         <p>
           <strong className="text-text-strong">Atual:</strong> {supervisor?.supervisor_nome || 'Nenhum supervisor definido'}
         </p>
-        <select
-          value={selectedSupervisor}
-          onChange={handleSelectChange}
-          className="mt-4 w-full rounded-md border border-border bg-surface p-3 text-text-strong focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">-- Selecione para assumir/liberar --</option>
-          {supervisoresList.map(s => (
-            <option key={s.id} value={s.id}>{s.nome}</option>
-          ))}
-        </select>
       </div>
+      <select
+        value={selectedSupervisor}
+        onChange={handleSelectChange}
+        className="mt-4 w-full rounded-md border border-border bg-background p-3 text-text-strong focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">-- Selecione para assumir/liberar --</option>
+        {supervisoresList.map(s => (
+          <option key={s.id} value={s.id}>{s.nome}</option>
+        ))}
+      </select>
     </div>
   );
 }

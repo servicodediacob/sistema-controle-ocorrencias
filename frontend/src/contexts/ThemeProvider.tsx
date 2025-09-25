@@ -1,58 +1,25 @@
-// Caminho: frontend/src/contexts/ThemeProvider.tsx
+// frontend/src/contexts/ThemeProvider.tsx
 
-import React, { createContext, useState, useContext, useMemo, useEffect, ReactNode } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 
-// Define os tipos para o tema e o contexto
-type Theme = 'light' | 'dark';
-
-interface IThemeContext {
-  theme: Theme;
-  toggleTheme: () => void;
-}
-
-// Cria o contexto
-const ThemeContext = createContext<IThemeContext | null>(null);
-
-// Hook para consumir o contexto
-export const useTheme = (): IThemeContext => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    // Esta é a mensagem de erro que você está vendo no console
-    throw new Error('useTheme deve ser usado dentro de um ThemeProvider');
-  }
-  return context;
-};
-
-// Componente Provedor
 interface ThemeProviderProps {
   children: ReactNode;
 }
 
+// O provedor agora tem uma única responsabilidade:
+// garantir que o tema escuro seja aplicado na inicialização.
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Tenta obter o tema do localStorage ou usa 'escuro' como padrão
-    const storedTheme = localStorage.getItem('theme');
-    return (storedTheme === 'light' || storedTheme === 'dark') ? storedTheme : 'dark';
-  });
-
-  // Efeito para atualizar a classe no body e salvar no localStorage
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    
+    // Limpa qualquer classe de tema anterior e adiciona 'dark' permanentemente.
+    root.classList.remove('claro', 'escuro');
+    root.classList.add('dark');
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+    // Remove a preferência salva, pois não é mais necessária.
+    localStorage.removeItem('theme');
+  }, []); // Executa apenas uma vez, quando o aplicativo é montado.
 
-  // O valor do contexto que será passado para os componentes filhos
-  const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
-
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  // O provedor simplesmente renderiza os filhos, sem passar nenhum valor de contexto.
+  return <>{children}</>;
 };
