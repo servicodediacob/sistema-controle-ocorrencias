@@ -1,4 +1,4 @@
-// frontend/src/pages/LoginPage.tsx
+// Caminho: frontend/src/pages/LoginPage.tsx
 
 import { useState, useEffect, ReactElement } from 'react';
 import { Link } from 'react-router-dom';
@@ -24,17 +24,17 @@ const Spinner = (): ReactElement => (
 );
 
 function LoginPage(): ReactElement {
+  // --- INÍCIO DA CORREÇÃO ---
   const [formData, setFormData] = useState({
-    email: 'admin@cbm.pe.gov.br',
-    senha: 'admin123',
+    email: '', // Campo de email agora começa vazio
+    senha: '', // Campo de senha agora começa vazio
   });
+  // --- FIM DA CORREÇÃO ---
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // ======================= INÍCIO DA MODIFICAÇÃO =======================
-  const [showPassword, setShowPassword] = useState(false); // 1. Estado para controlar a visibilidade
-  // ======================= FIM DA MODIFICAÇÃO =======================
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login } = useAuth();
 
@@ -100,20 +100,15 @@ function LoginPage(): ReactElement {
           </div>
 
           <div>
-            {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
             <input
-              // 2. O tipo do input agora é dinâmico
               type={showPassword ? 'text' : 'password'} 
               name="senha" placeholder="Senha"
               value={formData.senha} onChange={handleChange} required disabled={loading}
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
             />
-            {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
             <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.senha || ''}</p>
           </div>
 
-          {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
-          {/* 3. Adicionando o checkbox */}
           <div className="flex items-center gap-2 self-start">
             <input
               type="checkbox"
@@ -126,7 +121,6 @@ function LoginPage(): ReactElement {
               Mostrar senha
             </label>
           </div>
-          {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
 
           <button
             type="submit" disabled={loading || isFormInvalid}

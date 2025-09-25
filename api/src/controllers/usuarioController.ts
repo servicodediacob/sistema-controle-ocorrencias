@@ -1,10 +1,21 @@
+// Caminho: api/src/controllers/usuarioController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 import bcrypt from 'bcryptjs';
 
 export const listarUsuarios = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const { rows } = await db.query('SELECT id, nome, email, criado_em FROM usuarios ORDER BY nome ASC');
+    // --- INÍCIO DA ALTERAÇÃO ---
+    // Agora também buscamos a OBM associada ao usuário para exibir na tabela de gestão
+    const query = `
+      SELECT u.id, u.nome, u.email, u.role, u.criado_em, o.nome as obm_nome
+      FROM usuarios u
+      LEFT JOIN obms o ON u.obm_id = o.id
+      ORDER BY u.nome ASC;
+    `;
+    const { rows } = await db.query(query);
+    // --- FIM DA ALTERAÇÃO ---
     res.status(200).json(rows);
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
@@ -13,7 +24,10 @@ export const listarUsuarios = async (_req: Request, res: Response): Promise<void
 };
 
 export const criarUsuario = async (req: Request, res: Response): Promise<void> => {
-  const { nome, email, senha } = req.body;
+  // --- INÍCIO DA ALTERAÇÃO ---
+  // A criação agora também aceita 'role' e 'obm_id'
+  const { nome, email, senha, role = 'user', obm_id = null } = req.body;
+  // --- FIM DA ALTERAÇÃO ---
 
   if (!nome || !email || !senha) {
     res.status(400).json({ message: 'Nome, email e senha são obrigatórios.' });
@@ -30,8 +44,10 @@ export const criarUsuario = async (req: Request, res: Response): Promise<void> =
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
 
-    const query = 'INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3) RETURNING id, nome, email, criado_em';
-    const { rows } = await db.query(query, [nome, email, senha_hash]);
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const query = 'INSERT INTO usuarios (nome, email, senha_hash, role, obm_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, role, obm_id, criado_em';
+    const { rows } = await db.query(query, [nome, email, senha_hash, role, obm_id]);
+    // --- FIM DA ALTERAÇÃO ---
 
     res.status(201).json({ message: 'Usuário criado com sucesso!', usuario: rows[0] });
   } catch (error) {
@@ -42,16 +58,45 @@ export const criarUsuario = async (req: Request, res: Response): Promise<void> =
 
 export const atualizarUsuario = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { nome, email } = req.body;
+  // --- INÍCIO DA ALTERAÇÃO ---
+  // Recebemos os novos campos do corpo da requisição
+  const { nome, email, role, obm_id } = req.body;
 
-  if (!nome || !email) {
-    res.status(400).json({ message: 'Nome e email são obrigatórios.' });
+  if (!nome || !email || !role) {
+    res.status(400).json({ message: 'Nome, email e role são obrigatórios.' });
     return;
   }
 
   try {
-    const query = 'UPDATE usuarios SET nome = $1, email = $2 WHERE id = $3 RETURNING id, nome, email, criado_em';
-    const { rows } = await db.query(query, [nome, email, id]);
+    // Construção dinâmica da query para permitir atualização de senha opcional
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (nome) { fields.push(`nome = $${paramIndex++}`); values.push(nome); }
+    if (email) { fields.push(`email = $${paramIndex++}`); values.push(email); }
+    if (role) { fields.push(`role = $${paramIndex++}`); values.push(role); }
+    
+    // OBM ID pode ser nulo para administradores
+    fields.push(`obm_id = $${paramIndex++}`);
+    values.push(obm_id);
+
+    if (fields.length === 0) {
+      res.status(400).json({ message: 'Nenhum campo para atualizar foi fornecido.' });
+      return;
+    }
+
+    values.push(id); // Adiciona o ID do usuário como último parâmetro para a cláusula WHERE
+
+    const query = `
+      UPDATE usuarios 
+      SET ${fields.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING id, nome, email, role, obm_id, criado_em
+    `;
+    
+    const { rows } = await db.query(query, values);
+    // --- FIM DA ALTERAÇÃO ---
 
     if (rows.length === 0) {
       res.status(404).json({ message: 'Usuário não encontrado.' });

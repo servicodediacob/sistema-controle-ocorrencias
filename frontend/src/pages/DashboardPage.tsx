@@ -1,4 +1,4 @@
-// frontend/src/pages/DashboardPage.tsx
+// Caminho: frontend/src/pages/DashboardPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
@@ -130,14 +130,16 @@ function DashboardPage(): ReactElement {
         />
       </div>
       
-      {/* ======================= CORREÇÃO DE ALINHAMENTO ======================= */}
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-stretch">
-        <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
-        <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
-        
-        {usuario?.role === 'admin' && <LoggedInUsersWidget />}
-      </div>
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
+      {/* --- INÍCIO DA CORREÇÃO --- */}
+      {/* Renderização condicional dos widgets de controle do plantão */}
+      {usuario?.role === 'admin' && (
+        <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-stretch">
+          <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
+          <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
+          <LoggedInUsersWidget />
+        </div>
+      )}
+      {/* --- FIM DA CORREÇÃO --- */}
     </MainLayout>
   );
 }

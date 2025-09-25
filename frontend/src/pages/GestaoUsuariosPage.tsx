@@ -1,7 +1,7 @@
 // Caminho: frontend/src/pages/GestaoUsuariosPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
-import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser } from '../services/api';
+import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser, getCidades, ICidade } from '../services/api'; // 1. IMPORTAR getCidades e ICidade
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import UsuarioModal from '../components/UsuarioModal';
@@ -14,7 +14,8 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
         <div>
           <p className="font-bold text-text-strong">{usuario.nome}</p>
           <p className="text-sm">{usuario.email}</p>
-          <p className="mt-1 text-xs text-gray-500">ID: {usuario.id}</p>
+          {/* Exibe a OBM do usuário no card */}
+          <p className="text-sm text-gray-400 dark:text-gray-500">{ (usuario as any).obm_nome || 'Sem OBM'}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200'}`}>
           {usuario.role}
@@ -34,18 +35,24 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
 
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
+  const [cidades, setCidades] = useState<ICidade[]>([]); // 2. ESTADO PARA ARMAZENAR AS CIDADES (OBMs)
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState<IUser | null>(null);
   const { addNotification } = useNotification();
 
-  const fetchUsuarios = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getUsuarios();
-      setUsuarios(data);
+      // 3. BUSCAR USUÁRIOS E CIDADES EM PARALELO
+      const [usersData, cidadesData] = await Promise.all([
+        getUsuarios(),
+        getCidades()
+      ]);
+      setUsuarios(usersData);
+      setCidades(cidadesData);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Falha ao buscar usuários.';
+      const message = err instanceof Error ? err.message : 'Falha ao buscar dados.';
       addNotification(message, 'error');
     } finally {
       setLoading(false);
@@ -53,8 +60,8 @@ function GestaoUsuariosPage(): ReactElement {
   }, [addNotification]);
 
   useEffect(() => {
-    fetchUsuarios();
-  }, [fetchUsuarios]);
+    fetchData();
+  }, [fetchData]);
 
   const handleOpenModal = (usuario: IUser | null = null) => {
     setUsuarioEmEdicao(usuario);
@@ -76,7 +83,7 @@ function GestaoUsuariosPage(): ReactElement {
         addNotification('Usuário criado com sucesso!', 'success');
       }
       handleCloseModal();
-      fetchUsuarios();
+      fetchData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Falha ao salvar usuário.';
       addNotification(message, 'error');
@@ -88,7 +95,7 @@ function GestaoUsuariosPage(): ReactElement {
       try {
         await deleteUsuario(id);
         addNotification('Usuário excluído com sucesso!', 'success');
-        fetchUsuarios();
+        fetchData();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Falha ao excluir usuário.';
         addNotification(message, 'error');
@@ -111,7 +118,6 @@ function GestaoUsuariosPage(): ReactElement {
         <div className="flex justify-center p-10"><Spinner text="Carregando usuários..." /></div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-0 md:border-none md:bg-transparent">
-          {/* Tabela para Desktop */}
           <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-gray-200 dark:bg-gray-800">
@@ -119,6 +125,7 @@ function GestaoUsuariosPage(): ReactElement {
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Nome</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">OBM</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Role</th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
                 </tr>
@@ -129,6 +136,7 @@ function GestaoUsuariosPage(): ReactElement {
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.id}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.nome}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{user.email}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text">{(user as any).obm_nome || 'N/A'}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{user.role}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-center">
                       <div className="flex justify-center gap-2">
@@ -142,7 +150,6 @@ function GestaoUsuariosPage(): ReactElement {
             </table>
           </div>
 
-          {/* Cards para Mobile */}
           <div className="space-y-4 md:hidden">
             {usuarios.map(user => (
               <UsuarioCard
@@ -159,6 +166,7 @@ function GestaoUsuariosPage(): ReactElement {
       {isModalOpen && (
         <UsuarioModal
           usuario={usuarioEmEdicao}
+          cidades={cidades} // 4. PASSAR A LISTA DE CIDADES PARA O MODAL
           onClose={handleCloseModal}
           onSave={handleSave}
         />
