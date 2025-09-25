@@ -14,8 +14,13 @@ const OnlineUsersPopover: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  // Logs para depuração
+  console.log('[OnlineUsersPopover] onlineUsers do ChatProvider:', onlineUsers);
+  console.log('[OnlineUsersPopover] usuario logado:', usuario);
+
   // Filtra o próprio usuário da lista
   const otherOnlineUsers = onlineUsers.filter(u => u.id !== usuario?.id);
+  console.log('[OnlineUsersPopover] otherOnlineUsers (filtrados):', otherOnlineUsers);
 
   // Efeito para fechar o popover ao clicar fora dele
   useEffect(() => {

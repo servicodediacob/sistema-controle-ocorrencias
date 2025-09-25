@@ -1,9 +1,10 @@
 // Caminho: frontend/src/components/MainLayout.tsx
 
 import { useState, ReactNode } from 'react';
-import { useSocket } from '../hooks/useSocket'; // 1. Importa o hook do socket
+import { useSocket } from '../hooks/useSocket';
 import Sidebar from './Sidebar';
-import OnlineUsersPopover from './OnlineUsersPopover'; // 2. Importa o novo componente
+import OnlineUsersPopover from './OnlineUsersPopover';
+import ChatContainer from './ChatContainer'; // Importa o ChatContainer
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -11,8 +12,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
-  // 3. Chama o hook useSocket para obter a função de logout
-  const { logoutWithSocket } = useSocket(); 
+  const { logoutWithSocket } = useSocket();
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -40,8 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           `}
         >
           <Sidebar
-            // 4. Passa a nova função de logout para o Sidebar
-            onLogout={logoutWithSocket} 
+            onLogout={logoutWithSocket}
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
             closeMobileMenu={() => setMobileMenuOpen(false)}
@@ -68,7 +67,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
               </h1>
             </div>
             
-            {/* 5. Adiciona o popover de usuários online no cabeçalho */}
+            {/* Adiciona o popover de usuários online no cabeçalho */}
             <div className="flex items-center">
               <OnlineUsersPopover />
             </div>
@@ -80,6 +79,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           </main>
         </div>
       </div>
+      <ChatContainer /> {/* Adiciona o ChatContainer aqui */}
     </>
   );
 };

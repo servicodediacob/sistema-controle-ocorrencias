@@ -14,6 +14,8 @@ import ErrorBoundary from './components/ErrorBoundary.tsx';
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
+  console.log("[main.tsx] Aplicativo React sendo inicializado...");
+
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       {/* 

@@ -3,9 +3,9 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './useAuth';
-import { useSocket } from '../hooks/useSocket'; // 1. Importa o hook useSocket
+import { useSocket } from '../hooks/useSocket';
 
-// --- Interfaces (sem alterações) ---
+// --- Interfaces ---
 interface ChatMessage {
   senderId: number;
   senderName: string;
@@ -23,11 +23,10 @@ interface LoggedInUser {
   role: string;
 }
 
-// 2. A interface do contexto agora inclui a lista de usuários online
 interface IChatContext {
   conversations: Conversations;
   openChats: number[];
-  onlineUsers: LoggedInUser[]; // Lista de usuários online
+  onlineUsers: LoggedInUser[];
   openChatWith: (userId: number) => void;
   closeChat: (userId: number) => void;
   sendMessage: (recipientId: number, text: string) => void;
@@ -43,7 +42,7 @@ export const useChat = () => {
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { usuario } = useAuth();
-  const { socket } = useSocket(); // 3. Obtém a instância do socket do nosso hook centralizado
+  const { socket } = useSocket();
   const { addNotification } = useNotification();
   
   const [conversations, setConversations] = useState<Conversations>({});
@@ -60,30 +59,31 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setOpenChats(prev => prev.filter(id => id !== userId));
   }, []);
 
-  // 4. A função sendMessage agora usa o socket obtido do hook
   const sendMessage = useCallback((recipientId: number, text: string) => {
     if (socket) {
+      console.log(`[ChatProvider] Enviando mensagem para ${recipientId}`);
       socket.emit('send-private-message', { recipientId, text });
     } else {
-      console.error("[ChatProvider] Tentativa de enviar mensagem sem uma conexão de socket ativa.");
+      console.error('[ChatProvider] Tentativa de enviar mensagem sem socket.');
     }
   }, [socket]);
 
-  // 5. O useEffect agora configura todos os listeners do socket
   useEffect(() => {
-    if (socket) {
-      console.log("[ChatProvider] Socket ativo. Configurando listeners de chat...");
+    // Adicionado log para verificar o estado do socket e do usuário
+    console.log('[ChatProvider Effect] Socket:', socket ? 'Ativo' : 'Inativo', '| Usuário:', usuario ? usuario.nome : 'Nenhum');
 
-      // Listener para atualizar a lista de usuários online
+    if (socket && usuario) {
+      console.log('[ChatProvider] Socket e usuário OK. Configurando listeners...');
+
       const handleUpdateUsers = (users: LoggedInUser[]) => {
-        console.log("[ChatProvider] Recebido 'update-logged-in-users':", users);
+        // Log detalhado para o evento de atualização de usuários
+        console.log('[ChatProvider] Evento \'update-logged-in-users\' recebido. Usuários:', users);
         setOnlineUsers(users);
       };
 
-      // Listener para novas mensagens privadas
       const handleNewMessage = (message: ChatMessage) => {
-        console.log("[ChatProvider] Recebida 'new-private-message':", message);
-        const partnerId = message.senderId === usuario?.id ? message.recipientId : message.senderId;
+        console.log('[ChatProvider] Evento \'new-private-message\' recebido:', message);
+        const partnerId = message.senderId === usuario.id ? message.recipientId : message.senderId;
 
         setConversations(prev => ({
           ...prev,
@@ -92,11 +92,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         openChatWith(partnerId);
 
-        // Mostra notificação apenas se a mensagem for para o usuário atual
-        if (message.recipientId === usuario?.id && message.senderId !== usuario?.id) {
+        if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
           addNotification(`Nova mensagem de ${message.senderName}`, 'info');
-          const audio = new Audio("/sounds/notification.mp3");
-          audio.play().catch(e => console.warn("Não foi possível tocar o som de notificação:", e));
+          const audio = new Audio('/sounds/notification.mp3');
+          audio.play().catch(e => console.warn('Não foi possível tocar o som de notificação:', e));
         }
       };
 
@@ -104,17 +103,21 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.on('update-logged-in-users', handleUpdateUsers);
       socket.on('new-private-message', handleNewMessage);
 
-      // Solicita a lista inicial de usuários ao registrar os listeners
+      // Emite o evento para solicitar a lista de usuários
+      console.log('[ChatProvider] Emitindo \'request-logged-in-users\'...');
       socket.emit('request-logged-in-users');
 
-      // Função de limpeza para remover os listeners quando o socket mudar ou o componente for desmontado
+      // Função de limpeza
       return () => {
-        console.log("[ChatProvider] Limpando listeners de chat.");
+        console.log('[ChatProvider] Limpando listeners de chat.');
         socket.off('update-logged-in-users', handleUpdateUsers);
         socket.off('new-private-message', handleNewMessage);
       };
     }
   }, [socket, usuario, addNotification, openChatWith]); // Dependências do efeito
+
+  // Log para verificar o estado atual dos usuários online
+  console.log('[ChatProvider Render] Usuários Online Atuais:', onlineUsers);
 
   return (
     <ChatContext.Provider value={{ conversations, openChats, onlineUsers, openChatWith, closeChat, sendMessage }}>

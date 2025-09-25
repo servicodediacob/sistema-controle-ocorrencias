@@ -17,8 +17,7 @@ import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import GestaoAcessoPage from './pages/GestaoAcessoPage';
 
 // Importação de Componentes Globais
-import ChatContainer from './components/ChatContainer';
-import { useSocket } from './hooks/useSocket'; // 1. Importa o hook useSocket
+import { useSocket } from './hooks/useSocket';
 
 /**
  * Componente de Rota Privada
@@ -53,7 +52,6 @@ function App(): React.ReactElement {
       {isAuthenticated && (
         <>
           <SocketInitializer />
-          <ChatContainer />
         </>
       )}
       
