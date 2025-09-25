@@ -1,24 +1,25 @@
+// Caminho: api/src/middleware/authMiddleware.ts
+
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 
 // --- INÍCIO DA CORREÇÃO ---
-
-// 1. Definimos uma interface para o payload do nosso token
+// 1. ATUALIZAMOS A INTERFACE DO PAYLOAD DO TOKEN
 interface JwtPayload {
   id: number;
   nome: string;
+  role: 'admin' | 'user'; // Adicionamos a role
+  obm_id: number | null;   // Adicionamos a OBM
 }
+// --- FIM DA CORREÇÃO ---
 
-// 2. Criamos uma nova interface que estende a Request do Express e adiciona nossa propriedade 'usuario'
+// A interface RequestWithUser não precisa de mudanças, pois ela já usa JwtPayload.
 export interface RequestWithUser extends Request {
   usuario?: JwtPayload;
 }
 
-// 3. Usamos nossa nova interface 'RequestWithUser' em vez de 'Request' na assinatura da função
 export const proteger = (req: RequestWithUser, res: Response, next: NextFunction): void => {
-  // --- FIM DA CORREÇÃO ---
-
   let token;
   const authHeader = req.headers.authorization;
 
@@ -27,8 +28,13 @@ export const proteger = (req: RequestWithUser, res: Response, next: NextFunction
       token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
       
-      // Agora o TypeScript entende que 'req.usuario' existe
-      req.usuario = { id: decoded.id, nome: decoded.nome };
+      // Agora o TypeScript entende que o payload decodificado tem todas as propriedades.
+      req.usuario = { 
+        id: decoded.id, 
+        nome: decoded.nome,
+        role: decoded.role,
+        obm_id: decoded.obm_id
+      };
       
       next();
       return;

@@ -1,3 +1,5 @@
+// Caminho: api/src/controllers/authController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 import bcrypt from 'bcryptjs';
@@ -28,11 +30,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // --- INÍCIO DA CORREÇÃO ---
+    // Adicionamos 'role' e 'obm_id' ao payload do token.
     const token = jwt.sign(
-      { id: usuario.id, nome: usuario.nome },
+      { 
+        id: usuario.id, 
+        nome: usuario.nome,
+        role: usuario.role,
+        obm_id: usuario.obm_id
+      },
       process.env.JWT_SECRET as string,
       { expiresIn: '8h' }
     );
+    // --- FIM DA CORREÇÃO ---
 
     delete usuario.senha_hash;
 

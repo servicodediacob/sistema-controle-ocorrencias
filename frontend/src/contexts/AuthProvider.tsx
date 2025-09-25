@@ -3,16 +3,16 @@
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { login as apiLogin } from '../services/api';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-
-// 1. DEFINIÇÃO DAS INTERFACES DENTRO DESTE ARQUIVO
+// --- INÍCIO DA ALTERAÇÃO ---
+// 1. GARANTIR QUE A INTERFACE INCLUA OS CAMPOS DE PERMISSÃO
 export interface IUser {
   id: number;
   nome: string;
   email: string;
-  role: 'admin' | 'user';
-  obm_id: number | null;
+  role: 'admin' | 'user'; // Tipo mais específico para a role
+  obm_id: number | null;   // OBM pode ser nulo (para admins, por exemplo)
 }
+// --- FIM DA ALTERAÇÃO ---
 
 export interface IAuthContext {
   isAuthenticated: boolean;
@@ -22,18 +22,12 @@ export interface IAuthContext {
   logout: () => void;
 }
 
-// 2. CRIAÇÃO E EXPORTAÇÃO DO CONTEXTO DIRETAMENTE AQUI
 export const AuthContext = createContext<IAuthContext | null>(null);
 
-// ======================= FIM DA CORREÇÃO =======================
-
-
-// Props do Provider
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Componente Provedor (lógica interna sem alterações)
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [usuario, setUsuario] = useState<IUser | null>(null);
   const [token, setToken] = useState<string | null>(null);

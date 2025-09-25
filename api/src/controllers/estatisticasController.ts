@@ -1,8 +1,7 @@
+// Caminho: api/src/controllers/estatisticasController.ts
+
 import { Response } from 'express';
-// --- INÍCIO DA CORREÇÃO ---
-// 1. Importamos a interface RequestWithUser que criamos no authMiddleware
 import { RequestWithUser } from '../middleware/authMiddleware';
-// --- FIM DA CORREÇÃO ---
 import db from '../db';
 
 interface EstatisticaPayload {
@@ -11,10 +10,22 @@ interface EstatisticaPayload {
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
 
-// 2. Usamos a interface importada na assinatura da função
 export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
-  const usuario_id = req.usuario?.id; // Agora o TypeScript entende esta linha
+  const usuario = req.usuario; // Pegamos o objeto de usuário inteiro
+
+  // --- INÍCIO DA LÓGICA DE AUTORIZAÇÃO ---
+  if (!usuario) {
+    res.status(401).json({ message: 'Usuário não autenticado.' });
+    return;
+  }
+
+  // 1. Se o usuário NÃO é admin e está tentando registrar dados para uma OBM diferente da sua:
+  if (usuario.role !== 'admin' && usuario.obm_id !== obm_id) {
+    res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
+    return;
+  }
+  // --- FIM DA LÓGICA DE AUTORIZAÇÃO ---
 
   if (!data_registro || !obm_id || !estatisticas) {
     res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
@@ -42,7 +53,7 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
       const quantidade = Number(stat.quantidade);
       if (!quantidade || quantidade <= 0) continue;
       
-      const values = [data_registro, obm_id, stat.natureza_id, quantidade, usuario_id];
+      const values = [data_registro, obm_id, stat.natureza_id, quantidade, usuario.id]; // Usamos o ID do usuário autenticado
       await client.query(query, values);
       totalRegistrosCriados++;
     }
@@ -64,6 +75,9 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
     client.release();
   }
 };
+
+// O restante do arquivo (getRelatorioEstatisticas, etc.) não precisa de alterações,
+// pois são rotas de leitura e geralmente não precisam dessa trava.
 
 export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
@@ -173,6 +187,12 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
 
 export const limparEstatisticasDoDia = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data, obm_id } = req.query;
+  const usuario = req.usuario;
+
+  if (!usuario) {
+    res.status(401).json({ message: 'Usuário não autenticado.' });
+    return;
+  }
 
   if (!data || typeof data !== 'string') {
     res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
@@ -182,12 +202,22 @@ export const limparEstatisticasDoDia = async (req: RequestWithUser, res: Respons
   try {
     let result;
     if (obm_id && typeof obm_id === 'string') {
+      // Se um obm_id específico foi fornecido, verifica a permissão
+      if (usuario.role !== 'admin' && usuario.obm_id !== parseInt(obm_id, 10)) {
+        res.status(403).json({ message: 'Acesso negado. Você só pode limpar dados da sua própria OBM.' });
+        return;
+      }
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`, 
         [data, obm_id]
       );
       res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a OBM no dia ${data}.` });
     } else {
+      // Se NENHUM obm_id foi fornecido (limpeza geral do dia), apenas admins podem fazer isso
+      if (usuario.role !== 'admin') {
+        res.status(403).json({ message: 'Acesso negado. Apenas administradores podem limpar todos os registros de um dia.' });
+        return;
+      }
       result = await db.query(
         `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
         [data]

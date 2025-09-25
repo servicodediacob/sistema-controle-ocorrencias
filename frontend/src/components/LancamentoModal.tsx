@@ -3,12 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/useAuth'; // 1. IMPORTAR O useAuth
 import SearchableSelect from './SearchableSelect';
 
-// ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO =======================
-
-// 1. Define a ordem exata dos grupos e subgrupos conforme a imagem.
 const ORDEM_GRUPOS = [
   'Resgate',
   'Incêndio',
@@ -19,19 +16,14 @@ const ORDEM_GRUPOS = [
   'Defesa Civil',
 ];
 
-// ======================= FIM DA CORREÇÃO 1 =======================
-
-
-// Interface para a nova prop que receberá as OBMs com dados
 interface LancamentoModalProps {
   cidades: ICidade[];
   naturezas: IDataApoio[];
   onClose: () => void;
   onSave: (formData: any) => void;
   itemParaEditar: any | null;
-  obmsComDados: Set<number>; // <-- Nova prop para o destaque
+  obmsComDados: Set<number>;
 }
-
 
 function LancamentoModal({
   cidades,
@@ -39,13 +31,12 @@ function LancamentoModal({
   onClose,
   onSave,
   itemParaEditar,
-  obmsComDados, // <-- Nova prop
+  obmsComDados,
 }: LancamentoModalProps) {
   const { addNotification } = useNotification();
-  const { usuario } = useAuth();
+  const { usuario } = useAuth(); // 2. OBTER O USUÁRIO LOGADO
   const isEditing = !!itemParaEditar;
 
-  // ... (lógica de estados e handlers permanece a mesma) ...
   const getInitialQuantidades = () => {
     if (isEditing && itemParaEditar) {
       const quantidadesIniciais: Record<string, string> = {};
@@ -61,7 +52,15 @@ function LancamentoModal({
   };
 
   const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
-  const [cidadeId, setCidadeId] = useState<number | ''>(isEditing ? itemParaEditar.cidade.id : '');
+  
+  // --- INÍCIO DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND ---
+  const [cidadeId, setCidadeId] = useState<number | ''>(() => {
+    if (isEditing) return itemParaEditar.cidade.id;
+    if (usuario?.role === 'user' && usuario.obm_id) return usuario.obm_id;
+    return '';
+  });
+  // --- FIM DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND ---
+
   const [quantidades, setQuantidades] = useState<Record<string, string>>(getInitialQuantidades());
 
   const totalOcorrencias = useMemo(() => {
@@ -72,10 +71,12 @@ function LancamentoModal({
   }, [quantidades]);
 
   useEffect(() => {
-    if (usuario?.role === 'user' && usuario.obm_id) {
+    if (isEditing) {
+      setCidadeId(itemParaEditar.cidade.id);
+    } else if (usuario?.role === 'user' && usuario.obm_id) {
       setCidadeId(usuario.obm_id);
     } else {
-      setCidadeId(isEditing ? itemParaEditar.cidade.id : '');
+      setCidadeId('');
     }
     setQuantidades(getInitialQuantidades());
   }, [itemParaEditar, usuario]);
@@ -98,9 +99,7 @@ function LancamentoModal({
     setQuantidades({});
     addNotification('Campos de quantidade foram limpos.', 'info');
   };
-  // ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO =======================
 
-  // 2. Agrupa as naturezas normalmente, mas usaremos a constante de ordem para renderizar.
   const naturezasAgrupadas = useMemo(() => 
     naturezas.reduce((acc: any, nat: IDataApoio) => {
       const grupo = nat.grupo || 'Outros';
@@ -110,8 +109,6 @@ function LancamentoModal({
     }, {} as { [key: string]: IDataApoio[] }),
     [naturezas]
   );
-
-  // ======================= FIM DA CORREÇÃO 1 =======================
 
   const obmsParaSelecao = useMemo(() =>
     cidades.map((c: ICidade) => ({ id: c.id, nome: c.cidade_nome })),
@@ -134,14 +131,17 @@ function LancamentoModal({
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="cidade_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
+              {/* --- INÍCIO DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND --- */}
               <SearchableSelect
                 items={obmsParaSelecao}
                 selectedId={cidadeId}
                 onSelect={(id) => setCidadeId(id)}
                 placeholder="Digite para buscar uma OBM"
+                // 3. DESABILITA O CAMPO SE O USUÁRIO NÃO FOR ADMIN OU SE ESTIVER EDITANDO
                 disabled={isEditing || usuario?.role === 'user'}
-                highlightedIds={obmsComDados} // <-- Passa a nova prop para o destaque
+                highlightedIds={obmsComDados}
               />
+              {/* --- FIM DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND --- */}
             </div>
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="data_ocorrencia" className="text-sm text-gray-400">Data da Ocorrência</label>
@@ -153,9 +153,6 @@ function LancamentoModal({
             </div>
           </div>
           
-          {/* ======================= INÍCIO DA CORREÇÃO 1: ORDENAÇÃO ======================= */}
-
-          {/* 3. Itera sobre a constante de ordem para renderizar os grupos na sequência correta */}
           {ORDEM_GRUPOS.map(grupo => {
             const natsDoGrupo = naturezasAgrupadas[grupo];
             if (!natsDoGrupo) return null;
@@ -179,9 +176,6 @@ function LancamentoModal({
               </fieldset>
             );
           })}
-          
-          {/* ======================= FIM DA CORREÇÃO 1 ======================= */}
-
         </form>
         <div className="flex flex-shrink-0 items-center justify-end gap-4 border-t border-gray-700 p-6">
           <button type="button" onClick={limparFormulario} className="mr-auto rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700">
