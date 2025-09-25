@@ -7,6 +7,7 @@ interface LoggedInUser {
   nome: string;
   email: string;
   role: 'admin' | 'user';
+  loginTime: string; // <-- 1. PROPRIEDADE ADICIONADA
 }
 
 // Mapeia userId para um Set de socketIds
@@ -17,7 +18,10 @@ const socketToUser = new Map<string, LoggedInUser>();
 const broadcastLoggedInUsers = (io: Server) => {
   const uniqueUsers = new Map<number, LoggedInUser>();
   for (const user of socketToUser.values()) {
-    uniqueUsers.set(user.id, user);
+    // Para garantir que sempre pegamos o primeiro horário de login, caso o usuário tenha múltiplas abas
+    if (!uniqueUsers.has(user.id)) {
+      uniqueUsers.set(user.id, user);
+    }
   }
   const usersArray = Array.from(uniqueUsers.values());
   io.emit('update-logged-in-users', usersArray);
@@ -27,21 +31,31 @@ export const onSocketConnection = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     console.log(`[Socket.IO] Novo cliente conectado: ${socket.id}`);
 
-    socket.on('user-login', (user: LoggedInUser) => {
-      if (!userSockets.has(user.id)) {
-        userSockets.set(user.id, new Set<string>());
-      }
-      userSockets.get(user.id)!.add(socket.id);
-      socketToUser.set(socket.id, user);
+    // --- INÍCIO DA ALTERAÇÃO ---
+    socket.on('user-login', (user: Omit<LoggedInUser, 'loginTime'>) => {
+      // 2. CRIA O OBJETO COMPLETO COM O HORÁRIO DO LOGIN
+      const userWithLoginTime: LoggedInUser = {
+        ...user,
+        loginTime: new Date().toISOString(),
+      };
 
-      console.log(`[Socket.IO] Usuário logado: ${user.nome} (ID: ${user.id}) com socket: ${socket.id}`);
+      if (!userSockets.has(userWithLoginTime.id)) {
+        userSockets.set(userWithLoginTime.id, new Set<string>());
+      }
+      userSockets.get(userWithLoginTime.id)!.add(socket.id);
+      socketToUser.set(socket.id, userWithLoginTime); // Armazena o usuário com o timestamp
+
+      console.log(`[Socket.IO] Usuário logado: ${userWithLoginTime.nome} (ID: ${userWithLoginTime.id}) com socket: ${socket.id}`);
       broadcastLoggedInUsers(io);
     });
+    // --- FIM DA ALTERAÇÃO ---
 
     socket.on('request-logged-in-users', () => {
       const uniqueUsers = new Map<number, LoggedInUser>();
       for (const user of socketToUser.values()) {
-        uniqueUsers.set(user.id, user);
+        if (!uniqueUsers.has(user.id)) {
+          uniqueUsers.set(user.id, user);
+        }
       }
       const usersArray = Array.from(uniqueUsers.values());
       socket.emit('update-logged-in-users', usersArray);
@@ -81,28 +95,38 @@ export const onSocketConnection = (io: Server) => {
     socket.on('disconnect', () => {
       const user = socketToUser.get(socket.id);
       if (user) {
-        userSockets.get(user.id)?.delete(socket.id);
+        const userSocketSet = userSockets.get(user.id);
+        if (userSocketSet) {
+            userSocketSet.delete(socket.id);
+            if (userSocketSet.size === 0) {
+                userSockets.delete(user.id);
+            }
+        }
         socketToUser.delete(socket.id);
 
-        if (userSockets.get(user.id)?.size === 0) {
-          userSockets.delete(user.id);
-        }
         console.log(`[Socket.IO] Cliente desconectado: ${socket.id}. Usuário ID: ${user.id}.`);
         broadcastLoggedInUsers(io);
+      } else {
+        console.log(`[Socket.IO] Cliente desconectado (sem usuário associado): ${socket.id}`);
       }
-      console.log(`[Socket.IO] Cliente desconectado: ${socket.id}`);
     });
     
     socket.on('user-logout', () => {
       const user = socketToUser.get(socket.id);
       if (user) {
-        userSockets.get(user.id)?.delete(socket.id);
-        socketToUser.delete(socket.id);
-
-        if (userSockets.get(user.id)?.size === 0) {
-          userSockets.delete(user.id);
+        const userSocketSet = userSockets.get(user.id);
+        if (userSocketSet) {
+            // Remove todos os sockets associados a este usuário
+            userSocketSet.forEach(socketId => {
+                socketToUser.delete(socketId);
+                const socketInstance = io.sockets.sockets.get(socketId);
+                if (socketInstance) {
+                    socketInstance.disconnect(true);
+                }
+            });
+            userSockets.delete(user.id);
         }
-        console.log(`[Socket.IO] Logout explícito de: ID ${user.id} com socket: ${socket.id}`);
+        console.log(`[Socket.IO] Logout explícito de: ID ${user.id}. Todas as sessões foram encerradas.`);
         broadcastLoggedInUsers(io);
       }
     });

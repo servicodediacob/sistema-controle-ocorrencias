@@ -24,7 +24,7 @@ import { runDiagnostics } from './controllers/diagController';
 // Importação da conexão com o banco de dados
 import './db';
 
-const app: Express = express( );
+const app: Express = express(  );
 const PORT = process.env.PORT || 3001;
 
 // --- Configuração de CORS ---
@@ -36,8 +36,8 @@ const allowedOrigins = [
   'https://sistema-ocorrencias-api-1jzi.onrender.com'
 ];
 
-if (process.env.NODE_ENV !== 'production' ) {
-  allowedOrigins.push('http://localhost:5173' );
+if (process.env.NODE_ENV !== 'production'  ) {
+  allowedOrigins.push('http://localhost:5173'  );
 }
 
 const corsOptions: cors.CorsOptions = {
@@ -72,16 +72,20 @@ app.get('/api', (_req: Request, res: Response) => {
 });
 
 // --- Servidor HTTP e Socket.IO ---
-const httpServer = http.createServer(app );
+const httpServer = http.createServer(app  );
 
 const io = new SocketIOServer(httpServer, {
-  cors: corsOptions
-} );
+  cors: corsOptions,
+  // --- INÍCIO DA MELHORIA: Configuração de Heartbeat ---
+  pingInterval: 5000,   // O servidor envia um ping a cada 5 segundos
+  pingTimeout: 10000,   // Se não houver resposta em 10 segundos, a conexão é considerada perdida
+  // --- FIM DA MELHORIA ---
+}  );
 
 onSocketConnection(io);
 
 if (require.main === module) {
-  httpServer.listen(PORT, ( ) => {
+  httpServer.listen(PORT, (  ) => {
     logger.info(`Servidor HTTP e Socket.IO rodando na porta ${PORT}`);
     logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
   });
