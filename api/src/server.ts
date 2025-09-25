@@ -4,7 +4,14 @@ import './config/envLoader';
 import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import logger from './config/logger'; // Importa o logger centralizado
+import logger from './config/logger';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+
+// ======================= INÍCIO DA CORREÇÃO =======================
+// O caminho agora é relativo à pasta 'src', onde o server.ts está.
+import { onSocketConnection } from './services/socketService'; 
+// ======================= FIM DA CORREÇÃO =======================
 
 // Importação das suas rotas
 import authRoutes from './routes/authRoutes';
@@ -15,12 +22,12 @@ import plantaoRoutes from './routes/plantaoRoutes';
 import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
 import { checkHealth } from './controllers/healthController';
-import { runDiagnostics } from './controllers/diagController'; // <-- Importa o controlador de diagnóstico
+import { runDiagnostics } from './controllers/diagController';
 
 // Importação da conexão com o banco de dados
 import './db';
 
-const app: Express = express();
+const app: Express = express( );
 const PORT = process.env.PORT || 3001;
 
 // --- Configuração de CORS ---
@@ -32,8 +39,8 @@ const allowedOrigins = [
   'https://sistema-ocorrencias-api-1jzi.onrender.com'
 ];
 
-if (process.env.NODE_ENV !== 'production' ) {
-  allowedOrigins.push('http://localhost:5173'  );
+if (process.env.NODE_ENV !== 'production'  ) {
+  allowedOrigins.push('http://localhost:5173' );
 }
 
 const corsOptions: cors.CorsOptions = {
@@ -53,11 +60,9 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- Rotas de Monitoramento e Diagnóstico ---
+// --- Rotas ---
 app.get('/api/health', checkHealth);
-app.get('/api/diag', runDiagnostics); // <-- Rota de diagnóstico geral
-
-// --- Rotas da API ---
+app.get('/api/diag', runDiagnostics);
 app.use('/api/auth', authRoutes);
 app.use('/api/acesso', acessoRoutes);
 app.use('/api', dadosRoutes);
@@ -65,19 +70,24 @@ app.use('/api', unidadesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
-
-// --- Rota Raiz ---
 app.get('/api', (_req: Request, res: Response) => {
   res.send('API do Sistema de Controle de Ocorrências está no ar!');
 });
 
-// --- Inicialização do Servidor ---
+// --- Servidor HTTP e Socket.IO ---
+const httpServer = http.createServer(app );
+
+const io = new SocketIOServer(httpServer, {
+  cors: corsOptions
+} );
+
+onSocketConnection(io);
+
 if (require.main === module) {
-  app.listen(PORT, () => {
-    logger.info(`Servidor rodando na porta ${PORT}`);
+  httpServer.listen(PORT, ( ) => {
+    logger.info(`Servidor HTTP e Socket.IO rodando na porta ${PORT}`);
     logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
   });
 }
 
-// Exporta o app para a Vercel (e para os testes)
-export default app;
+export default httpServer;

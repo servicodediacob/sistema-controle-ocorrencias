@@ -1,15 +1,14 @@
-// frontend/src/contexts/useAuth.ts
+// Caminho: frontend/src/contexts/useAuth.ts
 
 import { useContext } from 'react';
-import { AuthContext, IAuthContext } from './AuthContext'; // 1. Importa o contexto e a interface
+// CORREÇÃO: Importa o contexto e a interface diretamente do arquivo do provedor.
+import { AuthContext, IAuthContext } from './AuthProvider';
 
-// 2. O hook agora retorna o tipo IAuthContext, garantindo a tipagem
 export const useAuth = (): IAuthContext => {
-  // 3. O TypeScript infere que 'context' pode ser IAuthContext ou null
   const context = useContext(AuthContext);
 
-  // 4. Verificação em tempo de execução para garantir que o hook é usado corretamente
   if (!context) {
+    // Esta verificação continua sendo importante.
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
 

@@ -1,10 +1,9 @@
 // Caminho: frontend/src/components/MainLayout.tsx
 
 import { useState, ReactNode } from 'react';
-import { useAuth } from '../contexts/useAuth';
-import { useSocket } from '../hooks/useSocket'; // 1. Importe o hook do socket
+import { useSocket } from '../hooks/useSocket'; // 1. Importa o hook do socket
 import Sidebar from './Sidebar';
-import OnlineUsersPopover from './OnlineUsersPopover'; // 2. Importe o novo componente
+import OnlineUsersPopover from './OnlineUsersPopover'; // 2. Importa o novo componente
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,8 +11,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
-  const { usuario } = useAuth();
-  // 3. Chame o hook useSocket para estabelecer a conexão e obter a função de logout
+  // 3. Chama o hook useSocket para obter a função de logout
   const { logoutWithSocket } = useSocket(); 
   
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -31,7 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background">
+      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text">
         {/* Sidebar */}
         <div
           className={`
@@ -42,12 +40,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           `}
         >
           <Sidebar
-            // 4. Use a nova função de logout que notifica o socket
+            // 4. Passa a nova função de logout para o Sidebar
             onLogout={logoutWithSocket} 
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
             closeMobileMenu={() => setMobileMenuOpen(false)}
-            userName={usuario?.nome}
           />
         </div>
 
@@ -58,7 +55,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
               {/* Botão Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="text-white lg:hidden"
+                className="text-text-strong lg:hidden"
                 aria-label="Abrir menu"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -71,13 +68,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
               </h1>
             </div>
             
-            {/* ======================= INÍCIO DA MODIFICAÇÃO ======================= */}
             {/* 5. Adiciona o popover de usuários online no cabeçalho */}
             <div className="flex items-center">
               <OnlineUsersPopover />
             </div>
-            {/* ======================= FIM DA MODIFICAÇÃO ======================= */}
-
           </header>
 
           {/* Corpo da Página */}

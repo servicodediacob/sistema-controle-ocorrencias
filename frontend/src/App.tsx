@@ -2,6 +2,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/useAuth';
+import React from 'react';
 
 // Importação das Páginas
 import LoginPage from './pages/LoginPage';
@@ -15,10 +16,9 @@ import RelatorioObitosPage from './pages/RelatorioObitosPage';
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import GestaoAcessoPage from './pages/GestaoAcessoPage';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// Importação de Componentes Globais SEM a extensão .tsx
+// Importação de Componentes Globais
 import ChatContainer from './components/ChatContainer';
-// ======================= FIM DA CORREÇÃO =======================
+import { useSocket } from './hooks/useSocket'; // 1. Importa o hook useSocket
 
 /**
  * Componente de Rota Privada
@@ -33,6 +33,15 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
 }
 
 /**
+ * Componente auxiliar para inicializar o socket quando o usuário está autenticado.
+ * Sua única responsabilidade é chamar o hook useSocket.
+ */
+const SocketInitializer: React.FC = () => {
+  useSocket(); // 2. Ativa o hook, estabelecendo a conexão do socket
+  return null; // Este componente não renderiza nada na tela
+};
+
+/**
  * Componente Principal da Aplicação
  */
 function App(): React.ReactElement {
@@ -40,7 +49,13 @@ function App(): React.ReactElement {
 
   return (
     <Router>
-      {isAuthenticated && <ChatContainer />}
+      {/* 3. Renderiza os componentes globais apenas se o usuário estiver autenticado */}
+      {isAuthenticated && (
+        <>
+          <SocketInitializer />
+          <ChatContainer />
+        </>
+      )}
       
       <Routes>
         {/* --- Rotas Públicas --- */}

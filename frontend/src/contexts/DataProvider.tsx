@@ -1,8 +1,10 @@
+// Caminho: frontend/src/contexts/DataProvider.tsx
+
 import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { getCidades, getNaturezas, ICidade, IDataApoio } from '../services/api';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuth'; // O hook para obter o estado de autenticação
 
-// Interfaces (sem alteração)
+// --- Interfaces e Contexto (sem alterações) ---
 interface IDataContext {
   cidades: ICidade[];
   naturezas: IDataApoio[];
@@ -14,25 +16,32 @@ interface DataProviderProps {
   children: ReactNode;
 }
 
-// Contexto (sem alteração)
 const DataContext = createContext<IDataContext | null>(null);
 
-// Provedor (COM A CORREÇÃO)
+// --- Componente Provedor (COM A CORREÇÃO) ---
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  // 1. Obtém o estado de autenticação, incluindo se o usuário está logado.
+  const { isAuthenticated } = useAuth(); 
+  
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
-  const [loading, setLoading] = useState(true); // Inicia como true
+  const [loading, setLoading] = useState(false); // Inicia como false
 
+  // 2. A função de busca de dados agora é um 'useCallback' que depende de 'isAuthenticated'.
+  //    Ela só será executada se o usuário estiver autenticado.
   const fetchDadosDeApoio = useCallback(async () => {
+    // Se não estiver autenticado, não faz nada.
     if (!isAuthenticated) {
-      setLoading(false);
+      console.log('[DataProvider] Usuário não autenticado. Nenhuma busca de dados será feita.');
+      setCidades([]); // Limpa os dados se o usuário deslogar
+      setNaturezas([]);
       return;
     }
 
     console.log('[DataProvider] Usuário autenticado. Buscando dados de apoio...');
-    setLoading(true); // Garante que o loading seja true no início da busca
+    setLoading(true);
     try {
+      // Busca os dados em paralelo
       const [cidadesData, naturezasData] = await Promise.all([
         getCidades(),
         getNaturezas(),
@@ -41,13 +50,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setNaturezas(naturezasData);
     } catch (error) {
       console.error('Falha ao carregar dados de apoio globais:', error);
+      // Em caso de erro, limpa os estados para evitar dados inconsistentes
       setCidades([]);
       setNaturezas([]);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // A dependência chave é 'isAuthenticated'
 
+  // 3. O 'useEffect' agora executa a função de busca sempre que o status de autenticação mudar.
   useEffect(() => {
     fetchDadosDeApoio();
   }, [fetchDadosDeApoio]);
@@ -59,31 +70,12 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refetchData: fetchDadosDeApoio,
   };
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // Enquanto os dados essenciais estiverem carregando, exibimos uma tela de loading
-  // em vez de tentar renderizar os componentes filhos com dados vazios.
-  // Isso impede que os componentes que dependem desses dados quebrem durante a inicialização.
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: '#1a202c',
-        color: 'white',
-        fontFamily: 'sans-serif'
-      }}>
-        Carregando dados essenciais...
-      </div>
-    );
-  }
-  // ======================= FIM DA CORREÇÃO =======================
-
+  // O DataProvider agora simplesmente renderiza seus filhos, sem uma tela de loading própria,
+  // pois a busca de dados só acontece após a autenticação.
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Hook (sem alteração)
+// --- Hook (sem alterações) ---
 export const useData = (): IDataContext => {
   const context = useContext(DataContext);
   if (!context) {

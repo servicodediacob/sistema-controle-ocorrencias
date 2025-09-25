@@ -4,9 +4,9 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import Icon from './Icon';
-import ThemeToggle from './ThemeToggle'; // 1. Importe o novo componente
+import ThemeToggle from './ThemeToggle';
 
-// Ícones... (a lista de ícones permanece a mesma, exceto que os de tema não são mais necessários aqui)
+// Ícones (sem alterações)
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -21,7 +21,7 @@ const ICONS = {
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
 };
 
-// O componente NavButton permanece o mesmo
+// Componente NavButton (sem alterações)
 interface NavButtonProps {
   onClick: () => void; isCollapsed: boolean; isActive: boolean; title: string; children: React.ReactNode; className?: string;
 }
@@ -32,16 +32,15 @@ const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, t
   return (<button onClick={onClick} title={title} className={`${baseClasses} ${activeClasses} ${collapsedClasses} ${className}`}>{children}</button>);
 };
 
-// Props da Sidebar (sem alteração)
+// Props da Sidebar
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
   closeMobileMenu: () => void;
-  userName: string | undefined;
   onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu, userName, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu, onLogout }) => {
   const { usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,15 +81,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
 
       <div className="flex-grow" />
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-      {/* 2. Substitua o NavButton antigo pelo novo componente ThemeToggle */}
       <div className="mt-4">
-        <ThemeToggle isCollapsed={isCollapsed} />
+        <ThemeToggle />
       </div>
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
 
       <div className={`border-t border-border pt-4 mt-4 text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
-        <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{userName?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
+        <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
       </div>
 
       <div className="hidden lg:block mt-4">
