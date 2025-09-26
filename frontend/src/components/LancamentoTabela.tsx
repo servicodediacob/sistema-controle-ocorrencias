@@ -3,8 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
+import Icon from './Icon'; // 1. Importamos o componente Icon
 
-// ... (Interfaces MobileCard e LancamentoTabelaProps não mudam) ...
+// --- Interfaces (sem alteração) ---
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
@@ -22,7 +23,7 @@ interface CardProps {
   showActions: boolean;
 }
 
-
+// --- Componente MobileCard (sem alteração) ---
 const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, showActions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
@@ -72,6 +73,78 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
   );
 };
 
+
+// --- Componente CrbmAccordion (COM A CORREÇÃO) ---
+interface CrbmAccordionProps {
+  crbmNome: string;
+  cidadesDoCrbm: ICidade[];
+  dadosMapa: Record<string, number>;
+  naturezas: Array<{ subgrupo: string; abreviacao: string }>;
+  onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
+  showActions: boolean;
+}
+
+const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, dadosMapa, naturezas, onEdit, showActions }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const totalCrbm = useMemo(() => {
+    return cidadesDoCrbm.reduce((acc, cidade) => {
+      return acc + naturezas.reduce((cityAcc, nat) => {
+        return cityAcc + (dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0);
+      }, 0);
+    }, 0);
+  }, [cidadesDoCrbm, dadosMapa, naturezas]);
+
+  return (
+    <div className="rounded-lg border border-border bg-surface">
+      <div
+        className="flex cursor-pointer items-center justify-between p-4"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+          {/* 2. Substituímos o <span> por um componente Icon SVG */}
+          <Icon 
+            path="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" // Path de um ícone "chevron_right"
+            className={`transform text-text-strong transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
+          />
+          {/* ======================= FIM DA CORREÇÃO ======================= */}
+          <p className="font-bold text-text-strong">{crbmNome}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-text">Total</p>
+          <p className={`text-xl font-bold ${totalCrbm > 0 ? 'text-blue-400' : 'text-text'}`}>{totalCrbm}</p>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="space-y-2 border-t border-border p-4">
+          {cidadesDoCrbm.map(cidade => {
+            const ocorrências: Record<string, number> = {};
+            let totalLinha = 0;
+            naturezas.forEach(nat => {
+              const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
+              ocorrências[nat.subgrupo] = qtd;
+              totalLinha += qtd;
+            });
+            return (
+              <MobileCard
+                key={`mobile-${cidade.id}`}
+                cidade={cidade}
+                ocorrencias={ocorrências}
+                total={totalLinha}
+                onEdit={() => onEdit(cidade, ocorrências)}
+                showActions={showActions}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Componente LancamentoTabela (sem mais alterações) ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -139,30 +212,20 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     return { crbm: totaisCrbm, geral: totaisGeral };
   }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]);
 
-
   return (
     <>
       <div className="mt-4 space-y-4 md:hidden">
-        {cidades.map(cidade => {
-          const ocorrências: Record<string, number> = {};
-          let totalLinha = 0;
-          naturezas.forEach(nat => {
-            const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-            ocorrências[nat.subgrupo] = qtd;
-            totalLinha += qtd;
-          });
-          
-          return (
-            <MobileCard
-              key={`mobile-${cidade.id}`}
-              cidade={cidade}
-              ocorrencias={ocorrências}
-              total={totalLinha}
-              onEdit={() => onEdit(cidade, ocorrências)}
-              showActions={showActions}
-            />
-          );
-        })}
+        {Object.entries(cidadesAgrupadas).map(([crbmNome, cidadesDoCrbm]) => (
+          <CrbmAccordion
+            key={crbmNome}
+            crbmNome={crbmNome}
+            cidadesDoCrbm={cidadesDoCrbm}
+            dadosMapa={dadosMapa}
+            naturezas={naturezas}
+            onEdit={onEdit}
+            showActions={showActions}
+          />
+        ))}
       </div>
 
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
@@ -198,12 +261,10 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
                 return (
                   <tr key={cidade.id} className="text-center hover:bg-border/50">
-                    {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
                     {index === 0 && (
                       <td rowSpan={listaCidades.length} className="sticky left-0 z-20 border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
                     )}
                     <td className={`sticky left-[150px] z-20 border-b border-r border-border p-3 text-left font-bold ${cellClass}`}>{cidade.cidade_nome}</td>
-                    {/* ======================= FIM DA CORREÇÃO ======================= */}
                     {naturezas.map(nat => (
                       <td key={nat.subgrupo} className="whitespace-nowrap border-x border-border p-3">{ocorrências[nat.subgrupo]}</td>
                     ))}

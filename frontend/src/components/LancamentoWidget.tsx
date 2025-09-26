@@ -27,7 +27,6 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
 ];
 
 function LancamentoWidget() {
-  // A constante 'cidades' agora vem do useData e contém a lista completa.
   const { cidades } = useData();
   const { addNotification } = useNotification();
 
@@ -54,15 +53,12 @@ function LancamentoWidget() {
 
   const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
   
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // A lógica de filtragem agora opera sobre a lista completa de 'cidades' vinda do contexto.
   const cidadesFiltradas = useMemo(() => {
     if (filtroCrbm === 'todos') {
       return cidades;
     }
     return cidades.filter(c => c.crbm_nome === filtroCrbm);
   }, [cidades, filtroCrbm]);
-  // ======================= FIM DA CORREÇÃO =======================
 
   const handleEditPlaceholder = () => {
     addNotification(`Para editar, acesse a página "Lançar Ocorrências".`, 'info');
@@ -84,7 +80,7 @@ function LancamentoWidget() {
             type="date"
             value={dataRegistro}
             onChange={e => setDataRegistro(e.target.value)}
-            className="rounded-md border border-border bg-surface p-3 text-text-strong"
+            className="rounded-md border border-border bg-background p-3 text-text-strong"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -95,7 +91,7 @@ function LancamentoWidget() {
             id="filtro-crbm-widget"
             value={filtroCrbm}
             onChange={e => setFiltroCrbm(e.target.value)}
-            className="min-w-[200px] rounded-md border border-border bg-surface p-3 text-text-strong"
+            className="min-w-[200px] rounded-md border border-border bg-background p-3 text-text-strong"
           >
             <option value="todos">Todos os CRBMs</option>
             {crbmsUnicos.map(crbm => (
@@ -110,7 +106,6 @@ function LancamentoWidget() {
           <Spinner text="Carregando espelho de lançamentos..." />
         </div>
       ) : (
-        // A prop 'cidades' agora passa a lista filtrada e completa.
         <LancamentoTabela
           dadosApi={dadosTabela}
           cidades={cidadesFiltradas}

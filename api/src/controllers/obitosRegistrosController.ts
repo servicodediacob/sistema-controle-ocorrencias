@@ -1,21 +1,18 @@
+// Caminho: api/src/controllers/obitosRegistrosController.ts
+
 import { Response } from 'express';
-// --- INÍCIO DA CORREÇÃO ---
-// 1. Importamos a interface RequestWithUser
 import { RequestWithUser } from '../middleware/authMiddleware';
-// --- FIM DA CORREÇÃO ---
 import db from '../db';
 
 interface ObitoRegistroPayload {
   data_ocorrencia: string;
   natureza_id: number;
   numero_ocorrencia: string;
-  obm_id: number;
+  obm_id: number; // A interface já espera 'obm_id', o que está correto.
   quantidade_vitimas: number;
 }
 
-// 2. Usamos a interface importada nas funções que precisam dela
 export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
-  // ... (código interno sem alteração)
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
     return res.status(400).json({ message: 'A data é obrigatória.' });
@@ -46,8 +43,16 @@ export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
 };
 
 export const criarObitoRegistro = async (req: RequestWithUser, res: Response) => {
-  const payload = req.body as ObitoRegistroPayload;
-  const usuario_id = req.usuario?.id || null; // Agora funciona
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // Alteramos o payload para ler 'obm_id' diretamente, em vez de 'obm_responsavel'.
+  const { 
+    data_ocorrencia, 
+    natureza_id, 
+    numero_ocorrencia, 
+    obm_id, // Lendo o campo correto
+    quantidade_vitimas 
+  } = req.body as ObitoRegistroPayload;
+  const usuario_id = req.usuario?.id || null;
 
   if (usuario_id === null) {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
@@ -61,13 +66,14 @@ export const criarObitoRegistro = async (req: RequestWithUser, res: Response) =>
       RETURNING *;
     `;
     const obitoRegistroValues = [
-      payload.data_ocorrencia,
-      payload.natureza_id,
-      payload.numero_ocorrencia,
-      payload.obm_id,
-      payload.quantidade_vitimas,
+      data_ocorrencia,
+      natureza_id,
+      numero_ocorrencia,
+      obm_id, // Usando a variável correta
+      quantidade_vitimas,
       usuario_id
     ];
+    // ======================= FIM DA CORREÇÃO =======================
     
     const { rows } = await db.query(obitoRegistroQuery, obitoRegistroValues);
     return res.status(201).json(rows[0]);
@@ -81,8 +87,15 @@ export const criarObitoRegistro = async (req: RequestWithUser, res: Response) =>
 
 export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
-    const payload = req.body as ObitoRegistroPayload;
-    const usuario_id = req.usuario?.id || null; // Agora funciona
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    const { 
+      data_ocorrencia, 
+      natureza_id, 
+      numero_ocorrencia, 
+      obm_id, // Lendo o campo correto
+      quantidade_vitimas 
+    } = req.body as ObitoRegistroPayload;
+    const usuario_id = req.usuario?.id || null;
 
     if (usuario_id === null) {
         return res.status(401).json({ message: 'Usuário não autenticado.' });
@@ -101,14 +114,15 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
             RETURNING *;
         `;
         const values = [
-            payload.data_ocorrencia,
-            payload.natureza_id,
-            payload.numero_ocorrencia,
-            payload.obm_id,
-            payload.quantidade_vitimas,
+            data_ocorrencia,
+            natureza_id,
+            numero_ocorrencia,
+            obm_id, // Usando a variável correta
+            quantidade_vitimas,
             usuario_id,
             id
         ];
+        // ======================= FIM DA CORREÇÃO =======================
 
         const { rows } = await db.query(query, values);
         if (rows.length === 0) {
@@ -122,7 +136,6 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
     }
 };
 
-// ... (resto do arquivo sem alterações)
 export const deletarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
     try {

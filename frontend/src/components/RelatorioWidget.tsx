@@ -1,12 +1,12 @@
 // Caminho: frontend/src/components/RelatorioWidget.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getRelatorio, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import ReportRow from './ReportRow'; // Mantemos o ReportRow para a versão mobile
 import Spinner from './Spinner';
+import Icon from './Icon'; // Importamos o componente Icon
 
-// ... (Componentes ReportCard e SubgrupoRow permanecem os mesmos) ...
+// --- Componente SubgrupoRow (permanece o mesmo) ---
 const crbmHeaders: (keyof IRelatorioRow)[] = ["1º CRBM", "2º CRBM", "3º CRBM", "4º CRBM", "5º CRBM", "6º CRBM", "7º CRBM", "8º CRBM", "9º CRBM"];
 
 interface SubgrupoRowProps {
@@ -66,6 +66,9 @@ const SubgrupoRow: React.FC<SubgrupoRowProps> = ({ row }) => {
   );
 };
 
+// ======================= INÍCIO DA CORREÇÃO =======================
+
+// --- NOVO COMPONENTE: ReportCard (agora funciona como um acordeão) ---
 interface ReportCardProps {
   grupo: string;
   subgrupos: IRelatorioRow[];
@@ -73,16 +76,22 @@ interface ReportCardProps {
 
 const ReportCard: React.FC<ReportCardProps> = ({ grupo, subgrupos }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const totalGrupo = subgrupos.reduce((acc, row) => acc + Number(row.total_geral), 0);
+  const totalGrupo = useMemo(() => 
+    subgrupos.reduce((acc, row) => acc + Number(row.total_geral), 0),
+    [subgrupos]
+  );
 
   return (
     <div className="rounded-lg border border-border bg-surface">
       <div
-        className="flex items-center justify-between p-4 cursor-pointer"
+        className="flex cursor-pointer items-center justify-between p-4"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <span className={`transform text-text-strong transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+          <Icon 
+            path="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+            className={`transform text-text-strong transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+          />
           <p className="font-bold text-text-strong">{grupo}</p>
         </div>
         <div className="text-right">
@@ -104,7 +113,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ grupo, subgrupos }) => {
   );
 };
 
-
+// --- Componente RelatorioWidget (lógica principal) ---
 function RelatorioWidget() {
   const [reportData, setReportData] = useState<IRelatorioRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,32 +138,45 @@ function RelatorioWidget() {
     return () => clearInterval(interval);
   }, [fetchReport]);
 
-  const groupedData = reportData.reduce((acc, row) => {
-    const grupo = row.grupo || 'Estatísticas';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(row);
-    return acc;
-  }, {} as Record<string, IRelatorioRow[]>);
+  const groupedData = useMemo(() => 
+    reportData.reduce((acc, row) => {
+      const grupo = row.grupo || 'Estatísticas';
+      if (!acc[grupo]) acc[grupo] = [];
+      acc[grupo].push(row);
+      return acc;
+    }, {} as Record<string, IRelatorioRow[]>),
+    [reportData]
+  );
+
+  const totalGeral = useMemo(() => 
+    reportData.reduce((acc, row) => acc + Number(row.total_geral), 0),
+    [reportData]
+  );
 
   return (
     <div className="w-full flex-1 rounded-lg bg-surface border border-border p-6 text-text mt-6">
-      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
-        Relatório Estatístico do Dia
-      </h3>
+      <div className="flex justify-between items-start border-b border-border pb-4">
+        <h3 className="mt-0 text-lg font-semibold text-text-strong">
+          Relatório Estatístico do Dia
+        </h3>
+        <div className="flex-shrink-0 rounded-lg bg-background p-3 text-center shadow-md">
+          <span className="text-sm text-gray-400">Total Geral</span>
+          <p className="text-3xl font-bold text-blue-400">{totalGeral}</p>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center p-10"><Spinner text="Carregando relatório..." /></div>
       ) : reportData.length > 0 ? (
         <div className="mt-4">
-          {/* RENDERIZAÇÃO PARA MOBILE (Cards aninhados) */}
+          {/* RENDERIZAÇÃO PARA MOBILE (AGORA COM ACORDEÃO) */}
           <div className="space-y-4 lg:hidden">
             {Object.entries(groupedData).map(([grupo, subgrupos]) => (
               <ReportCard key={grupo} grupo={grupo} subgrupos={subgrupos} />
             ))}
           </div>
 
-          {/* ================================================================= */}
-          {/* --- RENDERIZAÇÃO PARA DESKTOP (Tabela com Células Mescladas) --- */}
-          {/* ================================================================= */}
+          {/* RENDERIZAÇÃO PARA DESKTOP (Tabela - sem alteração) */}
           <div className="hidden overflow-x-auto lg:block">
             <table className="min-w-full w-full border-collapse text-sm">
               <thead className="bg-gray-100 dark:bg-gray-900/50 text-text-strong">
@@ -173,7 +195,6 @@ function RelatorioWidget() {
                   <React.Fragment key={grupo}>
                     {subgrupos.map((row, index) => (
                       <tr key={row.subgrupo} className="border-b border-border text-center">
-                        {/* A célula do GRUPO só é renderizada para a primeira linha do grupo */}
                         {index === 0 && (
                           <td rowSpan={subgrupos.length} className="p-2 text-left align-top font-bold text-text-strong border-r border-border">
                             {grupo}
@@ -201,3 +222,4 @@ function RelatorioWidget() {
 }
 
 export default RelatorioWidget;
+// ======================= FIM DA CORREÇÃO =======================
