@@ -1,6 +1,6 @@
 // Caminho: frontend/src/pages/RelatorioPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getRelatorio, IRelatorioRow } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
@@ -15,7 +15,7 @@ function RelatorioPage() {
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotification();
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getRelatorio(dataInicio, dataFim);
@@ -29,8 +29,14 @@ function RelatorioPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataInicio, dataFim, addNotification]);
 
+  // Carrega o relatório do dia atual ao montar a página
+  useEffect(() => {
+    handleGenerateReport();
+  }, [handleGenerateReport]);
+
+  // Agrupa os dados por 'grupo' para renderização
   const groupedData = reportData.reduce((acc, row) => {
     const grupo = row.grupo;
     if (!acc[grupo]) acc[grupo] = [];
@@ -40,6 +46,7 @@ function RelatorioPage() {
 
   const crbmHeaders = ["1º CRBM", "2º CRBM", "3º CRBM", "4º CRBM", "5º CRBM", "6º CRBM", "7º CRBM", "8º CRBM", "9º CRBM"];
 
+  // Calcula os totais gerais
   const totals = reportData.reduce((acc, row) => {
     (Object.keys(acc) as Array<keyof typeof acc>).forEach(key => {
       acc[key] += Number(row[key as keyof IRelatorioRow]) || 0;
@@ -67,7 +74,6 @@ function RelatorioPage() {
 
   return (
     <MainLayout pageTitle="Relatório Estatístico de Ocorrências">
-      {/* ======================= CORREÇÃO APLICADA ======================= */}
       <div className="mb-8 flex flex-wrap items-end gap-4 rounded-lg bg-surface border border-border p-6">
         <div className="flex flex-col gap-2">
           <label htmlFor="data-inicio" className="text-sm text-text">Data de Início</label>
