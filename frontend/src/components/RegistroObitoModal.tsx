@@ -31,7 +31,6 @@ function RegistroObitoModal({
   const isEditing = !!registroParaEditar;
   const { addNotification } = useNotification();
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
   // A interface interna do formulário agora usa 'obm_id' para consistência.
   const getInitialFormData = () => {
     if (isEditing && registroParaEditar) {
@@ -60,7 +59,6 @@ function RegistroObitoModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    // Não precisamos mais converter para número aqui, o estado pode ser string.
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -85,7 +83,6 @@ function RegistroObitoModal({
     
     onSave(payload, registroParaEditar?.id);
   };
-  // ======================= FIM DA CORREÇÃO =======================
 
   const handleDelete = async () => {
     if (!registroParaEditar) return;

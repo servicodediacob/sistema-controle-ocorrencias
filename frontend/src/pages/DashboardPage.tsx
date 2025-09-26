@@ -6,12 +6,10 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/useAuth';
 
 import MainLayout from '../components/MainLayout';
-import DestaqueWidget from '../components/DestaqueWidget';
-import PlantaoWidget from '../components/PlantaoWidget';
+import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget'; // 1. Importar o novo widget
 import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 import RelatorioWidget from '../components/RelatorioWidget';
 import LancamentoWidget from '../components/LancamentoWidget';
-import LoggedInUsersWidget from '../components/LoggedInUsersWidget';
 
 // --- Componentes Funcionais (StatCard, DataTable - sem alterações) ---
 interface StatCardProps {
@@ -109,6 +107,11 @@ function DashboardPage(): ReactElement {
         <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
       </div>
 
+      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+      {/* 2. Substituir o widget antigo pelo novo */}
+      <DestaqueDetalhadoWidget destaque={plantaoData?.ocorrenciaDestaque as any} />
+      {/* ======================= FIM DA CORREÇÃO ======================= */}
+
       {/* Widgets de Relatórios */}
       <RelatorioWidget />
       <ObitosDoDiaWidget />
@@ -130,16 +133,7 @@ function DashboardPage(): ReactElement {
         />
       </div>
       
-      {/* --- INÍCIO DA CORREÇÃO --- */}
-      {/* Renderização condicional dos widgets de controle do plantão */}
-      {usuario?.role === 'admin' && (
-        <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-stretch">
-          <DestaqueWidget destaque={plantaoData?.ocorrenciaDestaque ?? null} onUpdate={fetchData} />
-          <PlantaoWidget supervisor={plantaoData?.supervisorPlantao ?? null} onUpdate={fetchData} />
-          <LoggedInUsersWidget />
-        </div>
-      )}
-      {/* --- FIM DA CORREÇÃO --- */}
+      {/* A seção de controle de plantão foi removida, pois a funcionalidade foi integrada em outras partes */}
     </MainLayout>
   );
 }

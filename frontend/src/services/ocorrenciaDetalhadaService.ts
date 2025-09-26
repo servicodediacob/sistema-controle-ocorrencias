@@ -2,7 +2,6 @@
 
 import { api, extractErrorMessage } from './api';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
 // 1. Interface para o payload de ENVIO (o que o formulário manda)
 export interface IOcorrenciaDetalhadaPayload {
   numero_ocorrencia?: string;
@@ -37,7 +36,6 @@ export interface IOcorrenciaDetalhada {
   horario_ocorrencia?: string;
   usuario_id: number;
 }
-// ======================= FIM DA CORREÇÃO =======================
 
 /**
  * @description Cria uma nova ocorrência detalhada.
@@ -65,7 +63,6 @@ export const getOcorrenciasDetalhadas = async (data: string): Promise<IOcorrenci
   }
 };
 
-// ======================= INÍCIO DA CORREÇÃO =======================
 /**
  * @description Atualiza uma ocorrência detalhada existente.
  */
@@ -89,4 +86,3 @@ export const deletarOcorrenciaDetalhada = async (id: number): Promise<{ message:
     throw new Error(extractErrorMessage(error));
   }
 };
-// ======================= FIM DA CORREÇÃO =======================

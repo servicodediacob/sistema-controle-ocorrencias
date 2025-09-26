@@ -20,14 +20,17 @@ const OcorrenciaDetalhadaModal: React.FC<OcorrenciaDetalhadaModalProps> = ({ onC
   // Função para definir o estado inicial do formulário
   const getInitialFormData = () => {
     if (isEditing && ocorrenciaParaEditar) {
+      // Encontra o objeto completo da natureza para obter o nome do grupo
       const naturezaInicial = naturezas.find(n => n.id === ocorrenciaParaEditar.natureza_id);
       return {
         ...ocorrenciaParaEditar,
         data_ocorrencia: new Date(ocorrenciaParaEditar.data_ocorrencia).toISOString().split('T')[0],
         horario_ocorrencia: ocorrenciaParaEditar.horario_ocorrencia?.substring(0, 5) || '',
+        // Define o grupo da natureza para preencher o primeiro select
         grupo_natureza: naturezaInicial?.grupo || '',
       };
     }
+    // Estado inicial para uma nova ocorrência
     return {
       data_ocorrencia: new Date().toISOString().split('T')[0],
       horario_ocorrencia: new Date().toTimeString().substring(0, 5),
@@ -60,6 +63,7 @@ const OcorrenciaDetalhadaModal: React.FC<OcorrenciaDetalhadaModalProps> = ({ onC
   const handleGrupoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novoGrupo = e.target.value;
     setGrupoSelecionado(novoGrupo);
+    // Limpa a natureza selecionada ao trocar de grupo
     setFormData(prev => ({ ...prev, grupo_natureza: novoGrupo, natureza_id: undefined }));
   };
 
@@ -87,6 +91,7 @@ const OcorrenciaDetalhadaModal: React.FC<OcorrenciaDetalhadaModalProps> = ({ onC
           </button>
         </div>
         <form onSubmit={handleSubmit} id="detailed-occurrence-form" className="flex-grow space-y-6 overflow-y-auto p-6">
+          {/* Campos do formulário (sem alteração na estrutura JSX) */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div>
               <label htmlFor="numero_ocorrencia" className="block text-sm font-medium text-text">Nº Ocorrência (RAI)</label>

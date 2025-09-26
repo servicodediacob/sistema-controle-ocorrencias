@@ -17,21 +17,23 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
       naturezas_de_obito AS (
         SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos'
       ),
-      -- Soma as ocorrências da tabela de estatísticas diárias
+      -- Soma as ocorrências da tabela de estatísticas diárias, EXCLUINDO óbitos
       total_estatisticas AS (
         SELECT COALESCE(SUM(quantidade), 0) AS total 
         FROM estatisticas_diarias
         WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
       ),
-      -- Conta as ocorrências da tabela de ocorrências individuais
+      -- Conta as ocorrências da tabela de ocorrências individuais, EXCLUINDO óbitos
       total_individuais AS (
         SELECT COUNT(id) AS total 
         FROM ocorrencias 
         WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
       ),
+      -- O total de óbitos agora vem da tabela correta e dedicada
       total_obitos_registros AS (
         SELECT SUM(quantidade_vitimas) AS total FROM obitos_registros
       ),
+      -- Ocorrências por natureza também exclui os óbitos
       ocorrencias_por_natureza AS (
         SELECT
           n.subgrupo AS nome,
@@ -42,6 +44,7 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
         GROUP BY nome
         ORDER BY total DESC
       ),
+      -- Ocorrências por CRBM também exclui os óbitos
       ocorrencias_por_crbm AS (
         SELECT
           cr.nome AS nome,
@@ -54,7 +57,7 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
         ORDER BY total DESC
       )
       SELECT json_build_object(
-        -- Soma os totais das duas fontes
+        -- Soma os totais das duas fontes (já filtradas)
         'totalOcorrencias', (SELECT total FROM total_estatisticas) + (SELECT total FROM total_individuais),
         'totalObitos', COALESCE((SELECT total FROM total_obitos_registros), 0),
         'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_natureza) t), '[]'::json),

@@ -1,24 +1,25 @@
-// api/src/controllers/plantaoController.ts
+// Caminho: api/src/controllers/plantaoController.ts
+
 import { Request, Response } from 'express';
 import db from '../db';
 
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // CORREÇÃO: Troca 'cidades' por 'obms' e 'cidade_id' por 'obm_id'
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // A query agora busca da tabela 'ocorrencias_detalhadas'
     const destaqueQuery = `
       SELECT 
-        od.ocorrencia_id,
-        o.data_ocorrencia,
-        CONCAT(n.grupo, ' - ', n.subgrupo) as natureza_descricao,
-        ob.nome as cidade_nome,
-        cr.nome as crbm_nome
-      FROM ocorrencia_destaque od
-      LEFT JOIN ocorrencias o ON od.ocorrencia_id = o.id
-      LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      LEFT JOIN obms ob ON o.obm_id = ob.id
-      LEFT JOIN crbms cr ON ob.crbm_id = cr.id
-      WHERE od.id = 1;
+        od.*,
+        n.grupo as natureza_grupo,
+        n.subgrupo as natureza_nome,
+        c.nome as cidade_nome
+      FROM ocorrencia_destaque d
+      LEFT JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
+      LEFT JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
+      LEFT JOIN obms c ON od.cidade_id = c.id
+      WHERE d.id = 1;
     `;
+    // ======================= FIM DA CORREÇÃO =======================
     
     const supervisorQuery = `
       SELECT 
@@ -35,6 +36,7 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
     ]);
 
     res.status(200).json({
+      // O objeto retornado agora contém todos os campos da ocorrência detalhada
       ocorrenciaDestaque: destaqueResult.rows[0] || null,
       supervisorPlantao: supervisorResult.rows[0] || null,
     });

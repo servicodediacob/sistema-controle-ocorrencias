@@ -43,8 +43,7 @@ export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
 };
 
 export const criarObitoRegistro = async (req: RequestWithUser, res: Response) => {
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // Alteramos o payload para ler 'obm_id' diretamente, em vez de 'obm_responsavel'.
+  // Desestruturação agora lê 'obm_id' diretamente do corpo da requisição.
   const { 
     data_ocorrencia, 
     natureza_id, 
@@ -73,7 +72,6 @@ export const criarObitoRegistro = async (req: RequestWithUser, res: Response) =>
       quantidade_vitimas,
       usuario_id
     ];
-    // ======================= FIM DA CORREÇÃO =======================
     
     const { rows } = await db.query(obitoRegistroQuery, obitoRegistroValues);
     return res.status(201).json(rows[0]);
@@ -87,7 +85,6 @@ export const criarObitoRegistro = async (req: RequestWithUser, res: Response) =>
 
 export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
-    // ======================= INÍCIO DA CORREÇÃO =======================
     const { 
       data_ocorrencia, 
       natureza_id, 
@@ -122,7 +119,6 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
             usuario_id,
             id
         ];
-        // ======================= FIM DA CORREÇÃO =======================
 
         const { rows } = await db.query(query, values);
         if (rows.length === 0) {

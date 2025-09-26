@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 
 // 1. Esta é a ÚNICA definição de JwtPayload que vamos usar.
+//    Ela agora inclui as permissões do usuário.
 export interface JwtPayload {
   id: number;
   nome: string;
@@ -27,8 +28,8 @@ export const proteger = (req: Request, res: Response, next: NextFunction): void 
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
       
       // 3. Adicionamos a propriedade 'usuario' ao objeto 'req' dinamicamente.
-      // Para fazer isso de forma segura com TypeScript, fazemos um cast do 'req' para 'any'.
-      (req as any).usuario = decoded;
+      //    Para fazer isso de forma segura com TypeScript, fazemos um cast do 'req' para a nossa interface.
+      (req as RequestWithUser).usuario = decoded;
       
       next();
       return;

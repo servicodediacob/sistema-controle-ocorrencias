@@ -1,10 +1,8 @@
 // Caminho: api/src/middleware/roleMiddleware.ts
 
 import { Response, NextFunction } from 'express';
-// ======================= INÍCIO DA CORREÇÃO =======================
 // 1. Importamos a interface RequestWithUser diretamente do authMiddleware
 import { RequestWithUser } from './authMiddleware';
-// ======================= FIM DA CORREÇÃO =======================
 import db from '../db';
 
 // 2. Usamos a interface importada na assinatura da função

@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import Icon from './Icon';
 import SystemStatusIndicator from './SystemStatusIndicator';
+import OnlineUsersDropdown from './OnlineUsersDropdown'; // 1. Importar o novo componente
 
 // Ícones (sem alteração)
 const ICONS = {
@@ -77,18 +78,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
         })}
       </nav>
 
-      {/* Espaçador que empurra o conteúdo para baixo */}
       <div className="flex-grow" />
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-      {/* Container para os itens inferiores da sidebar */}
       <div className="flex flex-col gap-4 border-t border-border pt-4">
-        {/* Informações do usuário */}
         <div className={`text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
           <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
         </div>
 
-        {/* Botão de Recolher/Expandir para Desktop */}
+        {/* 2. Adicionar o componente de dropdown de usuários online aqui */}
+        <OnlineUsersDropdown isCollapsed={isCollapsed} />
+
         <div className="hidden lg:block">
           <NavButton onClick={() => setIsCollapsed(!isCollapsed)} isCollapsed={isCollapsed} isActive={false} title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}>
             <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
@@ -96,10 +95,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
           </NavButton>
         </div>
 
-        {/* Indicador de Status do Sistema */}
         <SystemStatusIndicator isCollapsed={isCollapsed} />
 
-        {/* Botão de Sair */}
         <div className="mt-2">
           <NavButton onClick={handleLogout} isCollapsed={isCollapsed} isActive={false} title="Sair" className="!bg-red-600 hover:!bg-red-700 !text-white">
             <Icon path={ICONS.logout} />
@@ -107,7 +104,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
           </NavButton>
         </div>
       </div>
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
     </aside>
   );
 };

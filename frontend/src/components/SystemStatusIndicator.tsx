@@ -27,7 +27,7 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ isCollaps
     const checkStatus = async () => {
       try {
         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-        await axios.get(`${apiBaseUrl}/diag` );
+        await axios.get(`${apiBaseUrl}/diag`  );
         setStatus('ok');
         setLastMessage('Todos os serviços estão operacionais.');
       } catch (error: any) {
