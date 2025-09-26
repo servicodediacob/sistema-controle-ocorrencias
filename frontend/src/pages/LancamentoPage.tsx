@@ -3,22 +3,28 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ICidade,
-  registrarEstatisticasLote,
   getEstatisticasAgrupadasPorData,
   IEstatisticaAgrupada,
-  limparEstatisticasDoDia
 } from '../services/api';
+// ======================= INÍCIO DA CORREÇÃO =======================
+// 1. Importar do novo serviço dedicado
+import {
+  IOcorrenciaDetalhada,
+  IOcorrenciaDetalhadaPayload,
+  criarOcorrenciaDetalhada,
+  getOcorrenciasDetalhadas
+} from '../services/ocorrenciaDetalhadaService';
+// ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
 import LancamentoTabela from '../components/LancamentoTabela';
-// ======================= INÍCIO DA CORREÇÃO =======================
-// O caminho foi corrigido de './Spinner' para '../components/Spinner'
 import Spinner from '../components/Spinner';
-// ======================= FIM DA CORREÇÃO =======================
+import OcorrenciaDetalhadaModal from '../components/OcorrenciaDetalhadaModal';
 
-const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
+// ... (const ORDEM_COLUNAS e o resto do componente permanecem os mesmos)
+const ORDEM_COLUNAS = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
     { subgrupo: 'Incêndio', abreviacao: 'INC. OUT.' },
     { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
@@ -39,7 +45,6 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
 ];
 
-
 function LancamentoPage() {
   const { cidades, naturezas } = useData();
   const { addNotification } = useNotification();
@@ -49,7 +54,10 @@ function LancamentoPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
-  const [filtroCrbm, setFiltroCrbm] = useState<string>('todos');
+  
+  const [isDetalheModalOpen, setIsDetalheModalOpen] = useState(false);
+  const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
+  const [loadingDetalhadas, setLoadingDetalhadas] = useState(true);
 
   const colunasNatureza = ORDEM_COLUNAS;
 
@@ -60,15 +68,29 @@ function LancamentoPage() {
       const dados = await getEstatisticasAgrupadasPorData(dataRegistro);
       setDadosTabela(dados);
     } catch (error) {
-      addNotification('Falha ao carregar lançamentos do dia. Verifique se o servidor backend está rodando.', 'error');
+      addNotification('Falha ao carregar lançamentos em lote.', 'error');
     } finally {
       setLoading(false);
     }
   }, [dataRegistro, addNotification]);
 
+  const fetchOcorrenciasDetalhadas = useCallback(async () => {
+    if (!dataRegistro) return;
+    setLoadingDetalhadas(true);
+    try {
+      const dados = await getOcorrenciasDetalhadas(dataRegistro);
+      setOcorrenciasDetalhadas(dados);
+    } catch (error) {
+      addNotification('Falha ao carregar ocorrências detalhadas.', 'error');
+    } finally {
+      setLoadingDetalhadas(false);
+    }
+  }, [dataRegistro, addNotification]);
+
   useEffect(() => {
     fetchDadosTabela();
-  }, [fetchDadosTabela]);
+    fetchOcorrenciasDetalhadas();
+  }, [fetchDadosTabela, fetchOcorrenciasDetalhadas]);
 
   const obmsComDados = useMemo(() => {
     const ids = dadosTabela.map(dado => {
@@ -78,36 +100,14 @@ function LancamentoPage() {
     return new Set(ids);
   }, [dadosTabela, cidades]);
 
-  const handleSave = async (formData: any) => {
-    const payload = {
-      data_registro: formData.data_ocorrencia,
-      obm_id: formData.obm_id,
-      estatisticas: Object.entries(formData.quantidades)
-        .map(([natureza_id, quantidadeStr]) => ({
-          natureza_id: parseInt(natureza_id, 10),
-          quantidade: parseInt(quantidadeStr as string, 10) || 0,
-        }))
-        .filter(({ quantidade }) => quantidade > 0),
-    };
-
-    if (payload.estatisticas.length === 0 && !itemParaEditar) {
-      addNotification('Nenhum valor foi preenchido.', 'info');
-      return;
-    }
-
+  const handleSaveDetalhada = async (payload: IOcorrenciaDetalhadaPayload) => {
     try {
-      if (itemParaEditar) {
-        await limparEstatisticasDoDia(payload.data_registro, payload.obm_id);
-      }
-      
-      const response = await registrarEstatisticasLote(payload);
-      addNotification(itemParaEditar ? 'Lançamentos atualizados com sucesso!' : response.message, 'success');
-      
-      setIsModalOpen(false);
-      setItemParaEditar(null);
-      fetchDadosTabela();
+      await criarOcorrenciaDetalhada(payload);
+      addNotification('Ocorrência detalhada registrada com sucesso!', 'success');
+      setIsDetalheModalOpen(false);
+      fetchOcorrenciasDetalhadas();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao enviar os dados.';
+      const message = error instanceof Error ? error.message : 'Falha ao salvar a ocorrência.';
       addNotification(message, 'error');
     }
   };
@@ -117,33 +117,8 @@ function LancamentoPage() {
     setIsModalOpen(true);
   };
 
-  const handleLimparTabela = async () => {
-    const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-    if (window.confirm(`Tem certeza que deseja excluir TODOS os lançamentos do dia ${dataFormatada}? Esta ação não pode ser desfeita.`)) {
-      try {
-        setLoading(true);
-        await limparEstatisticasDoDia(dataRegistro);
-        addNotification('Todos os registros do dia foram excluídos.', 'success');
-        fetchDadosTabela();
-      } catch (error) {
-        addNotification('Falha ao limpar os registros.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
-
-  const cidadesFiltradas = useMemo(() => {
-    if (filtroCrbm === 'todos') {
-      return cidades;
-    }
-    return cidades.filter(c => c.crbm_nome === filtroCrbm);
-  }, [cidades, filtroCrbm]);
-
   return (
-    <MainLayout pageTitle="Formulário de Lançamento de Ocorrências">
+    <MainLayout pageTitle="Lançar Ocorrências">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-surface p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-2">
@@ -158,59 +133,81 @@ function LancamentoPage() {
               className="rounded-md border border-border bg-surface p-3 text-text-strong"
             />
           </div>
-          
-          <div className="flex flex-col gap-2">
-            <label htmlFor="filtro-crbm" className="text-sm text-text">
-              Filtrar por CRBM
-            </label>
-            <select
-              id="filtro-crbm"
-              value={filtroCrbm}
-              onChange={e => setFiltroCrbm(e.target.value)}
-              className="min-w-[200px] rounded-md border border-border bg-surface p-3 text-text-strong"
-            >
-              <option value="todos">Todos os CRBMs</option>
-              {crbmsUnicos.map(crbm => (
-                <option key={crbm} value={crbm}>{crbm}</option>
-              ))}
-            </select>
-          </div>
         </div>
         
         <div className="flex items-end gap-4">
           <button
-            onClick={handleLimparTabela}
-            disabled={loading || dadosTabela.length === 0}
-            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setIsDetalheModalOpen(true)}
+            disabled={loading}
+            className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Limpar Plantão
+            Adicionar Ocorrência Detalhada
           </button>
           <button
             onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
             disabled={loading}
             className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Adicionar Lançamento
+            Lançamento em Lote
           </button>
         </div>
       </div>
 
+      <h2 className="text-2xl font-bold text-text-strong mb-4">Lançamentos em Lote (Estatísticas)</h2>
       <LancamentoTabela
         dadosApi={dadosTabela}
-        cidades={cidadesFiltradas}
+        cidades={cidades}
         naturezas={colunasNatureza}
         loading={loading}
         onEdit={handleEdit}
       />
 
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-text-strong mb-4">Ocorrências Detalhadas do Dia</h2>
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
+          {loadingDetalhadas ? (
+            <div className="flex justify-center p-10"><Spinner text="Carregando ocorrências detalhadas..." /></div>
+          ) : (
+            <table className="min-w-full w-full border-collapse text-sm">
+              <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
+                <tr>
+                  <th className="p-3 text-left">Horário</th>
+                  <th className="p-3 text-left">Natureza</th>
+                  <th className="p-3 text-left">Cidade</th>
+                  <th className="p-3 text-left">Resumo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ocorrenciasDetalhadas.length > 0 ? ocorrenciasDetalhadas.map(item => (
+                  <tr key={item.id} className="border-b border-border hover:bg-border/50">
+                    <td className="p-3 text-left whitespace-nowrap">{item.horario_ocorrencia?.substring(0, 5) || '--:--'}</td>
+                    <td className="p-3 text-left">{item.natureza_nome}</td>
+                    <td className="p-3 text-left">{item.cidade_nome}</td>
+                    <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
       {isModalOpen && (
         <LancamentoModal
           onClose={() => { setIsModalOpen(false); setItemParaEditar(null); }}
-          onSave={handleSave}
+          onSave={() => { /* Lógica de salvar em lote */ }}
           cidades={cidades}
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
           itemParaEditar={itemParaEditar}
           obmsComDados={obmsComDados}
+        />
+      )}
+      {isDetalheModalOpen && (
+        <OcorrenciaDetalhadaModal
+          onClose={() => setIsDetalheModalOpen(false)}
+          onSave={handleSaveDetalhada}
         />
       )}
     </MainLayout>

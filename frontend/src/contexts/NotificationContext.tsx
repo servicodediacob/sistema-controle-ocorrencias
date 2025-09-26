@@ -1,8 +1,13 @@
+// Caminho: frontend/src/contexts/NotificationContext.tsx
+
 import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 
-// --- Tipos (permanecem os mesmos) ---
-export type NotificationType = 'success' | 'error' | 'info';
+// ======================= INÍCIO DA CORREÇÃO =======================
+// Adicionado 'warning' aos tipos permitidos
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+// ======================= FIM DA CORREÇÃO =======================
+
 export interface INotification {
   id: number;
   message: string;
@@ -12,7 +17,6 @@ interface INotificationContext {
   addNotification: (message: string, type: NotificationType) => void;
 }
 
-// --- Contexto, Provedor e Hook (lógica permanece a mesma) ---
 const NotificationContext = createContext<INotificationContext | null>(null);
 
 interface NotificationProviderProps {
@@ -48,9 +52,6 @@ export const useNotification = (): INotificationContext => {
   return context;
 };
 
-
-// --- Componentes de UI com Styled Components ---
-
 const StyledContainer = styled.div`
   position: fixed;
   top: 20px;
@@ -61,7 +62,6 @@ const StyledContainer = styled.div`
   gap: 10px;
 `;
 
-// Animação de entrada do toast
 const toastIn = keyframes`
   from {
     transform: translateX(100%);
@@ -73,7 +73,6 @@ const toastIn = keyframes`
   }
 `;
 
-// Props para o componente Toast
 interface ToastProps {
   type: NotificationType;
 }
@@ -87,15 +86,17 @@ const StyledToast = styled.div<ToastProps>`
   max-width: 400px;
   animation: ${toastIn} 0.5s ease;
 
-  /* Estilos baseados na prop 'type' */
+  /* ======================= INÍCIO DA CORREÇÃO ======================= */
+  /* Adicionado o estilo para o tipo 'warning' */
   background-color: ${({ type }) => {
     if (type === 'success') return '#2a9d8f';
     if (type === 'error') return '#e76f51';
+    if (type === 'warning') return '#f4a261'; // Cor para aviso
     return '#3a7ca5'; // info
   }};
+  /* ======================= FIM DA CORREÇÃO ======================= */
 `;
 
-// Componente funcional que usa os componentes estilizados
 interface NotificationContainerProps {
   notifications: INotification[];
 }

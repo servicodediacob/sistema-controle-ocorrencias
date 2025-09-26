@@ -1,4 +1,4 @@
-// Caminho: backend/src/routes/dadosRoutes.ts
+// Caminho: api/src/routes/dadosRoutes.ts
 
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
@@ -18,8 +18,7 @@ import {
 
 // Controller do formulário de lançamento em lote e relatório estatístico
 import { 
-  // ===== CORREÇÃO APLICADA AQUI =====
-  registrarEstatisticasLote, // Nome corrigido
+  registrarEstatisticasLote,
   getRelatorioEstatisticas,
   getEstatisticasAgrupadasPorData,
   limparEstatisticasDoDia
@@ -33,6 +32,11 @@ import {
   deletarObitoRegistro,
   limparRegistrosPorData
 } from '../controllers/obitosRegistrosController';
+
+// ======================= INÍCIO DA ALTERAÇÃO =======================
+// 1. Importe o novo controller que criamos no passo anterior
+import { getRelatorioCompleto } from '../controllers/relatorioController';
+// ======================= FIM DA ALTERAÇÃO =======================
 
 const router = Router();
 
@@ -58,13 +62,18 @@ router.route('/ocorrencias/:id')
   .delete(proteger, deleteOcorrencia);
 
 // --- Rota para o formulário de lançamento em lote ---
-// ===== CORREÇÃO APLICADA AQUI =====
 router.route('/estatisticas/lote')
-  .post(proteger, registrarEstatisticasLote); // Nome corrigido
+  .post(proteger, registrarEstatisticasLote);
 
-// --- Rota para buscar os dados do relatório estatístico consolidado ---
+// --- Rota para buscar os dados do relatório estatístico consolidado (ANTIGA) ---
 router.route('/relatorio')
   .get(proteger, getRelatorioEstatisticas);
+
+// ======================= INÍCIO DA ALTERAÇÃO =======================
+// 2. Adicione a nova rota para o relatório completo
+router.route('/relatorio-completo')
+  .get(proteger, getRelatorioCompleto);
+// ======================= FIM DA ALTERAÇÃO =======================
 
 // --- Rota para buscar e limpar os dados da tabela de lançamentos ---
 router.route('/estatisticas/por-data')
@@ -80,11 +89,5 @@ router.route('/obitos-registros')
 router.route('/obitos-registros/:id')
   .put(proteger, atualizarObitoRegistro)
   .delete(proteger, deletarObitoRegistro);
-
-// --- Rota para o widget de óbitos do dia no Dashboard ---
-// (Esta rota estava duplicada, removi para evitar confusão)
-// router.route('/dashboard/obitos-do-dia')
-//   .get(proteger, getObitosPorData);
-
 
 export default router;

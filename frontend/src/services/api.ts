@@ -1,5 +1,7 @@
+// Caminho: frontend/src/services/api.ts
+
 import axios, { AxiosError } from 'axios';
-import { IUser } from '../contexts/AuthContext';
+import { IUser } from '../contexts/AuthProvider';
 
 // ===============================================
 // --- Interfaces de Tipos da API ---
@@ -16,10 +18,9 @@ export interface IDataApoio {
   descricao?: string;
 }
 
-// CORREÇÃO: A API retorna 'cidade_nome' para OBMs.
 export interface IObm {
   id: number;
-  cidade_nome: string; // A API retorna este campo para o nome da OBM/Unidade
+  cidade_nome: string;
   crbm_id: number;
   crbm_nome: string;
 }
@@ -51,7 +52,7 @@ export interface IOcorrencia {
   natureza_id: number;
   obm_id: number;
   natureza_descricao: string;
-  obm_nome: string; // CORREÇÃO: Adicionado para consistência com a resposta da API
+  obm_nome: string;
   crbm_nome: string;
 }
 
@@ -101,6 +102,12 @@ export interface IRelatorioRow {
   "4º CRBM": string; "5º CRBM": string; "6º CRBM": string;
   "7º CRBM": string; "8º CRBM": string; "9º CRBM": string;
   total_geral: string;
+}
+
+export interface IRelatorioCompleto {
+  estatisticas: IRelatorioRow[];
+  obitos: IObitoRegistro[];
+  destaques: IOcorrencia[];
 }
 
 export interface IEstatisticaLotePayload {
@@ -164,9 +171,9 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
 
-const api = axios.create({ baseURL });
+export const api = axios.create({ baseURL });
 
 api.interceptors.request.use(
   (config) => {
@@ -179,7 +186,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-const extractErrorMessage = (error: unknown): string => {
+export const extractErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
     return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`;
@@ -264,7 +271,14 @@ export const limparEstatisticasDoDia = async (data: string, obm_id?: number): Pr
 };
 
 // Relatórios
-export const getRelatorio = async (data_inicio: string, data_fim: string): Promise<IRelatorioRow[]> => api.get('/relatorio', { params: { data_inicio, data_fim } }).then(res => res.data);
+export const getRelatorioCompleto = async (data_inicio: string, data_fim: string): Promise<IRelatorioCompleto> => {
+  try {
+    const response = await api.get('/relatorio-completo', { params: { data_inicio, data_fim } });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
 
 // Registros de Óbitos
 export const getObitosPorData = async (data: string): Promise<IObitoRegistro[]> => api.get('/obitos-registros', { params: { data } }).then(res => res.data);
@@ -273,26 +287,10 @@ export const atualizarObitoRegistro = async (id: number, payload: IObitoRegistro
 export const deletarObitoRegistro = async (id: number): Promise<{ message: string }> => api.delete(`/obitos-registros/${id}`).then(res => res.data);
 export const limparRegistrosDoDia = async (data: string): Promise<{ message: string }> => api.delete('/obitos-registros', { params: { data } }).then(res => res.data);
 
-// ===================================================================
-// --- ADIÇÃO: Funções para Gerenciar Dados de Apoio (OBMs e Naturezas) ---
-// ===================================================================
-
-// OBMs (Unidades)
-export const createUnidade = async (data: { nome: string; crbm_id: number }): Promise<IObm> => 
-  api.post('/unidades', data).then(res => res.data);
-
-export const updateUnidade = async (id: number, data: { nome: string; crbm_id: number }): Promise<IObm> => 
-  api.put(`/unidades/${id}`, data).then(res => res.data);
-
-export const deleteUnidade = async (id: number): Promise<{ message: string }> => 
-  api.delete(`/unidades/${id}`).then(res => res.data);
-
-// Naturezas
-export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => 
-  api.post('/naturezas', data).then(res => res.data);
-
-export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => 
-  api.put(`/naturezas/${id}`, data).then(res => res.data);
-
-export const deleteNatureza = async (id: number): Promise<{ message: string }> => 
-  api.delete(`/naturezas/${id}`).then(res => res.data);
+// Gestão de Dados de Apoio (OBMs e Naturezas)
+export const createUnidade = async (data: { nome: string; crbm_id: number }): Promise<IObm> => api.post('/unidades', data).then(res => res.data);
+export const updateUnidade = async (id: number, data: { nome: string; crbm_id: number }): Promise<IObm> => api.put(`/unidades/${id}`, data).then(res => res.data);
+export const deleteUnidade = async (id: number): Promise<{ message: string }> => api.delete(`/unidades/${id}`).then(res => res.data);
+export const createNatureza = async (data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.post('/naturezas', data).then(res => res.data);
+export const updateNatureza = async (id: number, data: { grupo: string; subgrupo: string }): Promise<IDataApoio> => api.put(`/naturezas/${id}`, data).then(res => res.data);
+export const deleteNatureza = async (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`).then(res => res.data);

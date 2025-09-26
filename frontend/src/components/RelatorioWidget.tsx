@@ -1,12 +1,16 @@
 // Caminho: frontend/src/components/RelatorioWidget.tsx
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getRelatorio, IRelatorioRow } from '../services/api';
+// ======================= INÍCIO DA CORREÇÃO =======================
+import { IRelatorioRow } from '../services/api';
+// A função de busca agora vem do seu próprio serviço
+import { getRelatorioCompleto } from '../services/relatorioService';
+// ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
 import Spinner from './Spinner';
-import Icon from './Icon'; // Importamos o componente Icon
+import Icon from './Icon';
 
-// --- Componente SubgrupoRow (permanece o mesmo) ---
+// ... (Componentes SubgrupoRow e ReportCard permanecem os mesmos)
 const crbmHeaders: (keyof IRelatorioRow)[] = ["1º CRBM", "2º CRBM", "3º CRBM", "4º CRBM", "5º CRBM", "6º CRBM", "7º CRBM", "8º CRBM", "9º CRBM"];
 
 interface SubgrupoRowProps {
@@ -50,7 +54,7 @@ const SubgrupoRow: React.FC<SubgrupoRowProps> = ({ row }) => {
                 <span className="font-mono">{row.noturno}</span>
             </div>
             {crbmHeaders.map(crbm => {
-              const value = Number(row[crbm]);
+              const value = Number(row[crbm as keyof IRelatorioRow]);
               if (value === 0) return null;
               return (
                 <div key={crbm as string} className="flex justify-between">
@@ -66,9 +70,6 @@ const SubgrupoRow: React.FC<SubgrupoRowProps> = ({ row }) => {
   );
 };
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-
-// --- NOVO COMPONENTE: ReportCard (agora funciona como um acordeão) ---
 interface ReportCardProps {
   grupo: string;
   subgrupos: IRelatorioRow[];
@@ -113,7 +114,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ grupo, subgrupos }) => {
   );
 };
 
-// --- Componente RelatorioWidget (lógica principal) ---
+
 function RelatorioWidget() {
   const [reportData, setReportData] = useState<IRelatorioRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,9 +123,13 @@ function RelatorioWidget() {
   const fetchReport = useCallback(async () => {
     if (reportData.length === 0) setLoading(true);
     try {
+      // ======================= INÍCIO DA CORREÇÃO =======================
       const today = new Date().toISOString().split('T')[0];
-      const data = await getRelatorio(today, today);
-      setReportData(data);
+      // Usamos a nova função que busca todos os dados
+      const data = await getRelatorioCompleto(today, today);
+      // Pegamos apenas os dados de estatísticas para este widget
+      setReportData(data.estatisticas);
+      // ======================= FIM DA CORREÇÃO =======================
     } catch (error) {
       addNotification('Falha ao carregar relatório diário.', 'error');
     } finally {
@@ -169,14 +174,11 @@ function RelatorioWidget() {
         <div className="flex justify-center p-10"><Spinner text="Carregando relatório..." /></div>
       ) : reportData.length > 0 ? (
         <div className="mt-4">
-          {/* RENDERIZAÇÃO PARA MOBILE (AGORA COM ACORDEÃO) */}
           <div className="space-y-4 lg:hidden">
             {Object.entries(groupedData).map(([grupo, subgrupos]) => (
               <ReportCard key={grupo} grupo={grupo} subgrupos={subgrupos} />
             ))}
           </div>
-
-          {/* RENDERIZAÇÃO PARA DESKTOP (Tabela - sem alteração) */}
           <div className="hidden overflow-x-auto lg:block">
             <table className="min-w-full w-full border-collapse text-sm">
               <thead className="bg-gray-100 dark:bg-gray-900/50 text-text-strong">
@@ -204,7 +206,7 @@ function RelatorioWidget() {
                         <td>{row.diurno}</td>
                         <td>{row.noturno}</td>
                         <td className="font-semibold">{row.total_capital}</td>
-                        {crbmHeaders.map(h => <td key={h as string}>{row[h]}</td>)}
+                        {crbmHeaders.map(h => <td key={h as string}>{row[h as keyof IRelatorioRow]}</td>)}
                         <td className="font-bold bg-blue-900/30">{row.total_geral}</td>
                       </tr>
                     ))}
@@ -222,4 +224,3 @@ function RelatorioWidget() {
 }
 
 export default RelatorioWidget;
-// ======================= FIM DA CORREÇÃO =======================
