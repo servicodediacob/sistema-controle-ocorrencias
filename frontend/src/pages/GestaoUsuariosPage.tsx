@@ -1,12 +1,13 @@
 // Caminho: frontend/src/pages/GestaoUsuariosPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
-import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser, getCidades, ICidade } from '../services/api'; // 1. IMPORTAR getCidades e ICidade
+import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser, getCidades, ICidade } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import UsuarioModal from '../components/UsuarioModal';
 import Spinner from '../components/Spinner';
 
+// --- INÍCIO DA ALTERAÇÃO: Componente de Card para Mobile ---
 const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () => void; }> = ({ usuario, onEdit, onDelete }) => {
   return (
     <div className="rounded-lg border border-border bg-surface p-4 text-text">
@@ -14,8 +15,7 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
         <div>
           <p className="font-bold text-text-strong">{usuario.nome}</p>
           <p className="text-sm">{usuario.email}</p>
-          {/* Exibe a OBM do usuário no card */}
-          <p className="text-sm text-gray-400 dark:text-gray-500">{ (usuario as any).obm_nome || 'Sem OBM'}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{(usuario as any).obm_nome || 'Sem OBM'}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200'}`}>
           {usuario.role}
@@ -32,10 +32,11 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
     </div>
   );
 };
+// --- FIM DA ALTERAÇÃO ---
 
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
-  const [cidades, setCidades] = useState<ICidade[]>([]); // 2. ESTADO PARA ARMAZENAR AS CIDADES (OBMs)
+  const [cidades, setCidades] = useState<ICidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState<IUser | null>(null);
@@ -44,7 +45,6 @@ function GestaoUsuariosPage(): ReactElement {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      // 3. BUSCAR USUÁRIOS E CIDADES EM PARALELO
       const [usersData, cidadesData] = await Promise.all([
         getUsuarios(),
         getCidades()
@@ -117,7 +117,9 @@ function GestaoUsuariosPage(): ReactElement {
       {loading ? (
         <div className="flex justify-center p-10"><Spinner text="Carregando usuários..." /></div>
       ) : (
+        // --- INÍCIO DA ALTERAÇÃO: Container para as visualizações ---
         <div className="bg-surface border border-border rounded-lg p-0 md:border-none md:bg-transparent">
+          {/* Tabela para Desktop */}
           <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-gray-200 dark:bg-gray-800">
@@ -150,6 +152,7 @@ function GestaoUsuariosPage(): ReactElement {
             </table>
           </div>
 
+          {/* Cards para Mobile */}
           <div className="space-y-4 md:hidden">
             {usuarios.map(user => (
               <UsuarioCard
@@ -161,12 +164,13 @@ function GestaoUsuariosPage(): ReactElement {
             ))}
           </div>
         </div>
+        // --- FIM DA ALTERAÇÃO ---
       )}
 
       {isModalOpen && (
         <UsuarioModal
           usuario={usuarioEmEdicao}
-          cidades={cidades} // 4. PASSAR A LISTA DE CIDADES PARA O MODAL
+          cidades={cidades}
           onClose={handleCloseModal}
           onSave={handleSave}
         />

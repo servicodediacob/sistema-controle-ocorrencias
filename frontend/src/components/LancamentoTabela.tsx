@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
 
-// --- Interfaces (sem alterações) ---
+// --- CORREÇÃO 1: MOVER A INTERFACE PARA FORA DO COMPONENTE ---
+// A interface de props deve ser definida no escopo do módulo para ser acessível.
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
@@ -14,7 +15,7 @@ interface LancamentoTabelaProps {
   showActions?: boolean;
 }
 
-// --- Componente MobileCard (sem alterações) ---
+// --- Interface para as props do Card ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
@@ -23,11 +24,11 @@ interface CardProps {
   showActions: boolean;
 }
 
+// --- Componente MobileCard ---
 const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, showActions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
 
-  // Classes de cor dinâmicas para o card
   const cardClasses = hasData 
     ? 'border-green-700/50 dark:bg-green-900/20 bg-green-50' 
     : 'border-red-800/50 dark:bg-red-900/20 bg-red-50';
@@ -92,20 +93,22 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   }
 
   const dadosMapa = useMemo(() => {
-    return dadosApi.reduce((acc, item) => {
+    // --- CORREÇÃO 2: ADICIONAR TIPOS AO REDUCE ---
+    return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
       const key = `${item.cidade_nome}|${item.natureza_nome}`;
       acc[key] = item.quantidade;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
   }, [dadosApi]);
 
   const cidadesAgrupadas = useMemo(() => {
-    return cidades.reduce((acc, cidade) => {
+    // --- CORREÇÃO 3: ADICIONAR TIPOS AO REDUCE ---
+    return cidades.reduce((acc: Record<string, ICidade[]>, cidade: ICidade) => {
       const crbm = cidade.crbm_nome;
       if (!acc[crbm]) acc[crbm] = [];
       acc[crbm].push(cidade);
       return acc;
-    }, {} as Record<string, ICidade[]>);
+    }, {});
   }, [cidades]);
 
   const totais = useMemo(() => {
@@ -172,14 +175,14 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
       {/* VISUALIZAÇÃO DESKTOP */}
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
         <table className="min-w-[1300px] w-full border-collapse">
-          <thead className="bg-gray-700 text-white dark:bg-gray-700 dark:text-white light:bg-blue-600 light:text-white">
+          <thead className="bg-gray-700 text-white">
             <tr>
-              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong light:bg-blue-600 light:text-white">CRBM</th>
-              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong light:bg-blue-600 light:text-white">Quartel / Cidade</th>
+              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
+              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase light:bg-blue-600 light:text-white">{nat.abreviacao}</th>
+                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
               ))}
-              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase light:bg-blue-600 light:text-white">TOTAL</th>
+              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
               {showActions && (
                 <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
               )}
@@ -245,7 +248,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
           </tfoot>
         </table>
       </div>
-    </> // ======================= CORREÇÃO APLICADA =======================
+    </>
   );
 };
 

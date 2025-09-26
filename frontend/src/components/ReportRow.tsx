@@ -26,19 +26,19 @@ const ReportRow: React.FC<ReportRowProps> = ({
 
   // Define as classes de estilo com base no tipo de linha
   let rowClasses = 'text-center';
-  let firstCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-gray-800 p-3 text-left align-top';
-  let secondCellClasses = 'sticky left-[250px] z-10 border-r border-gray-600 bg-gray-800 p-3 text-left';
+  let firstCellClasses = 'sticky left-0 z-10 border-r border-border bg-surface p-3 text-left align-top';
+  let secondCellClasses = 'sticky left-[250px] z-10 border-r border-border bg-surface p-3 text-left';
 
   if (isSubtotal) {
     rowClasses += ' bg-blue-800 font-bold text-white';
-    firstCellClasses = ''; // Não renderiza a primeira célula no subtotal
-    secondCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-blue-800 p-3 text-right';
+    firstCellClasses = '';
+    secondCellClasses = 'sticky left-0 z-10 border-r border-gray-700 bg-blue-800 p-3 text-right';
   } else if (isTotalGeral) {
     rowClasses += ' bg-yellow-600 font-bold text-black';
     firstCellClasses = 'sticky left-0 z-10 border-r border-gray-600 bg-yellow-600 p-3 text-center';
-    secondCellClasses = ''; // Não renderiza a segunda célula no total geral
+    secondCellClasses = '';
   } else {
-    rowClasses += ' border-b border-gray-700 hover:bg-gray-700/50';
+    rowClasses += ' border-b border-border hover:bg-border/50';
   }
 
   // Renderização para a linha de TOTAL GERAL
