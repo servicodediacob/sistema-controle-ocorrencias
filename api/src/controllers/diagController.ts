@@ -1,54 +1,105 @@
+// Caminho: api/src/controllers/diagController.ts
+
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import db from '../db';
 import logger from '../config/logger';
 
-// Função auxiliar para medir o tempo de uma operação
+// Função auxiliar para medir o tempo de uma operação em milissegundos
 const timePromise = async (promise: Promise<any>): Promise<[any, number]> => {
   const start = process.hrtime();
-  const result = await promise;
-  const end = process.hrtime(start);
-  const durationMs = (end[0] * 1000) + (end[1] / 1_000_000);
-  return [result, parseFloat(durationMs.toFixed(2))];
+  try {
+    const result = await promise;
+    const end = process.hrtime(start);
+    const durationMs = (end[0] * 1000) + (end[1] / 1_000_000);
+    return [result, parseFloat(durationMs.toFixed(2))];
+  } catch (error) {
+    const end = process.hrtime(start);
+    const durationMs = (end[0] * 1000) + (end[1] / 1_000_000);
+    // Re-lança o erro para ser pego pelo bloco catch principal, mas com a duração
+    throw { error, duration: parseFloat(durationMs.toFixed(2)) };
+  }
 };
+
+// Interface para a estrutura do nosso relatório de diagnóstico
+interface IDiagnosticCheck {
+  status: 'ok' | 'error' | 'degraded';
+  message: string;
+  durationMs?: number;
+  details?: string;
+}
+
+interface IDiagnosticsReport {
+  geral: {
+    status: 'ok' | 'error' | 'degraded';
+    timestamp: string;
+  };
+  servicos: {
+    database: IDiagnosticCheck;
+    auth: IDiagnosticCheck;
+    // Outros serviços podem ser adicionados aqui
+  };
+}
 
 export const runDiagnostics = async (_req: Request, res: Response): Promise<void> => {
   logger.info('Iniciando diagnóstico geral do sistema...');
   
-  const diagnostics = {
+  const report: IDiagnosticsReport = {
     geral: {
       status: 'ok',
       timestamp: new Date().toISOString(),
     },
-    ambiente: {
-      nodeVersion: process.version,
-      platform: process.platform,
-      environment: process.env.NODE_ENV || 'development',
+    servicos: {
+      database: { status: 'degraded', message: 'Verificação não executada' },
+      auth: { status: 'degraded', message: 'Verificação não executada' },
     },
-    database: {
-      status: 'desconhecido',
-      pingMs: 0,
-      message: '',
-    },
-    // Adicione outras verificações aqui no futuro
   };
 
   // 1. Diagnóstico do Banco de Dados
   try {
     const [, duration] = await timePromise(db.query('SELECT NOW()'));
-    diagnostics.database.status = 'ok';
-    diagnostics.database.pingMs = duration;
-    diagnostics.database.message = 'Conexão com o banco de dados bem-sucedida.';
-  } catch (error) {
-    diagnostics.geral.status = 'error';
-    diagnostics.database.status = 'error';
-    diagnostics.database.message = (error instanceof Error) ? error.message : 'Erro desconhecido na conexão.';
-    logger.error({ err: error }, 'Diagnóstico falhou na verificação do banco de dados.');
+    report.servicos.database = {
+      status: 'ok',
+      message: 'Conexão bem-sucedida.',
+      durationMs: duration,
+    };
+  } catch (e: any) {
+    report.servicos.database = {
+      status: 'error',
+      message: 'Falha na conexão com o banco de dados.',
+      durationMs: e.duration,
+      details: e.error instanceof Error ? e.error.message : 'Erro desconhecido.',
+    };
+    report.geral.status = 'error';
+    logger.error({ err: e.error }, 'Diagnóstico falhou na verificação do banco de dados.');
   }
 
-  // Se o status geral mudou para 'error', o código de status HTTP deve ser de erro
-  const httpStatus = diagnostics.geral.status === 'ok' ? 200 : 503;
+  // 2. Diagnóstico do Sistema de Autenticação (JWT)
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('A variável de ambiente JWT_SECRET não está definida.');
+    }
+    // Simula a criação e verificação de um token
+    const testPayload = { id: 'test' };
+    const testToken = jwt.sign(testPayload, secret, { expiresIn: '1s' });
+    jwt.verify(testToken, secret);
+    report.servicos.auth = {
+      status: 'ok',
+      message: 'Segredo JWT está configurado e funcional.',
+    };
+  } catch (error: any) {
+    report.servicos.auth = {
+      status: 'error',
+      message: 'Falha no sistema de autenticação.',
+      details: error.message,
+    };
+    report.geral.status = 'error';
+    logger.error({ err: error }, 'Diagnóstico falhou na verificação do JWT.');
+  }
 
-  logger.info(`Diagnóstico concluído com status: ${diagnostics.geral.status}` );
+  const httpStatus = report.geral.status === 'ok' ? 200 : 503; // 503 Service Unavailable
+  logger.info(`Diagnóstico concluído com status: ${report.geral.status}` );
   
-  res.status(httpStatus ).json(diagnostics);
+  res.status(httpStatus ).json(report);
 };

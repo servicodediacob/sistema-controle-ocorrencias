@@ -1,10 +1,10 @@
-// frontend/src/components/Sidebar.tsx
+// Caminho: frontend/src/components/Sidebar.tsx
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import Icon from './Icon';
-// A importação do ThemeToggle foi REMOVIDA.
+import SystemStatusIndicator from './SystemStatusIndicator';
 
 // Ícones (sem alteração)
 const ICONS = {
@@ -77,27 +77,37 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
         })}
       </nav>
 
+      {/* Espaçador que empurra o conteúdo para baixo */}
       <div className="flex-grow" />
 
-      {/* A DIV que continha o ThemeToggle foi completamente removida */}
+      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+      {/* Container para os itens inferiores da sidebar */}
+      <div className="flex flex-col gap-4 border-t border-border pt-4">
+        {/* Informações do usuário */}
+        <div className={`text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
+          <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
+        </div>
 
-      <div className={`border-t border-border pt-4 mt-4 text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
-        <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
-      </div>
+        {/* Botão de Recolher/Expandir para Desktop */}
+        <div className="hidden lg:block">
+          <NavButton onClick={() => setIsCollapsed(!isCollapsed)} isCollapsed={isCollapsed} isActive={false} title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}>
+            <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Recolher</span>
+          </NavButton>
+        </div>
 
-      <div className="hidden lg:block mt-4">
-        <NavButton onClick={() => setIsCollapsed(!isCollapsed)} isCollapsed={isCollapsed} isActive={false} title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}>
-          <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Recolher</span>
-        </NavButton>
-      </div>
+        {/* Indicador de Status do Sistema */}
+        <SystemStatusIndicator isCollapsed={isCollapsed} />
 
-      <div className="mt-2">
-        <NavButton onClick={handleLogout} isCollapsed={isCollapsed} isActive={false} title="Sair" className="!bg-red-600 hover:!bg-red-700 !text-white">
-          <Icon path={ICONS.logout} />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Sair</span>
-        </NavButton>
+        {/* Botão de Sair */}
+        <div className="mt-2">
+          <NavButton onClick={handleLogout} isCollapsed={isCollapsed} isActive={false} title="Sair" className="!bg-red-600 hover:!bg-red-700 !text-white">
+            <Icon path={ICONS.logout} />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Sair</span>
+          </NavButton>
+        </div>
       </div>
+      {/* ======================= FIM DA CORREÇÃO ======================= */}
     </aside>
   );
 };

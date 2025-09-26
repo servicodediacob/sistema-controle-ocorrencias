@@ -1,3 +1,5 @@
+// Caminho: api/src/controllers/acessoController.ts
+
 import { Request, Response } from 'express';
 // --- INÍCIO DA CORREÇÃO ---
 // 1. Importamos a interface RequestWithUser
@@ -8,7 +10,6 @@ import bcrypt from 'bcryptjs';
 
 // 2. Usamos a interface importada onde necessário
 export const solicitarAcesso = async (req: Request, res: Response): Promise<void> => {
-    // ... (código interno sem alteração)
     const { nome, email, senha, obm_id } = req.body;
 
     if (!nome || !email || !senha || !obm_id) {
@@ -51,7 +52,6 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
 };
 
 export const listarSolicitacoes = async (_req: Request, res: Response): Promise<void> => {
-    // ... (código interno sem alteração)
     try {
         const query = `
             SELECT s.id, s.nome, s.email, s.status, s.data_solicitacao, o.nome as obm_nome

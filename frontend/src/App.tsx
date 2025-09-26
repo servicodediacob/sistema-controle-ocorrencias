@@ -1,8 +1,8 @@
 // Caminho: frontend/src/App.tsx
 
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/useAuth';
-import React from 'react';
 
 // Importação das Páginas
 import LoginPage from './pages/LoginPage';
@@ -18,6 +18,7 @@ import GestaoAcessoPage from './pages/GestaoAcessoPage';
 
 // Importação de Componentes Globais
 import { useSocket } from './hooks/useSocket';
+// A importação do SystemStatusIndicator foi REMOVIDA daqui.
 
 /**
  * Componente de Rota Privada
@@ -32,12 +33,11 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
 }
 
 /**
- * Componente auxiliar para inicializar o socket quando o usuário está autenticado.
- * Sua única responsabilidade é chamar o hook useSocket.
+ * Componente auxiliar para inicializar o socket.
  */
 const SocketInitializer: React.FC = () => {
-  useSocket(); // Ativa o hook, estabelecendo a conexão do socket
-  return null; // Este componente não renderiza nada na tela
+  useSocket();
+  return null;
 };
 
 /**
@@ -48,12 +48,8 @@ function App(): React.ReactElement {
 
   return (
     <Router>
-      {/* Renderiza os componentes globais apenas se o usuário estiver autenticado */}
-      {isAuthenticated && (
-        <>
-          <SocketInitializer />
-        </>
-      )}
+      {/* O SystemStatusIndicator foi REMOVIDO daqui */}
+      {isAuthenticated && <SocketInitializer />}
       
       <Routes>
         {/* --- Rotas Públicas --- */}

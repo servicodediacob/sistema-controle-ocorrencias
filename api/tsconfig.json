@@ -1,3 +1,4 @@
+// Caminho: api/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -15,14 +16,12 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]
-    },
-    // --- ADIÇÃO CRÍTICA AQUI ---
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    }
+    // A propriedade "typeRoots" foi completamente removida.
   },
   "include": [
-    // --- ADIÇÃO CRÍTICA AQUI ---
-    "src/**/*.ts", 
-    "src/**/*.d.ts" 
+    "src/**/*.ts"
+    // A referência a "src/**/*.d.ts" também é removida, pois não temos mais arquivos de declaração personalizados.
   ],
   "exclude": [
     "node_modules",

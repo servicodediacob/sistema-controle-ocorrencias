@@ -1,29 +1,26 @@
 // Caminho: frontend/src/pages/LancamentoPage.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  ICidade,
-  getEstatisticasAgrupadasPorData,
-  IEstatisticaAgrupada,
-} from '../services/api';
-// ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Importar do novo serviço dedicado
-import {
-  IOcorrenciaDetalhada,
-  IOcorrenciaDetalhadaPayload,
-  criarOcorrenciaDetalhada,
-  getOcorrenciasDetalhadas
-} from '../services/ocorrenciaDetalhadaService';
-// ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
+import { getEstatisticasAgrupadasPorData, ICidade, IEstatisticaAgrupada } from '../services/api';
+import { 
+  IOcorrenciaDetalhada, 
+  IOcorrenciaDetalhadaPayload, 
+  criarOcorrenciaDetalhada, 
+  getOcorrenciasDetalhadas,
+  atualizarOcorrenciaDetalhada,
+  deletarOcorrenciaDetalhada
+} from '../services/ocorrenciaDetalhadaService';
+
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
 import LancamentoTabela from '../components/LancamentoTabela';
 import Spinner from '../components/Spinner';
 import OcorrenciaDetalhadaModal from '../components/OcorrenciaDetalhadaModal';
+import ViewOcorrenciaDetalhadaModal from '../components/ViewOcorrenciaDetalhadaModal';
+import Icon from '../components/Icon';
 
-// ... (const ORDEM_COLUNAS e o resto do componente permanecem os mesmos)
 const ORDEM_COLUNAS = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
     { subgrupo: 'Incêndio', abreviacao: 'INC. OUT.' },
@@ -38,9 +35,8 @@ const ORDEM_COLUNAS = [
     { subgrupo: 'Atividades Técnicas', abreviacao: 'AT. OUT' },
     { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
     { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPO' },
-    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
-    { subgrupo: 'Defesa Civil', abreviacao: 'DC OUT' },
+    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, 
+    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, 
     { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, 
     { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
 ];
@@ -58,8 +54,9 @@ function LancamentoPage() {
   const [isDetalheModalOpen, setIsDetalheModalOpen] = useState(false);
   const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
   const [loadingDetalhadas, setLoadingDetalhadas] = useState(true);
-
-  const colunasNatureza = ORDEM_COLUNAS;
+  
+  const [ocorrenciaParaEditar, setOcorrenciaParaEditar] = useState<IOcorrenciaDetalhada | null>(null);
+  const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
   const fetchDadosTabela = useCallback(async () => {
     if (!dataRegistro) return;
@@ -100,15 +97,34 @@ function LancamentoPage() {
     return new Set(ids);
   }, [dadosTabela, cidades]);
 
-  const handleSaveDetalhada = async (payload: IOcorrenciaDetalhadaPayload) => {
+  const handleSaveDetalhada = async (payload: IOcorrenciaDetalhadaPayload, id?: number) => {
     try {
-      await criarOcorrenciaDetalhada(payload);
-      addNotification('Ocorrência detalhada registrada com sucesso!', 'success');
+      if (id) {
+        await atualizarOcorrenciaDetalhada(id, payload);
+        addNotification('Ocorrência atualizada com sucesso!', 'success');
+      } else {
+        await criarOcorrenciaDetalhada(payload);
+        addNotification('Ocorrência detalhada registrada com sucesso!', 'success');
+      }
       setIsDetalheModalOpen(false);
+      setOcorrenciaParaEditar(null);
       fetchOcorrenciasDetalhadas();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao salvar a ocorrência.';
       addNotification(message, 'error');
+    }
+  };
+
+  const handleDeleteDetalhada = async (id: number) => {
+    if (window.confirm('Tem certeza que deseja excluir esta ocorrência detalhada?')) {
+      try {
+        await deletarOcorrenciaDetalhada(id);
+        addNotification('Ocorrência excluída com sucesso!', 'success');
+        fetchOcorrenciasDetalhadas();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao excluir a ocorrência.';
+        addNotification(message, 'error');
+      }
     }
   };
 
@@ -137,7 +153,7 @@ function LancamentoPage() {
         
         <div className="flex items-end gap-4">
           <button
-            onClick={() => setIsDetalheModalOpen(true)}
+            onClick={() => { setOcorrenciaParaEditar(null); setIsDetalheModalOpen(true); }}
             disabled={loading}
             className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -157,7 +173,7 @@ function LancamentoPage() {
       <LancamentoTabela
         dadosApi={dadosTabela}
         cidades={cidades}
-        naturezas={colunasNatureza}
+        naturezas={ORDEM_COLUNAS}
         loading={loading}
         onEdit={handleEdit}
       />
@@ -175,6 +191,7 @@ function LancamentoPage() {
                   <th className="p-3 text-left">Natureza</th>
                   <th className="p-3 text-left">Cidade</th>
                   <th className="p-3 text-left">Resumo</th>
+                  <th className="p-3 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,9 +201,22 @@ function LancamentoPage() {
                     <td className="p-3 text-left">{item.natureza_nome}</td>
                     <td className="p-3 text-left">{item.cidade_nome}</td>
                     <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
+                    <td className="p-3 text-center">
+                      <div className="flex justify-center items-center gap-2">
+                        <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-blue-400 hover:text-blue-300">
+                          <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={20} />
+                        </button>
+                        <button onClick={() => { setOcorrenciaParaEditar(item); setIsDetalheModalOpen(true); }} title="Editar" className="text-yellow-400 hover:text-yellow-300">
+                          <Icon path="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" size={20} />
+                        </button>
+                        <button onClick={() => handleDeleteDetalhada(item.id)} title="Excluir" className="text-red-500 hover:text-red-400">
+                          <Icon path="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" size={20} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
                 )}
               </tbody>
             </table>
@@ -206,8 +236,15 @@ function LancamentoPage() {
       )}
       {isDetalheModalOpen && (
         <OcorrenciaDetalhadaModal
-          onClose={() => setIsDetalheModalOpen(false)}
+          onClose={() => { setIsDetalheModalOpen(false); setOcorrenciaParaEditar(null); }}
           onSave={handleSaveDetalhada}
+          ocorrenciaParaEditar={ocorrenciaParaEditar}
+        />
+      )}
+      {ocorrenciaParaVisualizar && (
+        <ViewOcorrenciaDetalhadaModal
+          ocorrencia={ocorrenciaParaVisualizar}
+          onClose={() => setOcorrenciaParaVisualizar(null)}
         />
       )}
     </MainLayout>
