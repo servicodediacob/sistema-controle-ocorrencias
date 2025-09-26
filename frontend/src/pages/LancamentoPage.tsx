@@ -12,26 +12,29 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
-// ======================= CORREÇÃO APLICADA =======================
-// A importação padrão agora funciona, pois o componente LancamentoTabela está sintaticamente correto.
 import LancamentoTabela from '../components/LancamentoTabela';
+// ======================= INÍCIO DA CORREÇÃO =======================
+// O caminho foi corrigido de './Spinner' para '../components/Spinner'
+import Spinner from '../components/Spinner';
+// ======================= FIM DA CORREÇÃO =======================
 
-// ... (constante ORDEM_COLUNAS permanece a mesma) ...
 const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
-    { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
+    { subgrupo: 'Incêndio', abreviacao: 'INC. OUT.' },
     { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
-    { subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
+    { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
+    { subgrupo: 'Busca e Salvamento', abreviacao: 'B. SALV.' },
     { subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
-    { subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
+    { subgrupo: 'Ações Preventivas', abreviacao: 'AP. OUT' },
     { subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
     { subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
     { subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
-    { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
+    { subgrupo: 'Atividades Técnicas', abreviacao: 'AT. OUT' },
     { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
     { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, 
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, 
+    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPO' },
+    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+    { subgrupo: 'Defesa Civil', abreviacao: 'DC OUT' },
     { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, 
     { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
 ];
@@ -78,7 +81,7 @@ function LancamentoPage() {
   const handleSave = async (formData: any) => {
     const payload = {
       data_registro: formData.data_ocorrencia,
-      obm_id: formData.cidade_id,
+      obm_id: formData.obm_id,
       estatisticas: Object.entries(formData.quantidades)
         .map(([natureza_id, quantidadeStr]) => ({
           natureza_id: parseInt(natureza_id, 10),

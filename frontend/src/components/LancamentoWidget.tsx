@@ -7,8 +7,6 @@ import { useNotification } from '../contexts/NotificationContext';
 import LancamentoTabela from './LancamentoTabela';
 import Spinner from './Spinner';
 
-// ======================= CORREÇÃO APLICADA =======================
-// A constante ORDEM_COLUNAS foi adicionada de volta ao arquivo.
 const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
     { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
@@ -27,9 +25,9 @@ const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
     { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, 
     { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
 ];
-// ======================= FIM DA CORREÇÃO =======================
 
 function LancamentoWidget() {
+  // A constante 'cidades' agora vem do useData e contém a lista completa.
   const { cidades } = useData();
   const { addNotification } = useNotification();
 
@@ -55,15 +53,19 @@ function LancamentoWidget() {
   }, [fetchDadosTabela]);
 
   const crbmsUnicos = useMemo(() => [...new Set(cidades.map(c => c.crbm_nome))], [cidades]);
+  
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // A lógica de filtragem agora opera sobre a lista completa de 'cidades' vinda do contexto.
   const cidadesFiltradas = useMemo(() => {
     if (filtroCrbm === 'todos') {
       return cidades;
     }
     return cidades.filter(c => c.crbm_nome === filtroCrbm);
   }, [cidades, filtroCrbm]);
+  // ======================= FIM DA CORREÇÃO =======================
 
-  const handleEditPlaceholder = (cidade: ICidade) => {
-    addNotification(`Para editar, acesse a página "Lançar Ocorrências" e selecione a cidade ${cidade.cidade_nome}.`, 'info');
+  const handleEditPlaceholder = () => {
+    addNotification(`Para editar, acesse a página "Lançar Ocorrências".`, 'info');
   };
 
   return (
@@ -108,6 +110,7 @@ function LancamentoWidget() {
           <Spinner text="Carregando espelho de lançamentos..." />
         </div>
       ) : (
+        // A prop 'cidades' agora passa a lista filtrada e completa.
         <LancamentoTabela
           dadosApi={dadosTabela}
           cidades={cidadesFiltradas}

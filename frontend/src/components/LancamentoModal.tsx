@@ -3,18 +3,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ICidade, IDataApoio } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth'; // 1. IMPORTAR O useAuth
+import { useAuth } from '../contexts/useAuth';
 import SearchableSelect from './SearchableSelect';
 
+// ======================= INÍCIO DA CORREÇÃO =======================
+// 1. Definimos a ordem de exibição desejada para os grupos.
 const ORDEM_GRUPOS = [
   'Resgate',
   'Incêndio',
   'Busca e Salvamento',
-  'Atividades Preventivas',
+  'Ações Preventivas', // Nome corrigido
   'Atividades Técnicas',
   'Produtos Perigosos',
   'Defesa Civil',
 ];
+// ======================= FIM DA CORREÇÃO =======================
 
 interface LancamentoModalProps {
   cidades: ICidade[];
@@ -34,7 +37,7 @@ function LancamentoModal({
   obmsComDados,
 }: LancamentoModalProps) {
   const { addNotification } = useNotification();
-  const { usuario } = useAuth(); // 2. OBTER O USUÁRIO LOGADO
+  const { usuario } = useAuth();
   const isEditing = !!itemParaEditar;
 
   const getInitialQuantidades = () => {
@@ -53,13 +56,11 @@ function LancamentoModal({
 
   const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
   
-  // --- INÍCIO DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND ---
   const [cidadeId, setCidadeId] = useState<number | ''>(() => {
     if (isEditing) return itemParaEditar.cidade.id;
     if (usuario?.role === 'user' && usuario.obm_id) return usuario.obm_id;
     return '';
   });
-  // --- FIM DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND ---
 
   const [quantidades, setQuantidades] = useState<Record<string, string>>(getInitialQuantidades());
 
@@ -92,7 +93,8 @@ function LancamentoModal({
       addNotification('Por favor, selecione uma OBM (Cidade).', 'error');
       return;
     }
-    onSave({ data_ocorrencia: dataOcorrencia, cidade_id: cidadeId, quantidades });
+    // A lógica de salvar agora usa 'obm_id' em vez de 'cidade_id' para consistência com o backend
+    onSave({ data_ocorrencia: dataOcorrencia, obm_id: cidadeId, quantidades });
   };
 
   const limparFormulario = () => {
@@ -101,12 +103,12 @@ function LancamentoModal({
   };
 
   const naturezasAgrupadas = useMemo(() => 
-    naturezas.reduce((acc: any, nat: IDataApoio) => {
+    naturezas.reduce((acc: { [key: string]: IDataApoio[] }, nat: IDataApoio) => {
       const grupo = nat.grupo || 'Outros';
       if (!acc[grupo]) acc[grupo] = [];
       acc[grupo].push(nat);
       return acc;
-    }, {} as { [key: string]: IDataApoio[] }),
+    }, {}),
     [naturezas]
   );
 
@@ -130,18 +132,15 @@ function LancamentoModal({
         <form id="lancamento-form" onSubmit={handleSubmit} className="flex flex-grow flex-col gap-6 overflow-y-auto p-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
-              <label htmlFor="cidade_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
-              {/* --- INÍCIO DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND --- */}
+              <label htmlFor="obm_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
               <SearchableSelect
                 items={obmsParaSelecao}
                 selectedId={cidadeId}
                 onSelect={(id) => setCidadeId(id)}
                 placeholder="Digite para buscar uma OBM"
-                // 3. DESABILITA O CAMPO SE O USUÁRIO NÃO FOR ADMIN OU SE ESTIVER EDITANDO
                 disabled={isEditing || usuario?.role === 'user'}
                 highlightedIds={obmsComDados}
               />
-              {/* --- FIM DA LÓGICA DE AUTORIZAÇÃO NO FRONTEND --- */}
             </div>
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="data_ocorrencia" className="text-sm text-gray-400">Data da Ocorrência</label>
@@ -153,6 +152,7 @@ function LancamentoModal({
             </div>
           </div>
           
+          {/* 3. Itera sobre a ORDEM_GRUPOS personalizada */}
           {ORDEM_GRUPOS.map(grupo => {
             const natsDoGrupo = naturezasAgrupadas[grupo];
             if (!natsDoGrupo) return null;

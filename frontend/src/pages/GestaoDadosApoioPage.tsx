@@ -1,6 +1,6 @@
 // Caminho: frontend/src/pages/GestaoDadosApoioPage.tsx
 
-import React, { useState, useEffect, useCallback, ReactElement } from 'react';
+import React, { useState, useEffect, useCallback, ReactElement, useMemo } from 'react';
 import {
   getCidades, createUnidade, updateUnidade, deleteUnidade, getCrbms,
   getNaturezas, createNatureza, updateNatureza, deleteNatureza,
@@ -10,6 +10,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import Spinner from '../components/Spinner';
 
+// ... (Componente DataModal não precisa de alterações) ...
 type DataType = 'obm' | 'natureza';
 type ItemType = IObm | IDataApoio;
 
@@ -94,40 +95,6 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
   );
 }
 
-interface DataTableProps {
-  data: ItemType[];
-  columns: { key: keyof ItemType; header: string }[];
-  onEdit: (item: ItemType) => void;
-  onDelete: (id: number) => void;
-}
-
-function DataTable({ data, columns, onEdit, onDelete }: DataTableProps) {
-  return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="min-w-full divide-y divide-border">
-        <thead className="bg-gray-200 dark:bg-gray-800">
-          <tr>
-            {columns.map(col => <th key={String(col.key)} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">{col.header}</th>)}
-            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border bg-surface">
-          {data.map(item => (
-            <tr key={item.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50 text-text-strong">
-              {columns.map(col => <td key={String(col.key)} className="whitespace-nowrap px-6 py-4">{(item as any)[col.key]}</td>)}
-              <td className="whitespace-nowrap px-6 py-4 text-center">
-                <div className="flex justify-center gap-2">
-                  <button onClick={() => onEdit(item)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
-                  <button onClick={() => onDelete(item.id)} className="rounded-md bg-red-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-700">Excluir</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 function GestaoDadosApoioPage(): ReactElement {
   const [activeTab, setActiveTab] = useState<DataType>('obm');
@@ -200,25 +167,87 @@ function GestaoDadosApoioPage(): ReactElement {
     }
   };
 
-  const renderTable = () => {
-    const isObm = activeTab === 'obm';
-    const data = isObm ? obms : naturezas;
-    const columns = isObm
-      ? [{ key: 'crbm_nome', header: 'CRBM' }, { key: 'cidade_nome', header: 'Nome da OBM' }]
-      : [{ key: 'grupo', header: 'Grupo' }, { key: 'subgrupo', header: 'Subgrupo' }];
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // Agrupa as OBMs por CRBM para renderização com células mescladas
+  const obmsAgrupadas = useMemo(() => {
+    return obms.reduce((acc: Record<string, IObm[]>, obm) => {
+      const crbmNome = obm.crbm_nome;
+      if (!acc[crbmNome]) {
+        acc[crbmNome] = [];
+      }
+      acc[crbmNome].push(obm);
+      return acc;
+    }, {});
+  }, [obms]);
 
-    return (
-      // ======================= CORREÇÃO APLICADA =======================
-      <div className="bg-surface border border-border rounded-lg p-4 md:p-6">
-        <div className="mb-6">
-          <button onClick={() => handleOpenModal()} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
-            Adicionar Nov{isObm ? 'a OBM' : 'a Natureza'}
-          </button>
+  const renderTable = () => {
+    if (activeTab === 'natureza') {
+      // A tabela de naturezas não precisa de agrupamento, então a mantemos simples
+      return (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-gray-200 dark:bg-gray-800">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Grupo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Subgrupo</th>
+                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border bg-surface">
+              {naturezas.map(item => (
+                <tr key={item.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50 text-text-strong">
+                  <td className="whitespace-nowrap px-6 py-4">{item.grupo}</td>
+                  <td className="whitespace-nowrap px-6 py-4">{item.subgrupo}</td>
+                  <td className="whitespace-nowrap px-6 py-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button onClick={() => handleOpenModal(item)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                      <button onClick={() => handleDelete(item.id)} className="rounded-md bg-red-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-700">Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <DataTable data={data} columns={columns as any} onEdit={handleOpenModal} onDelete={handleDelete} />
+      );
+    }
+
+    // Renderização da tabela de OBMs com células mescladas
+    return (
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-gray-200 dark:bg-gray-800">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">CRBM</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Nome da OBM</th>
+              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-surface">
+            {Object.entries(obmsAgrupadas).map(([crbmNome, listaObms]) => (
+              <React.Fragment key={crbmNome}>
+                {listaObms.map((obm, index) => (
+                  <tr key={obm.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50 text-text-strong">
+                    {index === 0 && (
+                      <td rowSpan={listaObms.length} className="whitespace-nowrap px-6 py-4 align-top font-semibold border-r border-border">{crbmNome}</td>
+                    )}
+                    <td className="whitespace-nowrap px-6 py-4">{obm.cidade_nome}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button onClick={() => handleOpenModal(obm)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        <button onClick={() => handleDelete(obm.id)} className="rounded-md bg-red-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-700">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   };
+  // ======================= FIM DA CORREÇÃO =======================
 
   return (
     <MainLayout pageTitle="Gerenciar Dados de Apoio">
@@ -231,7 +260,14 @@ function GestaoDadosApoioPage(): ReactElement {
         </button>
       </div>
 
-      {loading ? <Spinner text="Carregando dados..." /> : renderTable()}
+      <div className="bg-surface border border-border rounded-lg p-4 md:p-6">
+        <div className="mb-6">
+          <button onClick={() => handleOpenModal()} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
+            Adicionar Nov{activeTab === 'obm' ? 'a OBM' : 'a Natureza'}
+          </button>
+        </div>
+        {loading ? <Spinner text="Carregando dados..." /> : renderTable()}
+      </div>
 
       {isModalOpen && (
         <DataModal

@@ -4,8 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
 
-// --- CORREÇÃO 1: MOVER A INTERFACE PARA FORA DO COMPONENTE ---
-// A interface de props deve ser definida no escopo do módulo para ser acessível.
+// ... (Interfaces MobileCard e LancamentoTabelaProps não mudam) ...
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
@@ -15,7 +14,6 @@ interface LancamentoTabelaProps {
   showActions?: boolean;
 }
 
-// --- Interface para as props do Card ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
@@ -24,7 +22,7 @@ interface CardProps {
   showActions: boolean;
 }
 
-// --- Componente MobileCard ---
+
 const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, showActions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
@@ -74,8 +72,6 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
   );
 };
 
-
-// --- Componente Principal da Tabela ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -93,7 +89,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   }
 
   const dadosMapa = useMemo(() => {
-    // --- CORREÇÃO 2: ADICIONAR TIPOS AO REDUCE ---
     return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
       const key = `${item.cidade_nome}|${item.natureza_nome}`;
       acc[key] = item.quantidade;
@@ -102,7 +97,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   }, [dadosApi]);
 
   const cidadesAgrupadas = useMemo(() => {
-    // --- CORREÇÃO 3: ADICIONAR TIPOS AO REDUCE ---
     return cidades.reduce((acc: Record<string, ICidade[]>, cidade: ICidade) => {
       const crbm = cidade.crbm_nome;
       if (!acc[crbm]) acc[crbm] = [];
@@ -148,7 +142,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
   return (
     <>
-      {/* VISUALIZAÇÃO MOBILE */}
       <div className="mt-4 space-y-4 md:hidden">
         {cidades.map(cidade => {
           const ocorrências: Record<string, number> = {};
@@ -172,7 +165,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
         })}
       </div>
 
-      {/* VISUALIZAÇÃO DESKTOP */}
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
         <table className="min-w-[1300px] w-full border-collapse">
           <thead className="bg-gray-700 text-white">
@@ -182,9 +174,9 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
               {naturezas.map(nat => (
                 <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
               ))}
-              <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
+              <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
               {showActions && (
-                <th className="sticky right-0 top-0 z-20 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
+                <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
               )}
             </tr>
           </thead>
@@ -206,44 +198,45 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
                 return (
                   <tr key={cidade.id} className="text-center hover:bg-border/50">
+                    {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
                     {index === 0 && (
-                      <td rowSpan={listaCidades.length} className="sticky left-0 z-10 border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
+                      <td rowSpan={listaCidades.length} className="sticky left-0 z-20 border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
                     )}
-                    <td className={`sticky left-[150px] z-10 border-b border-r border-border p-3 text-left font-bold ${cellClass}`}>{cidade.cidade_nome}</td>
+                    <td className={`sticky left-[150px] z-20 border-b border-r border-border p-3 text-left font-bold ${cellClass}`}>{cidade.cidade_nome}</td>
+                    {/* ======================= FIM DA CORREÇÃO ======================= */}
                     {naturezas.map(nat => (
                       <td key={nat.subgrupo} className="whitespace-nowrap border-x border-border p-3">{ocorrências[nat.subgrupo]}</td>
                     ))}
-                    <td className="sticky right-0 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
+                    <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
-                      <td className="sticky right-0 whitespace-nowrap border-l border-border p-3">
+                      <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3">
                         <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
                       </td>
                     )}
                   </tr>
                 );
               })}
-              {/* Linha de Subtotal */}
               <tr className="bg-blue-800 font-bold text-white">
-                <td colSpan={2} className="sticky left-0 z-10 border-b border-r border-gray-700 bg-blue-800 p-3 text-center">
+                <td colSpan={2} className="sticky left-0 z-20 border-b border-r border-gray-700 bg-blue-800 p-3 text-center">
                   SUB TOTAL
                 </td>
                 {naturezas.map(nat => (
                   <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
                 ))}
-                <td className="sticky right-0 border-l border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
-                {showActions && <td className="sticky right-0 border-l border-gray-700 p-3"></td>}
+                <td className="sticky right-0 z-20 border-l border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
+                {showActions && <td className="sticky right-0 z-20 border-l border-gray-700 p-3"></td>}
               </tr>
             </tbody>
           ))}
 
-          <tfoot className="sticky bottom-0 z-20">
+          <tfoot className="sticky bottom-0 z-30">
             <tr className="bg-yellow-600 font-bold text-black">
-              <td colSpan={2} className="sticky left-0 z-10 border-r border-gray-600 bg-yellow-600 p-3 text-center">TOTAL GERAL</td>
+              <td colSpan={2} className="sticky left-0 z-20 border-r border-gray-600 bg-yellow-600 p-3 text-center">TOTAL GERAL</td>
               {naturezas.map(nat => (
                 <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.geral[nat.subgrupo] || 0}</td>
               ))}
-              <td className="sticky right-0 border-l border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
-              {showActions && <td className="sticky right-0 border-l border-gray-700 p-3"></td>}
+              <td className="sticky right-0 z-20 border-l border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
+              {showActions && <td className="sticky right-0 z-20 border-l border-gray-700 p-3"></td>}
             </tr>
           </tfoot>
         </table>
