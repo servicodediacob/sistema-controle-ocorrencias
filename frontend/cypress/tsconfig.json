@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    // 1. Diz ao TypeScript para incluir os tipos do Cypress.
+    //    Isso resolve o erro "Cannot find name 'cy'".
+    "types": ["cypress", "@testing-library/jest-dom"],
+
+    // 2. Permite o uso de import/export (ESM) nos seus testes.
+    "module": "ESNext",
+    "moduleResolution": "node",
+
+    // 3. Garante que o TypeScript não tente compilar seus testes em arquivos .js.
+    "noEmit": true,
+
+    // 4. Permite que você use `import` em vez de `require` se desejar.
+    "allowJs": true,
+    "esModuleInterop": true
+  },
+  "include": [
+    // 5. Especifica que esta configuração se aplica a todos os arquivos dentro da pasta 'cypress'.
+    "**/*.ts"
+  ]
+}
