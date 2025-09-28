@@ -117,3 +117,5 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
         client.release();
     }
 };
+// fim
+
