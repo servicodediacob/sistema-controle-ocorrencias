@@ -1,10 +1,9 @@
-// Caminho: api/src/controllers/plantaoController.ts
-
 import { Request, Response } from 'express';
 import db from '../db';
 
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
+    // Trocamos 'JOIN' por 'LEFT JOIN' para evitar erros se a ocorrência de destaque for deletada.
     const destaqueQuery = `
       SELECT 
         od.*,
@@ -12,7 +11,7 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
         n.subgrupo as natureza_nome,
         c.nome as cidade_nome
       FROM ocorrencia_destaque d
-      JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
+      LEFT JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
       LEFT JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
       LEFT JOIN obms c ON od.cidade_id = c.id
       WHERE d.id = 1 AND d.ocorrencia_id IS NOT NULL;
@@ -52,10 +51,6 @@ export const getSupervisores = async (_req: Request, res: Response): Promise<voi
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
-
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A função setOcorrenciaDestaque foi REMOVIDA, pois não é mais necessária.
-// ======================= FIM DA CORREÇÃO =======================
 
 export const setSupervisorPlantao = async (req: Request, res: Response): Promise<void> => {
   const { usuario_id } = req.body;
