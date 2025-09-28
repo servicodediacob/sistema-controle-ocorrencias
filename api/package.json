@@ -9,7 +9,8 @@
     "test": "jest",
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
     "migrate": "ts-node src/scripts/migrate.ts",
-    "seed:dev": "dotenv -e .env.development -- ts-node src/scripts/seed-dev.ts"
+    "seed:dev": "dotenv -e .env.development -- ts-node src/scripts/seed-dev.ts",
+    "build:prod": "npm install && npm run build && npm run migrate"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -21,7 +22,7 @@
     "pg": "^8.11.5",
     "pino": "^9.2.0",
     "socket.io": "^4.8.1",
-    "tsc-alias": "^1.8.10" 
+    "tsc-alias": "^1.8.10"
   },
   "devDependencies": {
     "@swc/core": "^1.7.3",
