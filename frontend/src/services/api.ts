@@ -180,7 +180,7 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
 
 export const api = axios.create({ baseURL });
 
@@ -196,6 +196,23 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Adicionamos um interceptador de resposta para lidar com erros 401.
+api.interceptors.response.use(
+  (response) => response, // Se a resposta for bem-sucedida, apenas a retorne.
+  (error) => {
+    // Se o erro for 401 (Não Autorizado), limpa o localStorage e recarrega a página.
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      console.warn('[Axios Interceptor] Erro 401 detectado. Token inválido ou expirado. Realizando logout forçado.');
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('token');
+      // Recarrega a página para forçar o redirecionamento para a tela de login.
+      window.location.href = '/login'; 
+    }
+    // Para todos os outros erros, apenas os rejeite para que sejam tratados localmente.
+    return Promise.reject(error);
+  }
 );
 
 export const extractErrorMessage = (error: unknown): string => {
