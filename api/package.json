@@ -3,17 +3,13 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
     "dev": "nodemon",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js",
+    "build": "tsc && tsc-alias",
+    "start": "node dist/server.js",
+    "test": "jest",
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
-    "smoke:test": "node scripts/smoke-test.mjs",
-    "db:migrate": "dotenv -e .env.development -- ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
-    "db:seed:dev": "ts-node -r tsconfig-paths/register src/db/seed.ts",
-    "db:prod:migrate": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/scripts/migrate.ts",
-    "db:prod:seed": "dotenv -e .env.production -- ts-node -r tsconfig-paths/register src/db/seed.ts"
+    "migrate": "ts-node src/scripts/migrate.ts",
+    "seed:dev": "dotenv -e .env.development -- ts-node src/scripts/seed-dev.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

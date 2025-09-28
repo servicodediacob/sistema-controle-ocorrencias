@@ -1,18 +1,16 @@
-// api/src/tests/setup.ts
-
-import server from '../server';
 import db from '../db';
-import bcrypt from 'bcryptjs'; // Importamos o bcryptjs
+import bcrypt from 'bcryptjs';
 
-const seedTestDatabase = async () => {
+async function seedDevelopmentDatabase() {
+  console.log('--- INICIANDO SEED DO BANCO DE DADOS DE DESENVOLVIMENTO ---');
   const client = await db.pool.connect();
+
   try {
     await client.query('BEGIN');
-    
-    // Limpa todas as tabelas para um estado inicial limpo
+    console.log('1. Limpando tabelas existentes...');
     await client.query('TRUNCATE TABLE solicitacoes_acesso, obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, obitos, ocorrencias_detalhadas, ocorrencias, usuarios, obms, crbms, naturezas_ocorrencia RESTART IDENTITY CASCADE');
-    
-    // Insere CRBMs
+
+    console.log('2. Inserindo CRBMs...');
     await client.query(`
       INSERT INTO crbms (nome) VALUES
       ('1º CRBM'), ('2º CRBM'), ('3º CRBM'), ('4º CRBM'), ('5º CRBM'),
@@ -20,7 +18,7 @@ const seedTestDatabase = async () => {
       ON CONFLICT (nome) DO NOTHING;
     `);
 
-    // Insere OBMs
+    console.log('3. Inserindo OBMs...');
     const obmsPorCrbm = {
       '1º CRBM': ['Goiânia - Diurno', 'Goiânia - Noturno'], '2º CRBM': ['Rio Verde', 'Jataí'], '3º CRBM': ['Anápolis', 'Pirenópolis'], '4º CRBM': ['Luziânia', 'Águas Lindas'], '5º CRBM': ['Aparecida de Goiânia - Diurno', 'Aparecida de Goiânia - Noturno'], '6º CRBM': ['Goiás', 'Iporá'], '7º CRBM': ['Itumbiara', 'Caldas'], '8º CRBM': ['Porangatú', 'Goianésia'], '9º CRBM': ['Formosa', 'Planaltina']
     };
@@ -34,7 +32,7 @@ const seedTestDatabase = async () => {
       }
     }
 
-    // Insere TODAS as naturezas necessárias
+    console.log('4. Inserindo todas as Naturezas de Ocorrência...');
     const naturezasParaInserir = [
       { grupo: 'Resgate', subgrupo: 'Resgate', abreviacao: 'RESGATE' },
       { grupo: 'Incêndio', subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
@@ -65,41 +63,29 @@ const seedTestDatabase = async () => {
       await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES ($1, $2, $3) ON CONFLICT (grupo, subgrupo) DO NOTHING", [nat.grupo, nat.subgrupo, nat.abreviacao]);
     }
 
-    // --- INÍCIO DA CORREÇÃO ---
-    // Adiciona a criação de um usuário administrador padrão para desenvolvimento.
-    // Use uma senha segura no seu ambiente real.
+    console.log('5. Inserindo usuário administrador padrão...');
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
     const adminSenhaHash = await bcrypt.hash(adminPassword, 10);
-    
     await client.query(
       `INSERT INTO usuarios (nome, email, senha_hash, role) VALUES ($1, $2, $3, 'admin')`,
       ['ALEXANDRE', 'admin@cbm.pe.gov.br', adminSenhaHash]
     );
-    // --- FIM DA CORREÇÃO ---
 
-    // Insere dados padrão para tabelas de controle
+    console.log('6. Inserindo dados de controle...');
     await client.query('INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');
     await client.query('INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING');
     
     await client.query('COMMIT');
-    console.log('🚀 Banco de dados de teste limpo e semeado com dados completos (naturezas e usuário admin).');
+    console.log('✅ BANCO DE DADOS DE DESENVOLVIMENTO PREPARADO COM SUCESSO!');
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Erro catastrófico durante o seeding no setup.ts:', error);
-    throw error;
+    console.error('❌ ERRO AO PREPARAR O BANCO DE DADOS DE DESENVOLVIMENTO:', error);
   } finally {
-    client.release();
+    await client.release();
+    await db.pool.end();
+    console.log('🔌 Conexão com o banco de dados encerrada.');
   }
-};
+}
 
-// Hooks do Jest
-beforeAll(async () => {
-  await seedTestDatabase();
-});
-
-afterAll(async () => {
-  server.close();
-  await db.pool.end();
-  console.log('🛑 Servidor e pool do banco de dados fechados.');
-});
+seedDevelopmentDatabase();

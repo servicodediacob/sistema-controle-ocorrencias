@@ -4,15 +4,12 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   
-  // **MUDANÇA AQUI**: Ignora a pasta 'unit'
   testMatch: [
     '**/__tests__/**/*.test.ts',
-    '**/tests/acesso.test.ts', // Pode ser mais específico se quiser
+    '**/tests/**/*.test.ts',
   ],
   
-  // Mantém o setup global para os testes de integração
   setupFilesAfterEnv: [
-    '<rootDir>/jest.setup.js',
     '<rootDir>/src/tests/setup.ts'
   ],
 
@@ -21,4 +18,11 @@ module.exports = {
       tsconfig: 'tsconfig.json'
     }],
   },
+
+  // --- ADIÇÃO CRÍTICA ---
+  // Esta configuração instrui o Jest a NÃO transformar o módulo 'bcryptjs'.
+  // Isso é essencial para que módulos nativos ou com bindings em C++ funcionem corretamente.
+  transformIgnorePatterns: [
+    '/node_modules/(?!bcryptjs)/'
+  ],
 };
