@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import db from '@/db';
 
-// Caminho relativo à raiz do projeto (onde o script é executado)
 const SCHEMA_FILE_PATH = path.join(process.cwd(), 'src/db/schema.sql');
 
 async function migrate() {
@@ -22,8 +21,9 @@ async function migrate() {
     console.log('🎉 Schema do banco de dados aplicado com sucesso!');
 
   } catch (error) {
+    // CORREÇÃO: Agora usamos a variável 'error' no log.
     console.error('❌ Erro durante a migração do schema:', error);
-    throw error; // Lança o erro para falhar o processo de build
+    throw error;
   } finally {
     client.release();
     console.log('🔌 Conexão com o banco de dados liberada.');
@@ -32,7 +32,8 @@ async function migrate() {
   }
 }
 
+// CORREÇÃO: Também usamos a variável 'err' aqui.
 migrate().catch((err) => {
-  console.error("A migração falhou. Encerrando o processo.");
+  console.error("A migração falhou. O processo de build será encerrado.", err);
   process.exit(1);
 });
