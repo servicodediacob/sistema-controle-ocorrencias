@@ -1,7 +1,7 @@
-// Caminho: api/src/controllers/dadosController.ts
 import { Request, Response } from 'express';
-import db from '../db';
+import db from '@/db'; // CORRIGIDO
 
+// ... (o resto do arquivo permanece o mesmo)
 // ===============================================
 // NATUREZAS DE OCORRÊNCIA
 // ===============================================

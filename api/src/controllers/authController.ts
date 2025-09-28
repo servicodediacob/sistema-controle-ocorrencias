@@ -1,68 +1,58 @@
-// Em api/src/controllers/authController.ts
-
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../db';
-import logger from '../config/logger';
+import db from '@/db'; // CORRIGIDO
+import logger from '@/config/logger'; // CORRIGIDO
 
-// ... (outras funções do controller)
+interface IUser {
+  id: number;
+  nome: string;
+  email: string;
+  senha_hash: string;
+  role: 'admin' | 'user';
+  obm_id: number | null;
+  criado_em: Date;
+}
 
-// --- INÍCIO DA CORREÇÃO ---
-// Adicionamos a anotação de tipo de retorno que foi removida acidentalmente.
-export const login = async (req: Request, res: Response): Promise<Response | void> => {
-// --- FIM DA CORREÇÃO ---
+// ... (o resto do arquivo permanece o mesmo)
+export const login = async (req: Request, res: Response): Promise<Response> => {
   const { email, senha } = req.body;
 
-  console.log(`[TESTE DEBUG] 1. Rota de login chamada com email: ${email}`);
+  if (!email || !senha) {
+    return res.status(400).json({ message: 'Email e senha são obrigatórios.' });
+  }
 
   try {
     const { rows } = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    
-    console.log(`[TESTE DEBUG] 2. Busca no DB por ${email} retornou ${rows.length} usuário(s).`);
+    const usuario: IUser | undefined = rows[0];
 
-    if (rows.length === 0) {
-      console.log(`[TESTE DEBUG] 3. FALHA: Usuário não encontrado. Retornando 401.`);
-      return res.status(401).json({ message: 'Credenciais inválidas' });
+    if (!usuario) {
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
-
-    const usuario = rows[0];
-    
-    console.log(`[TESTE DEBUG] 4. Usuário encontrado: ID ${usuario.id}, Email: ${usuario.email}`);
-    console.log(`[TESTE DEBUG] 5. Comparando senha fornecida com o hash do banco: ${usuario.senha_hash}`);
 
     const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
 
-    console.log(`[TESTE DEBUG] 6. Resultado da comparação de senha (bcrypt.compare): ${senhaValida}`);
-
     if (!senhaValida) {
-      console.log(`[TESTE DEBUG] 7. FALHA: Senha inválida. Retornando 401.`);
-      return res.status(401).json({ message: 'Credenciais inválidas' });
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
     const token = jwt.sign(
       { id: usuario.id, role: usuario.role, obm_id: usuario.obm_id },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1d' }
+      { expiresIn: '24h' }
     );
 
-    console.log(`[TESTE DEBUG] 8. SUCESSO: Gerando token para o usuário ID ${usuario.id}.`);
+    // Retorna os dados do usuário sem o hash da senha
+    const { senha_hash, ...usuarioSemSenha } = usuario;
 
-    // Note que aqui não há 'return', o que é permitido pela assinatura `Promise<void>`
-    res.status(200).json({
+    return res.status(200).json({
+      message: 'Login bem-sucedido!',
+      usuario: usuarioSemSenha,
       token,
-      usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        role: usuario.role,
-        obm_id: usuario.obm_id,
-      },
     });
 
   } catch (error) {
-    console.error('[TESTE DEBUG] 9. ERRO CATASTRÓFICO no bloco try/catch do login:', error);
-    logger.error({ err: error, email }, 'Erro no processo de login');
-    return res.status(500).json({ message: 'Erro interno do servidor' });
+    logger.error({ err: error }, 'Erro no processo de login.');
+    return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

@@ -2,18 +2,22 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import './config/envLoader';
+import './config/envLoader'; // Garante que as variáveis de ambiente sejam carregadas primeiro
 import logger from './config/logger';
-import db from './db';
+import { onSocketConnection } from './services/socketService';
 
-// Importação das rotas existentes
+// --- 1. IMPORTAÇÃO DE TODAS AS ROTAS ---
 import authRoutes from './routes/authRoutes';
-import dadosRoutes from './routes/dadosRoutes';
 import acessoRoutes from './routes/acessoRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciasDetalhadasRoutes from './routes/ocorrenciaDetalhadaRoutes';
+import dadosRoutes from './routes/dadosRoutes';
+import unidadesRoutes from './routes/unidadesRoutes';
+import usuariosRoutes from './routes/usuarioRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
+import diagRoutes from './routes/diagRoutes'; // Rota de diagnóstico
 
-// Configuração de CORS
+// --- Configuração de CORS ---
 const allowedOrigins = [
   'http://localhost:5173',
   'https://siscob-iota.vercel.app'
@@ -35,73 +39,31 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- INÍCIO DA CORREÇÃO ---
-// 1. Rota de Diagnóstico renomeada para '/api/health'
-app.get('/api/health', async (_req: Request, res: Response) => {
-// --- FIM DA CORREÇÃO ---
-  try {
-    await db.query('SELECT 1');
-    res.status(200).json({ status: 'ok', database: 'ok' });
-  } catch (error) {
-    res.status(500).json({ status: 'ok', database: 'error', message: (error as Error).message });
-  }
-});
-
-// Rotas de Dados de Apoio
-app.get('/api/unidades', async (_req: Request, res: Response) => {
-    try {
-        const { rows } = await db.query(`
-            SELECT o.id, o.nome as cidade_nome, o.crbm_id, c.nome as crbm_nome 
-            FROM obms o
-            JOIN crbms c ON o.crbm_id = c.id
-            ORDER BY c.nome, o.nome
-        `);
-        res.json(rows);
-    } catch (error) {
-        logger.error({ err: error }, 'Erro ao buscar unidades/cidades.');
-        res.status(500).send('Erro ao buscar unidades');
-    }
-});
-
-app.get('/api/crbms', async (_req: Request, res: Response) => {
-    try {
-        const { rows } = await db.query('SELECT * FROM crbms ORDER BY nome');
-        res.json(rows);
-    } catch (error) {
-        logger.error({ err: error }, 'Erro ao buscar CRBMs.');
-        res.status(500).send('Erro ao buscar CRBMs');
-    }
-});
-
-// Rotas de Usuários
-app.get('/api/usuarios', async (_req: Request, res: Response) => {
-    try {
-        const { rows } = await db.query('SELECT id, nome, email, role, obm_id FROM usuarios ORDER BY nome');
-        res.json(rows);
-    } catch (error) {
-        logger.error({ err: error }, 'Erro ao buscar usuários.');
-        res.status(500).send('Erro ao buscar usuários');
-    }
-});
-
-// Rotas existentes
+// --- 2. REGISTRO DAS ROTAS NA APLICAÇÃO ---
+// Cada conjunto de rotas é prefixado com seu caminho base.
 app.use('/api/auth', authRoutes);
 app.use('/api/acesso', acessoRoutes);
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciasDetalhadasRoutes);
-app.use('/api', dadosRoutes);
+app.use('/api/unidades', unidadesRoutes); // Inclui /crbms
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/diag', diagRoutes); // Rota de diagnóstico agora registrada
+app.use('/api', dadosRoutes); // Rotas mais genéricas (como /ocorrencias, /naturezas)
 
+// Rota raiz da API para um simples "Olá"
+app.get('/api', (_req: Request, res: Response) => {
+  res.status(200).json({ message: 'API do Sistema de Ocorrências do COCB no ar!' });
+});
+
+// --- Configuração do Servidor HTTP e Socket.IO ---
 const httpServer = createServer(app );
 const io = new SocketIOServer(httpServer, {
   cors: corsOptions
 } );
 
-io.on('connection', (socket) => {
-  logger.info(`[Socket.IO] Usuário conectado: ${socket.id}`);
-  socket.on('disconnect', () => {
-    logger.info(`[Socket.IO] Usuário desconectado: ${socket.id}`);
-  });
-});
+// Inicializa o serviço de socket
+onSocketConnection(io);
 
 const PORT = process.env.PORT || 3001;
 

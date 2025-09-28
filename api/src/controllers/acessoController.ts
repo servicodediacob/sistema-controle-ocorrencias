@@ -1,19 +1,14 @@
-// Caminho: api/src/controllers/acessoController.ts
-
 import { Request, Response } from 'express';
-// --- INÍCIO DA CORREÇÃO ---
-// 1. Importamos a interface RequestWithUser
-import { RequestWithUser } from '../middleware/authMiddleware';
-// --- FIM DA CORREÇÃO ---
-import db from '../db';
+import { RequestWithUser } from '@/middleware/authMiddleware'; // CORRIGIDO
+import db from '@/db'; // CORRIGIDO
 import bcrypt from 'bcryptjs';
 
-// 2. Usamos a interface importada onde necessário
+// ... (o resto do arquivo permanece o mesmo)
 export const solicitarAcesso = async (req: Request, res: Response): Promise<void> => {
     const { nome, email, senha, obm_id } = req.body;
 
     if (!nome || !email || !senha || !obm_id) {
-        res.status(400).json({ message: 'Todos os campos são obrigatórios: nome, email, senha e OBM.' });
+        res.status(400).json({ message: 'Todos os campos são obrigatórios: nome, email e OBM.' });
         return;
     }
 
@@ -67,11 +62,10 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
     }
 };
 
-// 3. Usamos a interface importada na função que precisa dela
 export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response): Promise<void> => {
     const { id } = req.params;
     const { acao } = req.body;
-    const aprovador_id = req.usuario?.id; // Agora esta linha é válida
+    const aprovador_id = req.usuario?.id;
 
     if (!acao || !['aprovar', 'recusar'].includes(acao)) {
         res.status(400).json({ message: "A ação é obrigatória e deve ser 'aprovar' ou 'recusar'." });

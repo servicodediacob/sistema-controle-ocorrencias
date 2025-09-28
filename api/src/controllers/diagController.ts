@@ -99,7 +99,7 @@ export const runDiagnostics = async (_req: Request, res: Response): Promise<void
   }
 
   const httpStatus = report.geral.status === 'ok' ? 200 : 503; // 503 Service Unavailable
-  logger.info(`Diagnóstico concluído com status: ${report.geral.status}` );
+  logger.info(`Diagnóstico concluído com status: ${report.geral.status}`  );
   
-  res.status(httpStatus ).json(report);
+  res.status(httpStatus  ).json(report);
 };

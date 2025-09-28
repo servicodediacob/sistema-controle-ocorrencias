@@ -1,28 +1,27 @@
-// api/src/routes/unidadesRoutes.ts
+// Caminho: api/src/routes/unidadesRoutes.ts
 
 import { Router } from 'express';
-import { proteger } from '../middleware/authMiddleware';
+import { proteger } from '@/middleware/authMiddleware'; // Usando alias
 import {
   getUnidades,
   criarUnidade,
   atualizarUnidade,
   excluirUnidade,
   getCrbms
-} from '../controllers/unidadesController';
+} from '@/controllers/unidadesController'; // Usando alias
 
 const router = Router();
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A rota GET /unidades agora é PÚBLICA. As outras (POST, PUT, DELETE) continuam protegidas.
-router.route('/unidades')
+// Rotas para /api/unidades
+router.route('/')
   .get(getUnidades) // Rota pública para listagem
   .post(proteger, criarUnidade); // Rota protegida para criação
-// ======================= FIM DA CORREÇÃO =======================
 
-router.route('/unidades/:id')
+router.route('/:id')
   .put(proteger, atualizarUnidade)
   .delete(proteger, excluirUnidade);
 
+// Rota para /api/unidades/crbms (aninhada para organização)
 router.route('/crbms')
   .get(proteger, getCrbms);
 
