@@ -1,8 +1,16 @@
 // Caminho: api/src/controllers/estatisticasController.ts
+// VERSÃO COM ASSINATURA DE TIPO CORRIGIDA
 
 import { Response } from 'express';
 import { RequestWithUser } from '../middleware/authMiddleware';
 import db from '../db';
+
+interface DashboardStats {
+  totalOcorrencias: number;
+  totalObitos: number;
+  ocorrenciasPorNatureza: { nome: string; total: number }[];
+  ocorrenciasPorCrbm: { nome: string; total: number }[];
+}
 
 interface EstatisticaPayload {
   data_registro: string;
@@ -10,49 +18,77 @@ interface EstatisticaPayload {
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
 
-export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<void> => {
-  console.log('[DIAGNÓSTICO BACKEND] Corpo da requisição recebido (req.body):', JSON.stringify(req.body, null, 2));
+export const getDashboardStats = async (_req: RequestWithUser, res: Response): Promise<Response | void> => {
+  try {
+    const query = `
+      WITH 
+      ocorrencias_unificadas AS (
+        SELECT natureza_id, quantidade, obm_id FROM estatisticas_diarias
+        UNION ALL
+        SELECT natureza_id, 1 AS quantidade, cidade_id AS obm_id FROM ocorrencias_detalhadas
+      ),
+      ocorrencias_sem_obitos AS (
+        SELECT * FROM ocorrencias_unificadas
+        WHERE natureza_id NOT IN (SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos')
+      ),
+      total_ocorrencias_unificadas AS (
+        SELECT COALESCE(SUM(quantidade), 0) AS total FROM ocorrencias_sem_obitos
+      ),
+      ocorrencias_por_natureza AS (
+        SELECT
+          n.subgrupo AS nome,
+          SUM(osu.quantidade)::int AS total
+        FROM ocorrencias_sem_obitos osu
+        JOIN naturezas_ocorrencia n ON osu.natureza_id = n.id
+        GROUP BY n.subgrupo
+        ORDER BY total DESC
+      ),
+      ocorrencias_por_crbm AS (
+        SELECT
+          cr.nome,
+          SUM(osu.quantidade)::int AS total
+        FROM ocorrencias_sem_obitos osu
+        JOIN obms ob ON osu.obm_id = ob.id
+        JOIN crbms cr ON ob.crbm_id = cr.id
+        GROUP BY cr.nome
+        ORDER BY total DESC
+      ),
+      total_obitos_registros AS (
+        SELECT COALESCE(SUM(quantidade_vitimas), 0) AS total FROM obitos_registros
+      )
+      SELECT json_build_object(
+        'totalOcorrencias', (SELECT total FROM total_ocorrencias_unificadas),
+        'totalObitos', (SELECT total FROM total_obitos_registros),
+        'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_natureza) t), '[]'::json),
+        'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_crbm) t), '[]'::json)
+      ) AS stats;
+    `;
 
-  // ======================= INÍCIO DA CORREÇÃO DE FLEXIBILIDADE =======================
-  // Esta seção irá adaptar o payload recebido, não importa qual versão o frontend envie.
+    const { rows } = await db.query(query);
+    const stats: DashboardStats = rows[0].stats;
+    
+    return res.status(200).json(stats);
 
-  let { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
-  const legacyBody = req.body as any; // Permite acesso a propriedades não tipadas
-
-  // 1. Verifica se o campo de data veio com o nome antigo ('data_ocorrencia')
-  if (!data_registro && legacyBody.data_ocorrencia) {
-    console.log("[ADAPTADOR BACKEND] Campo 'data_ocorrencia' detectado. Convertendo para 'data_registro'.");
-    data_registro = legacyBody.data_ocorrencia;
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas do dashboard:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor ao buscar estatísticas.' });
   }
+};
 
-  // 2. Verifica se o campo de estatísticas veio com o nome antigo ('quantidades')
-  if (!estatisticas && legacyBody.quantidades) {
-    console.log("[ADAPTADOR BACKEND] Campo 'quantidades' detectado. Convertendo para 'estatisticas'.");
-    estatisticas = Object.entries(legacyBody.quantidades)
-      .map(([natureza_id, quantidadeStr]) => ({
-        natureza_id: Number(natureza_id),
-        quantidade: Number(quantidadeStr) || 0,
-      }))
-      .filter(item => item.quantidade > 0);
-  }
-  // ======================= FIM DA CORREÇÃO DE FLEXIBILIDADE =======================
-
+export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
+  const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
   const usuario = req.usuario; 
 
   if (!usuario) {
-    res.status(401).json({ message: 'Usuário não autenticado.' });
-    return;
+    return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
 
   if (usuario.role !== 'admin' && usuario.obm_id !== obm_id) {
-    res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
-    return;
+    return res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
   }
 
-  // A validação agora usa as variáveis que podem ter sido adaptadas.
   if (!data_registro || !obm_id || !estatisticas) {
-    res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
-    return;
+    return res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
   }
 
   const client = await db.pool.connect();
@@ -83,82 +119,25 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
 
     if (totalRegistrosCriados === 0) {
         await client.query('ROLLBACK');
-        res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e OBM foram limpos.' });
-        return;
+        return res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e OBM foram limpos.' });
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a OBM!` });
+    return res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a OBM!` });
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Erro ao registrar estatísticas em lote (transação revertida):', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao registrar as estatísticas.' });
+    return res.status(500).json({ message: 'Erro interno do servidor ao registrar as estatísticas.' });
   } finally {
     client.release();
   }
 };
 
-// O restante do arquivo permanece o mesmo...
-export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Response): Promise<void> => {
-  const { data_inicio, data_fim } = req.query;
-
-  if (!data_inicio || !data_fim) {
-    res.status(400).json({ message: 'As datas de início e fim são obrigatórias.' });
-    return;
-  }
-
-  try {
-    const query = `
-      SELECT
-        n.grupo,
-        n.subgrupo,
-        COALESCE(SUM(CASE WHEN o.nome = 'Goiânia - Diurno' THEN ed.quantidade ELSE 0 END), 0) AS diurno,
-        COALESCE(SUM(CASE WHEN o.nome = 'Goiânia - Noturno' THEN ed.quantidade ELSE 0 END), 0) AS noturno,
-        COALESCE(SUM(CASE WHEN o.crbm_id = (SELECT id FROM crbms WHERE nome = '1º CRBM') THEN ed.quantidade ELSE 0 END), 0) AS total_capital,
-        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "1º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '2º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "2º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '3º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "3º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '4º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "4º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '5º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "5º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '6º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "6º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '7º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "7º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '8º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "8º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '9º CRBM' THEN ed.quantidade ELSE 0 END), 0) AS "9º CRBM",
-        COALESCE(SUM(ed.quantidade), 0) AS total_geral
-      FROM naturezas_ocorrencia n
-      LEFT JOIN estatisticas_diarias ed ON n.id = ed.natureza_id AND ed.data_registro BETWEEN $1 AND $2
-      LEFT JOIN obms o ON ed.obm_id = o.id
-      LEFT JOIN crbms cr ON o.crbm_id = cr.id
-      WHERE n.grupo != 'Relatório de Óbitos'
-      GROUP BY n.grupo, n.subgrupo
-      ORDER BY
-        CASE n.grupo
-          WHEN 'Resgate' THEN 1
-          WHEN 'Incêndio' THEN 2
-          WHEN 'Busca e Salvamento' THEN 3
-          WHEN 'Ações Preventivas' THEN 4
-          WHEN 'Atividades Técnicas' THEN 5
-          WHEN 'Produtos Perigosos' THEN 6
-          WHEN 'Defesa Civil' THEN 7
-          ELSE 8
-        END,
-        n.subgrupo;
-    `;
-    
-    const { rows } = await db.query(query, [data_inicio as string, data_fim as string]);
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error('Erro ao gerar relatório de estatísticas:', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao gerar relatório.' });
-  }
-};
-
-export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
+export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
-    res.status(400).json({ message: 'A data é obrigatória.' });
-    return;
+    return res.status(400).json({ message: 'A data é obrigatória.' });
   }
 
   try {
@@ -185,8 +164,8 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
           n.abreviacao as natureza_abreviacao,
           cr.nome as crbm_nome,
           COUNT(occ.id) as quantidade
-        FROM ocorrencias occ
-        JOIN obms o ON occ.obm_id = o.id
+        FROM ocorrencias_detalhadas occ
+        JOIN obms o ON occ.cidade_id = o.id
         JOIN naturezas_ocorrencia n ON occ.natureza_id = n.id
         JOIN crbms cr ON o.crbm_id = cr.id
         WHERE occ.data_ocorrencia = $1
@@ -210,54 +189,57 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
     `;
     
     const { rows } = await db.query(query, [data]);
-    res.status(200).json(rows);
+    return res.status(200).json(rows);
 
   } catch (error) {
     console.error('Erro ao buscar estatísticas unificadas por data:', error);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
+    return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-export const limparEstatisticasDoDia = async (req: RequestWithUser, res: Response): Promise<void> => {
-  const { data, obm_id } = req.query;
+export const limparTodosOsDadosDoDia = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
+  const { data } = req.query;
   const usuario = req.usuario;
 
-  if (!usuario) {
-    res.status(401).json({ message: 'Usuário não autenticado.' });
-    return;
+  if (!usuario || usuario.role !== 'admin') {
+    return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem executar esta ação.' });
   }
 
   if (!data || typeof data !== 'string') {
-    res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
-    return;
+    return res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
   }
 
+  const client = await db.pool.connect();
   try {
-    let result;
-    if (obm_id && typeof obm_id === 'string') {
-      if (usuario.role !== 'admin' && usuario.obm_id !== parseInt(obm_id, 10)) {
-        res.status(403).json({ message: 'Acesso negado. Você só pode limpar dados da sua própria OBM.' });
-        return;
-      }
-      result = await db.query(
-        `DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`, 
-        [data, obm_id]
-      );
-      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para a OBM no dia ${data}.` });
-    } else {
-      if (usuario.role !== 'admin') {
-        res.status(403).json({ message: 'Acesso negado. Apenas administradores podem limpar todos os registros de um dia.' });
-        return;
-      }
-      result = await db.query(
-        `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
-        [data]
-      );
-      res.status(200).json({ message: `Operação concluída. ${result.rowCount} registros de estatística foram excluídos para o dia ${data}.` });
-    }
+    await client.query('BEGIN');
+
+    const loteResult = await client.query(
+      `DELETE FROM estatisticas_diarias WHERE data_registro = $1`, 
+      [data]
+    );
+
+    const detalhadasResult = await client.query(
+      `DELETE FROM ocorrencias_detalhadas WHERE data_ocorrencia = $1`, 
+      [data]
+    );
+    
+    await client.query(
+      `UPDATE ocorrencia_destaque SET ocorrencia_id = NULL 
+       WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM ocorrencias_detalhadas WHERE id = ocorrencia_destaque.ocorrencia_id)`,
+      []
+    );
+
+    await client.query('COMMIT');
+
+    const totalLimpado = (loteResult.rowCount ?? 0) + (detalhadasResult.rowCount ?? 0);
+    
+    return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });
 
   } catch (error) {
-    console.error('Erro ao limpar estatísticas por data:', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao limpar os registros.' });
+    await client.query('ROLLBACK');
+    console.error('Erro ao limpar todos os dados do dia:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor ao limpar os registros.' });
+  } finally {
+    client.release();
   }
 };

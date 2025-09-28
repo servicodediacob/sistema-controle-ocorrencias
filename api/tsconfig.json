@@ -21,7 +21,7 @@
   },
   "include": [
     "src/**/*.ts"
-    // A referência a "src/**/*.d.ts" também é removida, pois não temos mais arquivos de declaração personalizados.
+, "src/controllers/estatisticasController.ts.bak"    // A referência a "src/**/*.d.ts" também é removida, pois não temos mais arquivos de declaração personalizados.
   ],
   "exclude": [
     "node_modules",

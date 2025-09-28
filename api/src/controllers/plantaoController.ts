@@ -5,9 +5,6 @@ import db from '../db';
 
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // A query agora busca da tabela 'ocorrencias_detalhadas' e junta com as tabelas corretas.
-    // Ela também seleciona os campos necessários para o novo widget de destaque.
     const destaqueQuery = `
       SELECT 
         od.*,
@@ -15,12 +12,11 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
         n.subgrupo as natureza_nome,
         c.nome as cidade_nome
       FROM ocorrencia_destaque d
-      LEFT JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
+      JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
       LEFT JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
       LEFT JOIN obms c ON od.cidade_id = c.id
-      WHERE d.id = 1;
+      WHERE d.id = 1 AND d.ocorrencia_id IS NOT NULL;
     `;
-    // ======================= FIM DA CORREÇÃO =======================
     
     const supervisorQuery = `
       SELECT 
@@ -37,7 +33,6 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
     ]);
 
     res.status(200).json({
-      // O objeto retornado agora contém todos os campos da ocorrência detalhada
       ocorrenciaDestaque: destaqueResult.rows[0] || null,
       supervisorPlantao: supervisorResult.rows[0] || null,
     });
@@ -48,7 +43,6 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
   }
 };
 
-// O resto do arquivo não precisa de alterações
 export const getSupervisores = async (_req: Request, res: Response): Promise<void> => {
   try {
     const { rows } = await db.query('SELECT id, nome FROM usuarios ORDER BY nome ASC');
@@ -59,17 +53,9 @@ export const getSupervisores = async (_req: Request, res: Response): Promise<voi
   }
 };
 
-export const setOcorrenciaDestaque = async (req: Request, res: Response): Promise<void> => {
-  const { ocorrencia_id } = req.body;
-  try {
-    const query = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
-    const { rows } = await db.query(query, [ocorrencia_id]);
-    res.status(200).json(rows[0]);
-  } catch (error) {
-    console.error('Erro ao definir ocorrência de destaque:', error);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
-  }
-};
+// ======================= INÍCIO DA CORREÇÃO =======================
+// A função setOcorrenciaDestaque foi REMOVIDA, pois não é mais necessária.
+// ======================= FIM DA CORREÇÃO =======================
 
 export const setSupervisorPlantao = async (req: Request, res: Response): Promise<void> => {
   const { usuario_id } = req.body;

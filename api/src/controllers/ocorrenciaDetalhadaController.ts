@@ -3,8 +3,8 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../middleware/authMiddleware';
 import db from '../db';
+import logger from '../config/logger';
 
-// Interface para o payload de criação/atualização
 interface OcorrenciaDetalhadaPayload {
   numero_ocorrencia?: string;
   natureza_id: number;
@@ -19,13 +19,19 @@ interface OcorrenciaDetalhadaPayload {
   horario_ocorrencia?: string;
 }
 
-// Controller para criar uma nova ocorrência detalhada
 export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const payload: OcorrenciaDetalhadaPayload = req.body;
   const usuario_id = req.usuario?.id;
+  
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // Agora usamos uma transação para garantir que ambas as operações (criar e definir destaque) ocorram com sucesso.
+  const client = await db.pool.connect();
 
   try {
-    const query = `
+    await client.query('BEGIN');
+
+    // 1. Insere a nova ocorrência detalhada e obtém seu ID
+    const queryInsert = `
       INSERT INTO ocorrencias_detalhadas 
         (numero_ocorrencia, natureza_id, endereco, bairro, cidade_id, viaturas, veiculos_envolvidos, dados_vitimas, resumo_ocorrencia, data_ocorrencia, horario_ocorrencia, usuario_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -37,15 +43,31 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
       payload.data_ocorrencia, payload.horario_ocorrencia, usuario_id
     ];
     
-    const { rows } = await db.query(query, values);
-    return res.status(201).json(rows[0]);
+    const result = await client.query(queryInsert, values);
+    const novaOcorrencia = result.rows[0];
+
+    // 2. Atualiza a tabela 'ocorrencia_destaque' com o ID da ocorrência que acabamos de criar.
+    const queryUpdateDestaque = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1';
+    await client.query(queryUpdateDestaque, [novaOcorrencia.id]);
+
+    logger.info(`[DESTAQUE AUTOMÁTICO] Ocorrência ID ${novaOcorrencia.id} definida como novo destaque.`);
+
+    // 3. Confirma a transação
+    await client.query('COMMIT');
+    
+    return res.status(201).json(novaOcorrencia);
+
   } catch (error) {
-    console.error('Erro ao criar ocorrência detalhada:', error);
+    await client.query('ROLLBACK'); // Desfaz tudo em caso de erro
+    logger.error({ err: error }, 'Erro ao criar ocorrência detalhada e definir como destaque.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
+  } finally {
+    client.release(); // Libera a conexão
   }
+  // ======================= FIM DA CORREÇÃO =======================
 };
 
-// Controller para buscar ocorrências detalhadas por data
+// O restante do arquivo permanece o mesmo
 export const getOcorrenciasDetalhadasPorData = async (req: Request, res: Response) => {
   const { data_ocorrencia } = req.query;
 
@@ -54,32 +76,18 @@ export const getOcorrenciasDetalhadasPorData = async (req: Request, res: Respons
   }
 
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // A query agora seleciona também 'natureza_id' e 'cidade_id'
     const query = `
       SELECT 
-        od.id,
-        od.numero_ocorrencia,
-        od.natureza_id,
-        n.subgrupo as natureza_nome,
-        od.endereco,
-        od.bairro,
-        od.cidade_id,
-        c.nome as cidade_nome,
-        od.viaturas,
-        od.veiculos_envolvidos,
-        od.dados_vitimas,
-        od.resumo_ocorrencia,
-        od.data_ocorrencia,
-        od.horario_ocorrencia,
-        od.usuario_id
+        od.id, od.numero_ocorrencia, od.natureza_id, n.subgrupo as natureza_nome,
+        od.endereco, od.bairro, od.cidade_id, c.nome as cidade_nome, od.viaturas,
+        od.veiculos_envolvidos, od.dados_vitimas, od.resumo_ocorrencia,
+        od.data_ocorrencia, od.horario_ocorrencia, od.usuario_id
       FROM ocorrencias_detalhadas od
       JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
       JOIN obms c ON od.cidade_id = c.id
       WHERE od.data_ocorrencia = $1
       ORDER BY od.horario_ocorrencia ASC, od.id ASC;
     `;
-    // ======================= FIM DA CORREÇÃO =======================
     
     const { rows } = await db.query(query, [data_ocorrencia]);
     return res.status(200).json(rows);
@@ -89,7 +97,6 @@ export const getOcorrenciasDetalhadasPorData = async (req: Request, res: Respons
   }
 };
 
-// Controller para atualizar uma ocorrência detalhada
 export const atualizarOcorrenciaDetalhada = async (req: Request, res: Response) => {
   const { id } = req.params;
   const payload: OcorrenciaDetalhadaPayload = req.body;
@@ -120,7 +127,6 @@ export const atualizarOcorrenciaDetalhada = async (req: Request, res: Response) 
   }
 };
 
-// Controller para deletar uma ocorrência detalhada
 export const deletarOcorrenciaDetalhada = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {

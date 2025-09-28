@@ -1,70 +1,64 @@
-// Caminho: api/src/controllers/dashboardController.ts
 import { Request, Response } from 'express';
 import db from '../db';
 
+// ======================= INÍCIO DA CORREÇÃO =======================
+// A definição da interface que foi removida acidentalmente está de volta.
 interface DashboardStats {
   totalOcorrencias: number;
   totalObitos: number;
   ocorrenciasPorNatureza: { nome: string; total: number }[];
   ocorrenciasPorCrbm: { nome: string; total: number }[];
 }
+// ======================= FIM DA CORREÇÃO =======================
 
 export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
     const query = `
       WITH 
       naturezas_de_obito AS (
         SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos'
       ),
-      -- Soma as ocorrências da tabela de estatísticas diárias, EXCLUINDO óbitos
-      total_estatisticas AS (
-        SELECT COALESCE(SUM(quantidade), 0) AS total 
-        FROM estatisticas_diarias
+      ocorrencias_unificadas AS (
+        SELECT natureza_id, quantidade, obm_id FROM estatisticas_diarias
+        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
+        
+        UNION ALL
+        
+        SELECT natureza_id, 1 AS quantidade, cidade_id AS obm_id FROM ocorrencias_detalhadas
         WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
       ),
-      -- Conta as ocorrências da tabela de ocorrências individuais, EXCLUINDO óbitos
-      total_individuais AS (
-        SELECT COUNT(id) AS total 
-        FROM ocorrencias 
-        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
+      total_ocorrencias_unificadas AS (
+        SELECT COALESCE(SUM(quantidade), 0) AS total FROM ocorrencias_unificadas
       ),
-      -- O total de óbitos agora vem da tabela correta e dedicada
-      total_obitos_registros AS (
-        SELECT SUM(quantidade_vitimas) AS total FROM obitos_registros
-      ),
-      -- Ocorrências por natureza também exclui os óbitos
       ocorrencias_por_natureza AS (
         SELECT
           n.subgrupo AS nome,
-          COUNT(o.id)::int AS total
-        FROM ocorrencias o
-        JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-        WHERE o.natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
-        GROUP BY nome
+          SUM(ou.quantidade)::int AS total
+        FROM ocorrencias_unificadas ou
+        JOIN naturezas_ocorrencia n ON ou.natureza_id = n.id
+        GROUP BY n.subgrupo
         ORDER BY total DESC
       ),
-      -- Ocorrências por CRBM também exclui os óbitos
       ocorrencias_por_crbm AS (
         SELECT
-          cr.nome AS nome,
-          COUNT(o.id)::int AS total
-        FROM ocorrencias o
-        JOIN obms ob ON o.obm_id = ob.id
+          cr.nome,
+          SUM(ou.quantidade)::int AS total
+        FROM ocorrencias_unificadas ou
+        JOIN obms ob ON ou.obm_id = ob.id
         JOIN crbms cr ON ob.crbm_id = cr.id
-        WHERE o.natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
         GROUP BY cr.nome
         ORDER BY total DESC
+      ),
+      total_obitos_registros AS (
+        SELECT COALESCE(SUM(quantidade_vitimas), 0) AS total FROM obitos_registros
       )
       SELECT json_build_object(
-        -- Soma os totais das duas fontes (já filtradas)
-        'totalOcorrencias', (SELECT total FROM total_estatisticas) + (SELECT total FROM total_individuais),
-        'totalObitos', COALESCE((SELECT total FROM total_obitos_registros), 0),
+        'totalOcorrencias', (SELECT total FROM total_ocorrencias_unificadas),
+        'totalObitos', (SELECT total FROM total_obitos_registros),
         'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_natureza) t), '[]'::json),
         'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_crbm) t), '[]'::json)
       ) AS stats;
     `;
-    // ======================= FIM DA CORREÇÃO =======================
 
     const { rows } = await db.query(query);
     const stats: DashboardStats = rows[0].stats;

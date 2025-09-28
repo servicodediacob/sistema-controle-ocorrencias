@@ -1,5 +1,3 @@
-// Caminho: api/src/server.ts
-
 import './config/envLoader';
 import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
@@ -20,19 +18,16 @@ import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
 import { checkHealth } from './controllers/healthController';
 import { runDiagnostics } from './controllers/diagController';
-
 // ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Importar o novo arquivo de rotas que estava faltando
-import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
+import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes'; // 1. Importar
 // ======================= FIM DA CORREÇÃO =======================
 
-// Importação da conexão com o banco de dados
 import './db';
 
 const app: Express = express( );
 const PORT = process.env.PORT || 3001;
 
-// --- Configuração de CORS ---
+// Configuração de CORS (sem alterações)
 const allowedOrigins = [
   'https://sistema-controle-ocorrencias.vercel.app',
   'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app',
@@ -40,11 +35,9 @@ const allowedOrigins = [
   'https://sistema-ocorrencias-d7rw.onrender.com',
   'https://sistema-ocorrencias-api-1jzi.onrender.com'
 ];
-
-if (process.env.NODE_ENV !== 'production' ) {
-  allowedOrigins.push('http://localhost:5173' );
+if (process.env.NODE_ENV !== 'production'  ) {
+  allowedOrigins.push('http://localhost:5173'  );
 }
-
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -58,11 +51,10 @@ const corsOptions: cors.CorsOptions = {
   credentials: true
 };
 
-// --- Middlewares ---
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- Rotas ---
+// Rotas
 app.get('/api/health', checkHealth);
 app.get('/api/diag', runDiagnostics);
 app.use('/api/auth', authRoutes);
@@ -74,23 +66,15 @@ app.use('/api/plantao', plantaoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 
 // ======================= INÍCIO DA CORREÇÃO =======================
-// 2. Registrar a rota no Express para que o servidor a reconheça
-app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
+app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes); // 2. Registrar a rota
 // ======================= FIM DA CORREÇÃO =======================
 
 app.get('/api', (_req: Request, res: Response) => {
   res.send('API do Sistema de Controle de Ocorrências está no ar!');
 });
 
-// --- Servidor HTTP e Socket.IO ---
 const httpServer = http.createServer(app );
-
-const io = new SocketIOServer(httpServer, {
-  cors: corsOptions,
-  pingInterval: 5000,
-  pingTimeout: 10000,
-} );
-
+const io = new SocketIOServer(httpServer, { cors: corsOptions, pingInterval: 5000, pingTimeout: 10000 } );
 onSocketConnection(io);
 
 if (require.main === module) {

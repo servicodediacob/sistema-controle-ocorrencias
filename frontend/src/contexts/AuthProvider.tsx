@@ -1,18 +1,16 @@
-// Caminho: frontend/src/contexts/AuthProvider.tsx
-
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { login as apiLogin } from '../services/api';
 
-// --- INÍCIO DA ALTERAÇÃO ---
-// 1. GARANTIR QUE A INTERFACE INCLUA OS CAMPOS DE PERMISSÃO
+// ======================= INÍCIO DA CORREÇÃO =======================
+// A interface IUser agora inclui obm_id, resolvendo o erro de tipo em toda a aplicação.
 export interface IUser {
   id: number;
   nome: string;
   email: string;
-  role: 'admin' | 'user'; // Tipo mais específico para a role
-  obm_id: number | null;   // OBM pode ser nulo (para admins, por exemplo)
+  role: 'admin' | 'user';
+  obm_id: number | null; // <-- PROPRIEDADE ADICIONADA
 }
-// --- FIM DA ALTERAÇÃO ---
+// ======================= FIM DA CORREÇÃO =======================
 
 export interface IAuthContext {
   isAuthenticated: boolean;

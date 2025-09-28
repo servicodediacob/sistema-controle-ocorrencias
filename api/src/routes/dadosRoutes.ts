@@ -3,7 +3,6 @@
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 
-// Controller de dados gerais (Naturezas, Ocorrências)
 import {
   getNaturezas,
   getNaturezasPorNomes,
@@ -16,15 +15,12 @@ import {
   deleteOcorrencia
 } from '../controllers/dadosController';
 
-// Controller do formulário de lançamento em lote e relatório estatístico
 import { 
   registrarEstatisticasLote,
-  getRelatorioEstatisticas,
   getEstatisticasAgrupadasPorData,
-  limparEstatisticasDoDia
+  limparTodosOsDadosDoDia
 } from '../controllers/estatisticasController';
 
-// Controller para o novo CRUD de registros de óbitos
 import { 
   getObitosPorData, 
   criarObitoRegistro,
@@ -33,10 +29,7 @@ import {
   limparRegistrosPorData
 } from '../controllers/obitosRegistrosController';
 
-// ======================= INÍCIO DA ALTERAÇÃO =======================
-// 1. Importe o novo controller que criamos no passo anterior
 import { getRelatorioCompleto } from '../controllers/relatorioController';
-// ======================= FIM DA ALTERAÇÃO =======================
 
 const router = Router();
 
@@ -52,7 +45,7 @@ router.route('/naturezas/:id')
   .put(proteger, atualizarNatureza)
   .delete(proteger, excluirNatureza);
 
-// --- Rotas de Ocorrências (CRUD principal) ---
+// --- Rotas de Ocorrências (CRUD principal - legado) ---
 router.route('/ocorrencias')
   .get(proteger, getOcorrencias)
   .post(proteger, criarOcorrencia);
@@ -65,20 +58,17 @@ router.route('/ocorrencias/:id')
 router.route('/estatisticas/lote')
   .post(proteger, registrarEstatisticasLote);
 
-// --- Rota para buscar os dados do relatório estatístico consolidado (ANTIGA) ---
-router.route('/relatorio')
-  .get(proteger, getRelatorioEstatisticas);
-
-// ======================= INÍCIO DA ALTERAÇÃO =======================
-// 2. Adicione a nova rota para o relatório completo
+// --- Rota para o relatório consolidado ---
 router.route('/relatorio-completo')
   .get(proteger, getRelatorioCompleto);
-// ======================= FIM DA ALTERAÇÃO =======================
 
-// --- Rota para buscar e limpar os dados da tabela de lançamentos ---
+// --- Rota para buscar os dados da tabela de lançamentos ---
 router.route('/estatisticas/por-data')
-  .get(proteger, getEstatisticasAgrupadasPorData)
-  .delete(proteger, limparEstatisticasDoDia);
+  .get(proteger, getEstatisticasAgrupadasPorData);
+
+// --- Rota de limpeza completa ---
+router.route('/limpeza/dia-completo')
+  .delete(proteger, limparTodosOsDadosDoDia);
 
 // --- Rotas para o CRUD de Registros de Óbitos ---
 router.route('/obitos-registros')
@@ -90,4 +80,5 @@ router.route('/obitos-registros/:id')
   .put(proteger, atualizarObitoRegistro)
   .delete(proteger, deletarObitoRegistro);
 
+// Garante que o router seja exportado como padrão.
 export default router;

@@ -1,16 +1,14 @@
-// Caminho: frontend/src/pages/LancamentoPage.tsx
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
-// 1. IMPORTAR A FUNÇÃO CORRETA DA API
 import { 
-  getEstatisticasAgrupadasPorData, 
   ICidade, 
   IEstatisticaAgrupada, 
-  setOcorrenciaDestaque,
-  registrarEstatisticasLote, // <-- IMPORTAR A FUNÇÃO DE SALVAR
-  IEstatisticaLotePayload 
+  getEstatisticasAgrupadasPorData,
+  limparTodosOsLancamentosDoDia,
+  registrarEstatisticasLote,
+  IEstatisticaLotePayload,
+  extractErrorMessage
 } from '../services/api';
 import { 
   IOcorrenciaDetalhada, 
@@ -66,60 +64,48 @@ function LancamentoPage() {
   const [ocorrenciaParaEditar, setOcorrenciaParaEditar] = useState<IOcorrenciaDetalhada | null>(null);
   const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
-  const fetchDadosTabela = useCallback(async () => {
+  const fetchDados = useCallback(async () => {
     if (!dataRegistro) return;
     setLoading(true);
-    try {
-      const dados = await getEstatisticasAgrupadasPorData(dataRegistro);
-      setDadosTabela(dados);
-    } catch (error) {
-      addNotification('Falha ao carregar lançamentos em lote.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [dataRegistro, addNotification]);
-
-  const fetchOcorrenciasDetalhadas = useCallback(async () => {
-    if (!dataRegistro) return;
     setLoadingDetalhadas(true);
     try {
-      const dados = await getOcorrenciasDetalhadas(dataRegistro);
-      setOcorrenciasDetalhadas(dados);
+      const [dadosLote, dadosDetalhados] = await Promise.all([
+        getEstatisticasAgrupadasPorData(dataRegistro),
+        getOcorrenciasDetalhadas(dataRegistro)
+      ]);
+      setDadosTabela(dadosLote);
+      setOcorrenciasDetalhadas(dadosDetalhados);
     } catch (error) {
-      addNotification('Falha ao carregar ocorrências detalhadas.', 'error');
+      addNotification('Falha ao carregar os dados da página.', 'error');
     } finally {
+      setLoading(false);
       setLoadingDetalhadas(false);
     }
   }, [dataRegistro, addNotification]);
 
   useEffect(() => {
-    fetchDadosTabela();
-    fetchOcorrenciasDetalhadas();
-  }, [fetchDadosTabela, fetchOcorrenciasDetalhadas]);
+    fetchDados();
+  }, [fetchDados]);
 
   const obmsComDados = useMemo(() => {
     const ids = dadosTabela.map(dado => {
       const cidade = cidades.find(c => c.cidade_nome === dado.cidade_nome);
-      return cidade ? cidade.id : null;
-    }).filter((id): id is number => id !== null);
+      return cidade ? cidade.id : undefined;
+    }).filter((id): id is number => id !== undefined && id !== null);
     return new Set(ids);
   }, [dadosTabela, cidades]);
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // 2. CRIAR A FUNÇÃO QUE REALMENTE CHAMA A API PARA SALVAR OS DADOS EM LOTE
   const handleSaveLote = async (payload: IEstatisticaLotePayload) => {
     try {
       const response = await registrarEstatisticasLote(payload);
       addNotification(response.message, 'success');
       setIsModalOpen(false);
       setItemParaEditar(null);
-      fetchDadosTabela(); // Atualiza a tabela após salvar
+      fetchDados();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao salvar os lançamentos.';
-      addNotification(message, 'error');
+      addNotification(extractErrorMessage(error), 'error');
     }
   };
-  // ======================= FIM DA CORREÇÃO =======================
 
   const handleSaveDetalhada = async (payload: IOcorrenciaDetalhadaPayload, id?: number) => {
     try {
@@ -128,14 +114,13 @@ function LancamentoPage() {
         addNotification('Ocorrência atualizada com sucesso!', 'success');
       } else {
         await criarOcorrenciaDetalhada(payload);
-        addNotification('Ocorrência detalhada registrada com sucesso!', 'success');
+        addNotification('Ocorrência detalhada registrada e definida como destaque!', 'success');
       }
       setIsDetalheModalOpen(false);
       setOcorrenciaParaEditar(null);
-      fetchOcorrenciasDetalhadas();
+      fetchDados();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao salvar a ocorrência.';
-      addNotification(message, 'error');
+      addNotification(extractErrorMessage(error), 'error');
     }
   };
 
@@ -144,22 +129,25 @@ function LancamentoPage() {
       try {
         await deletarOcorrenciaDetalhada(id);
         addNotification('Ocorrência excluída com sucesso!', 'success');
-        fetchOcorrenciasDetalhadas();
+        fetchDados();
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Falha ao excluir a ocorrência.';
-        addNotification(message, 'error');
+        addNotification(extractErrorMessage(error), 'error');
       }
     }
   };
 
-  const handleSetDestaque = async (id: number) => {
-    if (window.confirm(`Tem certeza que deseja definir a ocorrência ID ${id} como destaque?`)) {
+  const handleLimparLancamentos = async () => {
+    const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+    if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do dia ${dataFormatada}?`)) {
       try {
-        await setOcorrenciaDestaque(id);
-        addNotification(`Ocorrência ${id} definida como destaque!`, 'success');
+        setLoading(true);
+        const response = await limparTodosOsLancamentosDoDia(dataRegistro);
+        addNotification(response.message, 'success');
+        fetchDados();
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Falha ao definir destaque.';
-        addNotification(message, 'error');
+        addNotification(extractErrorMessage(error), 'error');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -187,7 +175,14 @@ function LancamentoPage() {
           </div>
         </div>
         
-        <div className="flex items-end gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <button
+            onClick={handleLimparLancamentos}
+            disabled={loading || (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)}
+            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Limpar Lançamentos do Dia
+          </button>
           <button
             onClick={() => { setOcorrenciaParaEditar(null); setIsDetalheModalOpen(true); }}
             disabled={loading}
@@ -239,9 +234,6 @@ function LancamentoPage() {
                     <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
                     <td className="p-3 text-center">
                       <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => handleSetDestaque(item.id)} title="Definir como Destaque" className="text-purple-400 hover:text-purple-300">
-                          <Icon path="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" size={20} />
-                        </button>
                         <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-blue-400 hover:text-blue-300">
                           <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={20} />
                         </button>
@@ -266,7 +258,6 @@ function LancamentoPage() {
       {isModalOpen && (
         <LancamentoModal
           onClose={() => { setIsModalOpen(false); setItemParaEditar(null); }}
-          // 3. PASSAR A NOVA FUNÇÃO PARA O MODAL
           onSave={handleSaveLote}
           cidades={cidades}
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}

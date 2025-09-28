@@ -1,29 +1,24 @@
-// Caminho: frontend/src/components/LancamentoModal.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { ICidade, IDataApoio } from '../services/api';
+import { ICidade, IDataApoio, IEstatisticaLotePayload } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/useAuth';
 import SearchableSelect from './SearchableSelect';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Definimos a ordem de exibição desejada para os grupos.
 const ORDEM_GRUPOS = [
   'Resgate',
   'Incêndio',
   'Busca e Salvamento',
-  'Ações Preventivas', // Nome corrigido
+  'Ações Preventivas',
   'Atividades Técnicas',
   'Produtos Perigosos',
   'Defesa Civil',
 ];
-// ======================= FIM DA CORREÇÃO =======================
 
 interface LancamentoModalProps {
   cidades: ICidade[];
   naturezas: IDataApoio[];
   onClose: () => void;
-  onSave: (formData: any) => void;
+  onSave: (formData: IEstatisticaLotePayload) => void;
   itemParaEditar: any | null;
   obmsComDados: Set<number>;
 }
@@ -80,7 +75,7 @@ function LancamentoModal({
       setCidadeId('');
     }
     setQuantidades(getInitialQuantidades());
-  }, [itemParaEditar, usuario]);
+  }, [itemParaEditar, usuario, isEditing]);
 
   const handleQuantidadeChange = (naturezaId: number, valor: string) => {
     const valorLimpo = valor.replace(/[^0-9]/g, '');
@@ -93,8 +88,23 @@ function LancamentoModal({
       addNotification('Por favor, selecione uma OBM (Cidade).', 'error');
       return;
     }
-    // A lógica de salvar agora usa 'obm_id' em vez de 'cidade_id' para consistência com o backend
-    onSave({ data_ocorrencia: dataOcorrencia, obm_id: cidadeId, quantidades });
+
+    const estatisticas = Object.entries(quantidades)
+      .map(([natureza_id, quantidadeStr]) => ({
+        natureza_id: Number(natureza_id),
+        quantidade: Number(quantidadeStr) || 0,
+      }))
+      .filter(item => item.quantidade > 0);
+
+    const payload: IEstatisticaLotePayload = {
+      data_registro: dataOcorrencia,
+      obm_id: cidadeId,
+      estatisticas: estatisticas,
+    };
+    
+    console.log('[DIAGNÓSTICO FRONTEND] Payload enviado para a API:', JSON.stringify(payload, null, 2));
+    
+    onSave(payload);
   };
 
   const limparFormulario = () => {
@@ -152,7 +162,6 @@ function LancamentoModal({
             </div>
           </div>
           
-          {/* 3. Itera sobre a ORDEM_GRUPOS personalizada */}
           {ORDEM_GRUPOS.map(grupo => {
             const natsDoGrupo = naturezasAgrupadas[grupo];
             if (!natsDoGrupo) return null;

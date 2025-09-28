@@ -1,5 +1,3 @@
-// Caminho: frontend/src/services/api.ts
-
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthProvider';
 
@@ -75,11 +73,22 @@ export interface IDashboardStats {
 
 export interface IPlantao {
   ocorrenciaDestaque: {
-    ocorrencia_id: number | null;
-    data_ocorrencia: string | null;
-    natureza_descricao: string | null;
-    obm_nome: string | null;
-    crbm_nome: string | null;
+    id: number;
+    numero_ocorrencia?: string;
+    natureza_id: number;
+    natureza_grupo: string;
+    natureza_nome: string;
+    endereco?: string;
+    bairro?: string;
+    cidade_id: number;
+    cidade_nome: string;
+    viaturas?: string;
+    veiculos_envolvidos?: string;
+    dados_vitimas?: string;
+    resumo_ocorrencia: string;
+    data_ocorrencia: string;
+    horario_ocorrencia?: string;
+    usuario_id: number;
   } | null;
   supervisorPlantao: {
     usuario_id: number | null;
@@ -171,12 +180,10 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
 
 export const api = axios.create({ baseURL });
 
-// Define o cabeçalho 'Content-Type' como padrão para todas as requisições POST, PUT, etc.
-// Isso garante que o backend sempre receba JSON da forma correta.
 api.defaults.headers.post['Content-Type'] = 'application/json';
 api.defaults.headers.put['Content-Type'] = 'application/json';
 
@@ -194,7 +201,6 @@ api.interceptors.request.use(
 export const extractErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
-    // Log detalhado do erro da API no console do navegador para facilitar a depuração
     console.error('[API Error]', {
       message: axiosError.message,
       url: axiosError.config?.url,
@@ -231,23 +237,8 @@ export const solicitarAcesso = async (payload: ISolicitacaoAcessoPayload): Promi
   }
 };
 
-export const getSolicitacoes = async (): Promise<ISolicitacao[]> => {
-  try {
-    const response = await api.get('/acesso');
-    return response.data;
-  } catch (error) {
-    throw new Error(extractErrorMessage(error));
-  }
-};
-
-export const gerenciarSolicitacao = async (id: number, acao: 'aprovar' | 'recusar'): Promise<{ message: string }> => {
-  try {
-    const response = await api.put(`/acesso/${id}/gerenciar`, { acao });
-    return response.data;
-  } catch (error) {
-    throw new Error(extractErrorMessage(error));
-  }
-};
+export const getSolicitacoes = async (): Promise<ISolicitacao[]> => api.get('/acesso').then(res => res.data);
+export const gerenciarSolicitacao = async (id: number, acao: 'aprovar' | 'recusar'): Promise<{ message: string }> => api.put(`/acesso/${id}/gerenciar`, { acao }).then(res => res.data);
 
 // Dados de Apoio
 export const getCrbms = async (): Promise<ICrbm[]> => api.get('/crbms').then(res => res.data);
@@ -255,7 +246,7 @@ export const getCidades = async (): Promise<ICidade[]> => api.get('/unidades').t
 export const getNaturezas = async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data);
 export const getNaturezasPorNomes = async (nomes: string[]): Promise<IDataApoio[]> => api.post('/naturezas/por-nomes', { nomes }).then(res => res.data);
 
-// Ocorrências
+// Ocorrências (Legado)
 export const criarOcorrencia = async (payload: IOcorrenciaPayload): Promise<{ message: string; ocorrenciaId: number }> => api.post('/ocorrencias', payload).then(res => res.data);
 export const getOcorrencias = async (page = 1, limit = 10): Promise<IPaginatedOcorrencias> => api.get(`/ocorrencias?page=${page}&limit=${limit}`).then(res => res.data);
 export const updateOcorrencia = async (id: number, data: { data_ocorrencia: string; natureza_id: number; obm_id: number; }): Promise<{ message: string; ocorrencia: IOcorrencia }> => api.put(`/ocorrencias/${id}`, data).then(res => res.data);
@@ -265,7 +256,6 @@ export const deleteOcorrencia = async (id: number): Promise<{ message: string }>
 export const getDashboardStats = async (): Promise<IDashboardStats> => api.get('/dashboard/stats').then(res => res.data);
 export const getPlantao = async (): Promise<IPlantao> => api.get('/plantao').then(res => res.data);
 export const getSupervisores = async (): Promise<ISupervisor[]> => api.get('/plantao/supervisores').then(res => res.data);
-export const setOcorrenciaDestaque = async (ocorrencia_id: number | null): Promise<any> => api.post('/plantao/destaque', { ocorrencia_id }).then(res => res.data);
 export const setSupervisorPlantao = async (usuario_id: number | null): Promise<any> => api.post('/plantao/supervisor', { usuario_id }).then(res => res.data);
 
 // Usuários
@@ -275,12 +265,24 @@ export const updateUsuario = async (id: number, data: Partial<IUser>): Promise<{
 export const deleteUsuario = async (id: number): Promise<{ message: string }> => api.delete(`/usuarios/${id}`).then(res => res.data);
 
 // Lançamentos em Lote (Estatísticas)
-export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload): Promise<{ message: string }> => api.post('/estatisticas/lote', payload).then(res => res.data);
+export const registrarEstatisticasLote = async (payload: IEstatisticaLotePayload): Promise<{ message: string }> => {
+  try {
+    const response = await api.post('/estatisticas/lote', payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
 export const getEstatisticasAgrupadasPorData = async (data: string): Promise<IEstatisticaAgrupada[]> => api.get('/estatisticas/por-data', { params: { data } }).then(res => res.data);
-export const limparEstatisticasDoDia = async (data: string, obm_id?: number): Promise<{ message: string }> => {
-  const params: { data: string; obm_id?: number } = { data };
-  if (obm_id) params.obm_id = obm_id;
-  return api.delete('/estatisticas/por-data', { params }).then(res => res.data);
+
+// Limpeza de Dados
+export const limparTodosOsLancamentosDoDia = async (data: string): Promise<{ message: string }> => {
+  try {
+    const response = await api.delete('/limpeza/dia-completo', { params: { data } });
+    return response.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
 };
 
 // Relatórios
