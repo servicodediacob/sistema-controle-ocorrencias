@@ -171,9 +171,14 @@ interface ApiError {
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}` );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
 
 export const api = axios.create({ baseURL });
+
+// Define o cabeçalho 'Content-Type' como padrão para todas as requisições POST, PUT, etc.
+// Isso garante que o backend sempre receba JSON da forma correta.
+api.defaults.headers.post['Content-Type'] = 'application/json';
+api.defaults.headers.put['Content-Type'] = 'application/json';
 
 api.interceptors.request.use(
   (config) => {
@@ -189,6 +194,14 @@ api.interceptors.request.use(
 export const extractErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
+    // Log detalhado do erro da API no console do navegador para facilitar a depuração
+    console.error('[API Error]', {
+      message: axiosError.message,
+      url: axiosError.config?.url,
+      method: axiosError.config?.method,
+      status: axiosError.response?.status,
+      data: axiosError.response?.data,
+    });
     return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`;
   }
   if (error instanceof Error) return error.message;

@@ -33,8 +33,10 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (formData) {
-      // CORREÇÃO: O nome do campo no formulário da ocorrência agora é 'cidade_id'
-      const finalValue = (name === 'cidade_id' || name === 'natureza_id') ? parseInt(value, 10) : value;
+      // ======================= INÍCIO DA CORREÇÃO =======================
+      // O nome do campo no formulário e na lógica agora é 'obm_id'
+      const finalValue = (name === 'obm_id' || name === 'natureza_id') ? parseInt(value, 10) : value;
+      // ======================= FIM DA CORREÇÃO =======================
       setFormData({ ...formData, [name]: finalValue });
     }
   };
@@ -82,21 +84,21 @@ function EditOcorrenciaModal({ ocorrencia, onClose, onSave }: EditOcorrenciaModa
             <div style={styles.formGroup}>
               <label htmlFor="natureza_id" style={styles.label}>Natureza</label>
               <select id="natureza_id" name="natureza_id" value={formData?.natureza_id} onChange={handleChange} required style={styles.input}>
-                {naturezas.map(nat => <option key={nat.id} value={nat.id}>{nat.descricao}</option>)}
+                {naturezas.map(nat => <option key={nat.id} value={nat.id}>{nat.subgrupo}</option>)}
               </select>
             </div>
+            {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
             <div style={styles.formGroup}>
-              {/* CORREÇÃO: O campo agora é 'cidade_id' */}
-              <label htmlFor="cidade_id" style={styles.label}>Cidade</label>
-              <select id="cidade_id" name="cidade_id" value={formData?.cidade_id} onChange={handleChange} required style={styles.input}>
+              <label htmlFor="obm_id" style={styles.label}>OBM (Cidade)</label>
+              <select id="obm_id" name="obm_id" value={formData?.obm_id} onChange={handleChange} required style={styles.input}>
                 {cidades.map(cidade => (
-                  // CORREÇÃO: Acessando 'cidade.cidade_nome'
                   <option key={cidade.id} value={cidade.id}>
                     {cidade.cidade_nome}
                   </option>
                 ))}
               </select>
             </div>
+            {/* ======================= FIM DA CORREÇÃO ======================= */}
             <div style={styles.buttonContainer}>
               <button type="button" onClick={onClose} style={{...styles.button, backgroundColor: '#555'}}>Cancelar</button>
               <button type="submit" style={{...styles.button, backgroundColor: '#3a7ca5'}}>Salvar Alterações</button>

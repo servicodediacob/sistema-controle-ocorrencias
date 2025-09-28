@@ -1,0 +1,15 @@
+OUTPUT_FILE="backup_codigo_fonte.txt"
+> "$OUTPUT_FILE"
+find . -type f \
+  -not -path "./node_modules/*" \
+  -not -path "./dist/*" \
+  -not -path "./.git/*" \
+  | while read -r file; do
+    echo "==================================================" >> "$OUTPUT_FILE"
+    echo "ARQUIVO: $file" >> "$OUTPUT_FILE"
+    echo "==================================================" >> "$OUTPUT_FILE"
+    cat -n "$file" >> "$OUTPUT_FILE"
+    echo -e "\n\n" >> "$OUTPUT_FILE"
+done
+
+echo "Backup concluído! O conteúdo foi salvo em: $OUTPUT_FILE"

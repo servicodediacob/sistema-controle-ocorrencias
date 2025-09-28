@@ -6,7 +6,8 @@ import db from '../db';
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
     // ======================= INÍCIO DA CORREÇÃO =======================
-    // A query agora busca da tabela 'ocorrencias_detalhadas'
+    // A query agora busca da tabela 'ocorrencias_detalhadas' e junta com as tabelas corretas.
+    // Ela também seleciona os campos necessários para o novo widget de destaque.
     const destaqueQuery = `
       SELECT 
         od.*,

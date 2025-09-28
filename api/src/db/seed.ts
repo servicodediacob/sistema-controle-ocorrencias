@@ -19,7 +19,7 @@ export async function seedDatabase() {
 
     if (!isProduction) {
       console.log('🧹 Limpando tabelas existentes...');
-      await client.query('TRUNCATE TABLE solicitacoes_acesso, obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, obitos, ocorrencias, usuarios, obms, crbms RESTART IDENTITY CASCADE');
+      await client.query('TRUNCATE TABLE solicitacoes_acesso, obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, obitos, ocorrencias, usuarios, obms, crbms, naturezas_ocorrencia RESTART IDENTITY CASCADE');
       console.log('✅ Tabelas limpas.');
     }
 

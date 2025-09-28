@@ -4,7 +4,6 @@ import { Response } from 'express';
 import { RequestWithUser } from '../middleware/authMiddleware';
 import db from '../db';
 
-// ... (Interface e função registrarEstatisticasLote não precisam de alteração) ...
 interface EstatisticaPayload {
   data_registro: string;
   obm_id: number;
@@ -12,7 +11,32 @@ interface EstatisticaPayload {
 }
 
 export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<void> => {
-  const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
+  console.log('[DIAGNÓSTICO BACKEND] Corpo da requisição recebido (req.body):', JSON.stringify(req.body, null, 2));
+
+  // ======================= INÍCIO DA CORREÇÃO DE FLEXIBILIDADE =======================
+  // Esta seção irá adaptar o payload recebido, não importa qual versão o frontend envie.
+
+  let { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
+  const legacyBody = req.body as any; // Permite acesso a propriedades não tipadas
+
+  // 1. Verifica se o campo de data veio com o nome antigo ('data_ocorrencia')
+  if (!data_registro && legacyBody.data_ocorrencia) {
+    console.log("[ADAPTADOR BACKEND] Campo 'data_ocorrencia' detectado. Convertendo para 'data_registro'.");
+    data_registro = legacyBody.data_ocorrencia;
+  }
+
+  // 2. Verifica se o campo de estatísticas veio com o nome antigo ('quantidades')
+  if (!estatisticas && legacyBody.quantidades) {
+    console.log("[ADAPTADOR BACKEND] Campo 'quantidades' detectado. Convertendo para 'estatisticas'.");
+    estatisticas = Object.entries(legacyBody.quantidades)
+      .map(([natureza_id, quantidadeStr]) => ({
+        natureza_id: Number(natureza_id),
+        quantidade: Number(quantidadeStr) || 0,
+      }))
+      .filter(item => item.quantidade > 0);
+  }
+  // ======================= FIM DA CORREÇÃO DE FLEXIBILIDADE =======================
+
   const usuario = req.usuario; 
 
   if (!usuario) {
@@ -25,6 +49,7 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
     return;
   }
 
+  // A validação agora usa as variáveis que podem ter sido adaptadas.
   if (!data_registro || !obm_id || !estatisticas) {
     res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
     return;
@@ -74,8 +99,7 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
   }
 };
 
-
-// ======================= INÍCIO DA CORREÇÃO =======================
+// O restante do arquivo permanece o mesmo...
 export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data_inicio, data_fim } = req.query;
 
@@ -85,7 +109,6 @@ export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Respon
   }
 
   try {
-    // A query foi modificada para incluir uma ordenação personalizada.
     const query = `
       SELECT
         n.grupo,
@@ -118,11 +141,10 @@ export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Respon
           WHEN 'Atividades Técnicas' THEN 5
           WHEN 'Produtos Perigosos' THEN 6
           WHEN 'Defesa Civil' THEN 7
-          ELSE 8 -- Garante que qualquer outro grupo vá para o final
+          ELSE 8
         END,
-        n.subgrupo; -- Ordena os subgrupos alfabeticamente dentro de cada grupo
+        n.subgrupo;
     `;
-    // ======================= FIM DA CORREÇÃO =======================
     
     const { rows } = await db.query(query, [data_inicio as string, data_fim as string]);
     res.status(200).json(rows);
@@ -132,7 +154,6 @@ export const getRelatorioEstatisticas = async (req: RequestWithUser, res: Respon
   }
 };
 
-// ... (Restante do arquivo sem alterações) ...
 export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
