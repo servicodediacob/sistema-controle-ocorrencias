@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-// A importação com alias funciona aqui porque o 'tsc-alias' a corrige durante o build.
 import db from '@/db'; 
 
 // O script compilado estará em 'dist/scripts/'. O schema estará em 'dist/db/'.
