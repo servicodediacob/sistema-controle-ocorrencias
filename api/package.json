@@ -10,7 +10,7 @@
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
     "migrate": "ts-node src/scripts/migrate.ts",
     "seed:dev": "dotenv -e .env.development -- ts-node src/scripts/seed-dev.ts",
-    "build:prod": "npm install && npm run migrate && npm run build"
+    "build:prod": "npm install && npm run build && npm run migrate"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
