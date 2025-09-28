@@ -1,11 +1,14 @@
 {
-  "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/jest": "^30.0.0",
-    "@types/supertest": "^6.0.3",
-    "fs-extra": "^11.3.2",
-    "jest": "^30.1.3",
-    "supertest": "^7.1.4",
-    "ts-jest": "^29.4.3"
-  }
+  "name": "sistema-ocorrencias-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd api && npm install && npm run build",
+    "start": "cd api && npm run start",
+    "migrate": "cd api && npm run migrate"
+  },
+  "workspaces": [
+    "api",
+    "frontend"
+  ]
 }
