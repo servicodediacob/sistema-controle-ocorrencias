@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import db from '@/db';
 
-// CORREÇÃO: O caminho agora aponta para o local correto dentro do contêiner do Render
-const SCHEMA_FILE_PATH = path.resolve(process.cwd(), 'src/db/schema.sql');
+// Caminho relativo à raiz do projeto (onde o script é executado)
+const SCHEMA_FILE_PATH = path.join(process.cwd(), 'src/db/schema.sql');
 
 async function migrate() {
   console.log('🚀 Iniciando a migração do schema do banco de dados...');
@@ -23,8 +23,7 @@ async function migrate() {
 
   } catch (error) {
     console.error('❌ Erro durante a migração do schema:', error);
-    // Lançar o erro novamente para que o processo de build do Render falhe
-    throw error;
+    throw error; // Lança o erro para falhar o processo de build
   } finally {
     client.release();
     console.log('🔌 Conexão com o banco de dados liberada.');
@@ -33,4 +32,7 @@ async function migrate() {
   }
 }
 
-migrate().catch(() => process.exit(1)); // Garante que o processo saia com erro se a migração falhar
+migrate().catch((err) => {
+  console.error("A migração falhou. Encerrando o processo.");
+  process.exit(1);
+});
