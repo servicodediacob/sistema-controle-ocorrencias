@@ -1,87 +1,153 @@
-// backend/src/controllers/relatorioObitosController.ts
-
-import { Request, Response } from 'express';
+import { Response } from 'express';
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Importamos a interface RequestWithUser do nosso middleware
+import { RequestWithUser } from '../middleware/authMiddleware';
+// --- FIM DA CORREÇÃO ---
 import db from '../db';
+import logger from '../config/logger';
 
-interface ObitoRelatorioPayload {
-  data_relatorio: string;
-  dados: {
-    natureza_id: number;
-    quantidade: number;
-    rai_obm_info: string;
-  }[];
+// Interface para o payload recebido do frontend
+interface IObitoRegistroPayload {
+  data_ocorrencia: string;
+  natureza_id: number;
+  numero_ocorrencia: string;
+  obm_id: number;
+  quantidade_vitimas: number;
 }
 
-/**
- * @description Busca os dados do relatório de óbitos para uma data específica.
- */
-export const getRelatorioObitos = async (req: Request, res: Response): Promise<void> => {
+// Função para buscar registros de óbitos por data
+export const getObitosPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { data } = req.query;
 
   if (!data || typeof data !== 'string') {
-    res.status(400).json({ message: 'A data do relatório é obrigatória.' });
+    res.status(400).json({ message: 'O parâmetro "data" é obrigatório.' });
     return;
   }
 
   try {
     const query = `
       SELECT 
-        n.id as natureza_id,
-        n.grupo,
-        n.subgrupo,
-        COALESCE(obr.quantidade, 0) as quantidade,
-        COALESCE(obr.rai_obm_info, '') as rai_obm_info
-      FROM naturezas_ocorrencia n
-      LEFT JOIN obitos_relatorio obr ON n.id = obr.natureza_id AND obr.data_relatorio = $1
-      ORDER BY n.grupo, n.subgrupo;
+        obr.id,
+        obr.data_ocorrencia,
+        obr.natureza_id,
+        n.subgrupo as natureza_nome,
+        obr.numero_ocorrencia,
+        obr.obm_id,
+        o.nome as obm_nome,
+        obr.quantidade_vitimas
+      FROM obitos_registros obr
+      JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
+      LEFT JOIN obms o ON obr.obm_id = o.id
+      WHERE obr.data_ocorrencia = $1
+      ORDER BY n.subgrupo, obr.id;
     `;
     const { rows } = await db.query(query, [data]);
     res.status(200).json(rows);
   } catch (error) {
-    console.error('Erro ao buscar relatório de óbitos:', error);
+    logger.error({ err: error, query: req.query }, 'Erro ao buscar registros de óbitos por data.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @description Salva (insere ou atualiza) os dados do relatório de óbitos.
- */
-export const saveRelatorioObitos = async (req: Request, res: Response): Promise<void> => {
-  const { data_relatorio, dados } = req.body as ObitoRelatorioPayload;
+// Função para criar um novo registro de óbito
+export const criarObitoRegistro = async (req: RequestWithUser, res: Response): Promise<void> => {
+  // --- INÍCIO DA CORREÇÃO ---
+  // 2. Usamos a interface correta para que 'req.usuario' seja reconhecido
   const usuario_id = req.usuario?.id;
+  // --- FIM DA CORREÇÃO ---
+  const payload: IObitoRegistroPayload = req.body;
 
-  if (!data_relatorio || !dados) {
-    res.status(400).json({ message: 'Dados incompletos.' });
+  try {
+    const query = `
+      INSERT INTO obitos_registros 
+        (data_ocorrencia, natureza_id, numero_ocorrencia, obm_id, quantidade_vitimas, usuario_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [
+      payload.data_ocorrencia,
+      payload.natureza_id,
+      payload.numero_ocorrencia,
+      payload.obm_id,
+      payload.quantidade_vitimas,
+      usuario_id
+    ];
+    const { rows } = await db.query(query, values);
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    logger.error({ err: error, body: req.body }, 'Erro ao criar registro de óbito.');
+    res.status(500).json({ message: 'Erro interno do servidor ao criar registro.' });
+  }
+};
+
+// Função para atualizar um registro de óbito
+export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const payload: IObitoRegistroPayload = req.body;
+
+  try {
+    const query = `
+      UPDATE obitos_registros SET
+        data_ocorrencia = $1,
+        natureza_id = $2,
+        numero_ocorrencia = $3,
+        obm_id = $4,
+        quantidade_vitimas = $5
+      WHERE id = $6
+      RETURNING *;
+    `;
+    const values = [
+      payload.data_ocorrencia,
+      payload.natureza_id,
+      payload.numero_ocorrencia,
+      payload.obm_id,
+      payload.quantidade_vitimas,
+      id
+    ];
+    const { rows } = await db.query(query, values);
+
+    if (rows.length === 0) {
+      res.status(404).json({ message: 'Registro de óbito não encontrado.' });
+      return;
+    }
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    logger.error({ err: error, params: req.params, body: req.body }, 'Erro ao atualizar registro de óbito.');
+    res.status(500).json({ message: 'Erro interno do servidor ao atualizar registro.' });
+  }
+};
+
+// Função para deletar um registro de óbito
+export const deletarObitoRegistro = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const result = await db.query('DELETE FROM obitos_registros WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ message: 'Registro de óbito não encontrado.' });
+      return;
+    }
+    res.status(200).json({ message: 'Registro excluído com sucesso.' });
+  } catch (error) {
+    logger.error({ err: error, params: req.params }, 'Erro ao deletar registro de óbito.');
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// Função para limpar todos os registros de uma data específica
+export const limparRegistrosPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { data } = req.query;
+
+  if (!data || typeof data !== 'string') {
+    res.status(400).json({ message: 'O parâmetro "data" é obrigatório.' });
     return;
   }
 
-  const client = await db.pool.connect();
   try {
-    await client.query('BEGIN');
-
-    const query = `
-      INSERT INTO obitos_relatorio (data_relatorio, natureza_id, quantidade, rai_obm_info, usuario_id, atualizado_em)
-      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-      ON CONFLICT (data_relatorio, natureza_id) 
-      DO UPDATE SET
-        quantidade = EXCLUDED.quantidade,
-        rai_obm_info = EXCLUDED.rai_obm_info,
-        usuario_id = EXCLUDED.usuario_id,
-        atualizado_em = CURRENT_TIMESTAMP;
-    `;
-
-    for (const item of dados) {
-      await client.query(query, [data_relatorio, item.natureza_id, item.quantidade, item.rai_obm_info, usuario_id]);
-    }
-
-    await client.query('COMMIT');
-    res.status(200).json({ message: 'Relatório de óbitos salvo com sucesso!' });
-
+    const result = await db.query('DELETE FROM obitos_registros WHERE data_ocorrencia = $1', [data]);
+    res.status(200).json({ message: `${result.rowCount} registros de óbito foram excluídos para a data ${data}.` });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Erro ao salvar relatório de óbitos:', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao salvar o relatório.' });
-  } finally {
-    client.release();
+    logger.error({ err: error, query: req.query }, 'Erro ao limpar registros de óbitos por data.');
+    res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
