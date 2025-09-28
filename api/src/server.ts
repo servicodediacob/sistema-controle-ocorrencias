@@ -6,14 +6,14 @@ import './config/envLoader';
 import logger from './config/logger';
 import db from './db';
 
-// Importação APENAS das rotas que sabemos que existem
+// Importação das rotas existentes
 import authRoutes from './routes/authRoutes';
 import dadosRoutes from './routes/dadosRoutes';
 import acessoRoutes from './routes/acessoRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciasDetalhadasRoutes from './routes/ocorrenciaDetalhadaRoutes';
 
-// --- CONFIGURAÇÃO DE CORS ---
+// Configuração de CORS
 const allowedOrigins = [
   'http://localhost:5173',
   'https://siscob-iota.vercel.app'
@@ -35,10 +35,10 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- ROTAS CONSOLIDADAS ---
-
-// Rota de Diagnóstico
-app.get('/api/diag', async (_req: Request, res: Response) => {
+// --- INÍCIO DA CORREÇÃO ---
+// 1. Rota de Diagnóstico renomeada para '/api/health'
+app.get('/api/health', async (_req: Request, res: Response) => {
+// --- FIM DA CORREÇÃO ---
   try {
     await db.query('SELECT 1');
     res.status(200).json({ status: 'ok', database: 'ok' });
@@ -90,8 +90,6 @@ app.use('/api/acesso', acessoRoutes);
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciasDetalhadasRoutes);
 app.use('/api', dadosRoutes);
-
-// --- FIM DAS ROTAS ---
 
 const httpServer = createServer(app );
 const io = new SocketIOServer(httpServer, {
