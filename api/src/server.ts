@@ -1,87 +1,114 @@
-import './config/envLoader';
-import 'dotenv/config';
-import express, { Express, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
-import logger from './config/logger';
-import http from 'http';
+import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import './config/envLoader';
+import logger from './config/logger';
+import db from './db';
 
-import { onSocketConnection } from './services/socketService'; 
-
-// Importação das suas rotas
+// Importação APENAS das rotas que sabemos que existem
 import authRoutes from './routes/authRoutes';
 import dadosRoutes from './routes/dadosRoutes';
-import unidadesRoutes from './routes/unidadesRoutes';
-import dashboardRoutes from './routes/dashboardRoutes';
-import plantaoRoutes from './routes/plantaoRoutes';
-import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
-import { checkHealth } from './controllers/healthController';
-import { runDiagnostics } from './controllers/diagController';
-// ======================= INÍCIO DA CORREÇÃO =======================
-import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes'; // 1. Importar
-// ======================= FIM DA CORREÇÃO =======================
+import plantaoRoutes from './routes/plantaoRoutes';
+import ocorrenciasDetalhadasRoutes from './routes/ocorrenciaDetalhadaRoutes';
 
-import './db';
-
-const app: Express = express( );
-const PORT = process.env.PORT || 3001;
-
-// Configuração de CORS (sem alterações)
+// --- CONFIGURAÇÃO DE CORS ---
 const allowedOrigins = [
-  'https://sistema-controle-ocorrencias.vercel.app',
-  'https://sistema-controle-ocorrencias-kn7pa3qiq.vercel.app',
-  'https://siscob-iota.vercel.app',
-  'https://sistema-ocorrencias-d7rw.onrender.com',
-  'https://sistema-ocorrencias-api-1jzi.onrender.com'
+  'http://localhost:5173',
+  'https://siscob-iota.vercel.app'
 ];
-if (process.env.NODE_ENV !== 'production'  ) {
-  allowedOrigins.push('http://localhost:5173'  );
-}
+
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin, callback ) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Acesso não permitido pela política de CORS'));
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
 };
+
+const app = express();
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Rotas
-app.get('/api/health', checkHealth);
-app.get('/api/diag', runDiagnostics);
-app.use('/api/auth', authRoutes);
-app.use('/api/acesso', acessoRoutes);
-app.use('/api', dadosRoutes);
-app.use('/api', unidadesRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/plantao', plantaoRoutes);
-app.use('/api/usuarios', usuarioRoutes);
+// --- ROTAS CONSOLIDADAS ---
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes); // 2. Registrar a rota
-// ======================= FIM DA CORREÇÃO =======================
-
-app.get('/api', (_req: Request, res: Response) => {
-  res.send('API do Sistema de Controle de Ocorrências está no ar!');
+// Rota de Diagnóstico
+app.get('/api/diag', async (_req: Request, res: Response) => {
+  try {
+    await db.query('SELECT 1');
+    res.status(200).json({ status: 'ok', database: 'ok' });
+  } catch (error) {
+    res.status(500).json({ status: 'ok', database: 'error', message: (error as Error).message });
+  }
 });
 
-const httpServer = http.createServer(app );
-const io = new SocketIOServer(httpServer, { cors: corsOptions, pingInterval: 5000, pingTimeout: 10000 } );
-onSocketConnection(io);
+// Rotas de Dados de Apoio
+app.get('/api/unidades', async (_req: Request, res: Response) => {
+    try {
+        const { rows } = await db.query(`
+            SELECT o.id, o.nome as cidade_nome, o.crbm_id, c.nome as crbm_nome 
+            FROM obms o
+            JOIN crbms c ON o.crbm_id = c.id
+            ORDER BY c.nome, o.nome
+        `);
+        res.json(rows);
+    } catch (error) {
+        logger.error({ err: error }, 'Erro ao buscar unidades/cidades.');
+        res.status(500).send('Erro ao buscar unidades');
+    }
+});
 
-if (require.main === module) {
-  httpServer.listen(PORT, ( ) => {
-    logger.info(`Servidor HTTP e Socket.IO rodando na porta ${PORT}`);
-    logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+app.get('/api/crbms', async (_req: Request, res: Response) => {
+    try {
+        const { rows } = await db.query('SELECT * FROM crbms ORDER BY nome');
+        res.json(rows);
+    } catch (error) {
+        logger.error({ err: error }, 'Erro ao buscar CRBMs.');
+        res.status(500).send('Erro ao buscar CRBMs');
+    }
+});
+
+// Rotas de Usuários
+app.get('/api/usuarios', async (_req: Request, res: Response) => {
+    try {
+        const { rows } = await db.query('SELECT id, nome, email, role, obm_id FROM usuarios ORDER BY nome');
+        res.json(rows);
+    } catch (error) {
+        logger.error({ err: error }, 'Erro ao buscar usuários.');
+        res.status(500).send('Erro ao buscar usuários');
+    }
+});
+
+// Rotas existentes
+app.use('/api/auth', authRoutes);
+app.use('/api/acesso', acessoRoutes);
+app.use('/api/plantao', plantaoRoutes);
+app.use('/api/ocorrencias-detalhadas', ocorrenciasDetalhadasRoutes);
+app.use('/api', dadosRoutes);
+
+// --- FIM DAS ROTAS ---
+
+const httpServer = createServer(app );
+const io = new SocketIOServer(httpServer, {
+  cors: corsOptions
+} );
+
+io.on('connection', (socket) => {
+  logger.info(`[Socket.IO] Usuário conectado: ${socket.id}`);
+  socket.on('disconnect', () => {
+    logger.info(`[Socket.IO] Usuário desconectado: ${socket.id}`);
   });
-}
+});
 
-export default httpServer;
+const PORT = process.env.PORT || 3001;
+
+const server = httpServer.listen(PORT, ( ) => {
+  logger.info(`🚀 Servidor rodando na porta ${PORT}`);
+});
+
+export default server;
