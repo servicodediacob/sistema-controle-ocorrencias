@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import db from '@/db';
+// A importação com alias funciona aqui porque o 'tsc-alias' a corrige durante o build.
+import db from '@/db'; 
 
-const SCHEMA_FILE_PATH = path.join(process.cwd(), 'src/db/schema.sql');
+// O script compilado estará em 'dist/scripts/'. O schema estará em 'dist/db/'.
+// O caminho relativo de um para o outro é '../db/schema.sql'.
+const SCHEMA_FILE_PATH = path.join(__dirname, '../db/schema.sql');
 
 async function migrate() {
   console.log('🚀 Iniciando a migração do schema do banco de dados...');
@@ -21,7 +24,6 @@ async function migrate() {
     console.log('🎉 Schema do banco de dados aplicado com sucesso!');
 
   } catch (error) {
-    // CORREÇÃO: Agora usamos a variável 'error' no log.
     console.error('❌ Erro durante a migração do schema:', error);
     throw error;
   } finally {
@@ -32,7 +34,6 @@ async function migrate() {
   }
 }
 
-// CORREÇÃO: Também usamos a variável 'err' aqui.
 migrate().catch((err) => {
   console.error("A migração falhou. O processo de build será encerrado.", err);
   process.exit(1);
