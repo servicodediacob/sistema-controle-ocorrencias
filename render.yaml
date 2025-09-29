@@ -7,21 +7,8 @@ services:
     buildCommand: "npm install && npm run build && npm run migrate"
     startCommand: "npm run start"
     healthCheckPath: /api/health
-    envVars:
-      - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: postgres-siscob
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: NODE_ENV
-        value: production
-      - key: LOG_LEVEL
-        value: info
 
   # --- Serviço do Banco de Dados PostgreSQL ---
   - type: pserv
     name: postgres-siscob
-    env: postgres
     plan: free
