@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd api && npm install && npm run build",
-    "start": "cd api && node dist/server.js",
+    "build": "cd api && npm run build",
+    "start": "cd api && npm run start",
     "migrate": "cd api && npm run migrate"
   },
   "workspaces": [
