@@ -5,38 +5,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDashboardStats = void 0;
 const db_1 = __importDefault(require("../db"));
+// ======================= FIM DA CORREÇÃO =======================
 const getDashboardStats = async (_req, res) => {
     try {
         const query = `
-      WITH total_ocorrencias AS (
-        SELECT COUNT(*) AS total FROM ocorrencias
+      WITH 
+      naturezas_de_obito AS (
+        SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos'
       ),
-      total_obitos AS (
-        SELECT SUM(quantidade_obitos) AS total FROM ocorrencias
+      ocorrencias_unificadas AS (
+        SELECT natureza_id, quantidade, obm_id FROM estatisticas_diarias
+        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
+        
+        UNION ALL
+        
+        SELECT natureza_id, 1 AS quantidade, cidade_id AS obm_id FROM ocorrencias_detalhadas
+        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
+      ),
+      total_ocorrencias_unificadas AS (
+        SELECT COALESCE(SUM(quantidade), 0) AS total FROM ocorrencias_unificadas
       ),
       ocorrencias_por_natureza AS (
         SELECT
-          n.descricao AS nome,
-          COUNT(o.id)::int AS total
-        FROM ocorrencias o
-        JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-        GROUP BY n.descricao
+          n.subgrupo AS nome,
+          SUM(ou.quantidade)::int AS total
+        FROM ocorrencias_unificadas ou
+        JOIN naturezas_ocorrencia n ON ou.natureza_id = n.id
+        GROUP BY n.subgrupo
         ORDER BY total DESC
       ),
-      ocorrencias_por_obm AS (
+      ocorrencias_por_crbm AS (
         SELECT
-          obm.nome AS nome,
-          COUNT(o.id)::int AS total
-        FROM ocorrencias o
-        JOIN obms obm ON o.obm_id = obm.id
-        GROUP BY obm.nome
+          cr.nome,
+          SUM(ou.quantidade)::int AS total
+        FROM ocorrencias_unificadas ou
+        JOIN obms ob ON ou.obm_id = ob.id
+        JOIN crbms cr ON ob.crbm_id = cr.id
+        GROUP BY cr.nome
         ORDER BY total DESC
+      ),
+      total_obitos_registros AS (
+        SELECT COALESCE(SUM(quantidade_vitimas), 0) AS total FROM obitos_registros
       )
       SELECT json_build_object(
-        'totalOcorrencias', (SELECT total FROM total_ocorrencias),
-        'totalObitos', (SELECT COALESCE(total, 0) FROM total_obitos),
-        'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(ocorrencias_por_natureza) FROM ocorrencias_por_natureza), '[]'::json),
-        'ocorrenciasPorOBM', COALESCE((SELECT json_agg(ocorrencias_por_obm) FROM ocorrencias_por_obm), '[]'::json)
+        'totalOcorrencias', (SELECT total FROM total_ocorrencias_unificadas),
+        'totalObitos', (SELECT total FROM total_obitos_registros),
+        'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_natureza) t), '[]'::json),
+        'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_crbm) t), '[]'::json)
       ) AS stats;
     `;
         const { rows } = await db_1.default.query(query);

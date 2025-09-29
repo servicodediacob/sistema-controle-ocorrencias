@@ -4,7 +4,7 @@
 /frontend/node_modules
 
 # Arquivos de build e distribuição
-/api/dist
+#/api/dist
 /frontend/dist
 /.vercel
 
@@ -31,3 +31,4 @@ sync_db.sh
 
 # Arquivos de configuração de IDE
 .vscode/
+

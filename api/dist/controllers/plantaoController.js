@@ -3,21 +3,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setSupervisorPlantao = exports.setOcorrenciaDestaque = exports.getSupervisores = exports.getPlantao = void 0;
+exports.setSupervisorPlantao = exports.getSupervisores = exports.getPlantao = void 0;
 const db_1 = __importDefault(require("../db"));
+const logger_1 = __importDefault(require("../config/logger"));
 const getPlantao = async (_req, res) => {
     try {
         const destaqueQuery = `
       SELECT 
-        od.ocorrencia_id,
-        o.data_ocorrencia,
-        n.descricao as natureza_descricao,
-        obm.nome as obm_nome
-      FROM ocorrencia_destaque od
-      LEFT JOIN ocorrencias o ON od.ocorrencia_id = o.id
-      LEFT JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      LEFT JOIN obms obm ON o.obm_id = obm.id
-      WHERE od.id = 1;
+        od.*,
+        n.grupo as natureza_grupo,
+        n.subgrupo as natureza_nome,
+        c.nome as cidade_nome
+      FROM ocorrencia_destaque d
+      LEFT JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
+      LEFT JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
+      LEFT JOIN obms c ON od.cidade_id = c.id
+      WHERE d.id = 1 AND d.ocorrencia_id IS NOT NULL;
     `;
         const supervisorQuery = `
       SELECT 
@@ -37,44 +38,32 @@ const getPlantao = async (_req, res) => {
         });
     }
     catch (error) {
-        console.error('Erro ao buscar dados do plantão:', error);
+        logger_1.default.error({ err: error }, 'Erro ao buscar dados do plantão.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.getPlantao = getPlantao;
 const getSupervisores = async (_req, res) => {
     try {
-        const { rows } = await db_1.default.query('SELECT id, nome FROM usuarios ORDER BY nome ASC');
+        const { rows } = await db_1.default.query("SELECT id, nome FROM usuarios WHERE role = 'admin' ORDER BY nome ASC");
         res.status(200).json(rows);
     }
     catch (error) {
-        console.error('Erro ao buscar supervisores:', error);
+        logger_1.default.error({ err: error }, 'Erro ao buscar lista de supervisores.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.getSupervisores = getSupervisores;
-const setOcorrenciaDestaque = async (req, res) => {
-    const { ocorrencia_id } = req.body;
-    try {
-        const query = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
-        const { rows } = await db_1.default.query(query, [ocorrencia_id]);
-        res.status(200).json(rows[0]);
-    }
-    catch (error) {
-        console.error('Erro ao definir ocorrência de destaque:', error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-};
-exports.setOcorrenciaDestaque = setOcorrenciaDestaque;
 const setSupervisorPlantao = async (req, res) => {
     const { usuario_id } = req.body;
     try {
         const query = 'UPDATE supervisor_plantao SET usuario_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
         const { rows } = await db_1.default.query(query, [usuario_id]);
+        logger_1.default.info({ novoSupervisorId: usuario_id }, 'Supervisor de plantão atualizado.');
         res.status(200).json(rows[0]);
     }
     catch (error) {
-        console.error('Erro ao definir supervisor de plantão:', error);
+        logger_1.default.error({ err: error, body: req.body }, 'Erro ao definir supervisor de plantão.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };

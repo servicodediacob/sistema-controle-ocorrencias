@@ -1,173 +1,85 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteOcorrencia = exports.updateOcorrencia = exports.getOcorrencias = exports.criarOcorrencia = exports.excluirNatureza = exports.atualizarNatureza = exports.criarNatureza = exports.getNaturezas = exports.excluirObm = exports.atualizarObm = exports.criarObm = exports.getObms = void 0;
-// CORREÇÃO: Importa tanto 'db' (default) quanto 'pool' (nomeado)
-const db_1 = __importStar(require("../db"));
-// ===============================================
-// OBMs (Organizações Bombeiro Militar)
-// ===============================================
-const getObms = async (_req, res) => {
-    try {
-        const { rows } = await db_1.default.query('SELECT * FROM obms ORDER BY nome ASC');
-        res.status(200).json(rows);
-    }
-    catch (error) {
-        console.error('[DIAGNÓSTICO] Erro ao buscar OBMs:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao buscar OBMs.' });
-    }
-};
-exports.getObms = getObms;
-const criarObm = async (req, res) => {
-    const { nome, crbm_id } = req.body;
-    if (!nome || crbm_id === undefined) {
-        res.status(400).json({ message: 'Nome e ID do CRBM são obrigatórios.' });
-        return;
-    }
-    try {
-        const query = 'INSERT INTO obms (nome, crbm_id) VALUES ($1, $2) RETURNING *';
-        const values = [nome, crbm_id];
-        const { rows } = await db_1.default.query(query, values);
-        res.status(201).json(rows[0]);
-    }
-    catch (error) {
-        const dbError = error;
-        if (dbError.code === '23505') {
-            res.status(409).json({ message: `A OBM com o nome "${nome}" já existe.` });
-            return;
-        }
-        if (dbError.code === '23503') {
-            res.status(400).json({ message: `O CRBM com ID ${crbm_id} não é válido.` });
-            return;
-        }
-        res.status(500).json({ message: 'Erro interno do servidor ao criar OBM.' });
-    }
-};
-exports.criarObm = criarObm;
-const atualizarObm = async (req, res) => {
-    const { id } = req.params;
-    const { nome, crbm_id } = req.body;
-    if (!nome || !crbm_id) {
-        res.status(400).json({ message: 'Nome e ID do CRBM são obrigatórios.' });
-        return;
-    }
-    try {
-        const query = 'UPDATE obms SET nome = $1, crbm_id = $2 WHERE id = $3 RETURNING *';
-        const { rows } = await db_1.default.query(query, [nome, crbm_id, id]);
-        if (rows.length === 0) {
-            res.status(404).json({ message: 'OBM não encontrada.' });
-            return;
-        }
-        res.status(200).json(rows[0]);
-    }
-    catch (error) {
-        console.error('Erro ao atualizar OBM:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao atualizar OBM.' });
-    }
-};
-exports.atualizarObm = atualizarObm;
-const excluirObm = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await db_1.default.query('DELETE FROM obms WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            res.status(404).json({ message: 'OBM não encontrada.' });
-            return;
-        }
-        res.status(200).json({ message: 'OBM excluída com sucesso.' });
-    }
-    catch (error) {
-        console.error('Erro ao excluir OBM:', error);
-        if (error.code === '23503') {
-            res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a ocorrências existentes.' });
-            return;
-        }
-        res.status(500).json({ message: 'Erro interno do servidor ao excluir OBM.' });
-    }
-};
-exports.excluirObm = excluirObm;
-// ===============================================
-// NATUREZAS DE OCORRÊNCIA
-// ===============================================
+exports.excluirNatureza = exports.atualizarNatureza = exports.criarNatureza = exports.getNaturezasPorNomes = exports.getNaturezas = void 0;
+const db_1 = __importDefault(require("../db"));
+const logger_1 = __importDefault(require("../config/logger"));
 const getNaturezas = async (_req, res) => {
     try {
-        const { rows } = await db_1.default.query('SELECT * FROM naturezas_ocorrencia ORDER BY descricao ASC');
-        res.status(200).json(rows);
+        const { rows } = await db_1.default.query('SELECT id, grupo, subgrupo, abreviacao FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
+        return res.status(200).json(rows);
     }
     catch (error) {
-        console.error('Erro ao buscar naturezas:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao buscar naturezas.' });
+        logger_1.default.error({ err: error }, 'Erro ao buscar naturezas.');
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.getNaturezas = getNaturezas;
-const criarNatureza = async (req, res) => {
-    const { descricao } = req.body;
-    if (!descricao) {
-        res.status(400).json({ message: 'A descrição é obrigatória.' });
-        return;
+const getNaturezasPorNomes = async (req, res) => {
+    const { nomes } = req.body;
+    if (!Array.isArray(nomes) || nomes.length === 0) {
+        return res.status(400).json({ message: 'Um array de nomes de subgrupo é obrigatório.' });
     }
     try {
-        const query = 'INSERT INTO naturezas_ocorrencia (descricao) VALUES ($1) RETURNING *';
-        const { rows } = await db_1.default.query(query, [descricao]);
-        res.status(201).json(rows[0]);
+        const inPlaceholders = nomes.map((_, index) => `$${index + 1}`).join(', ');
+        const query = `
+      SELECT id, subgrupo 
+      FROM naturezas_ocorrencia 
+      WHERE subgrupo IN (${inPlaceholders})
+      ORDER BY subgrupo;
+    `;
+        const { rows } = await db_1.default.query(query, nomes);
+        return res.status(200).json(rows);
     }
     catch (error) {
-        console.error('Erro ao criar natureza:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao criar natureza.' });
+        logger_1.default.error({ err: error, nomes }, 'Erro ao buscar naturezas por nomes.');
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+};
+exports.getNaturezasPorNomes = getNaturezasPorNomes;
+const criarNatureza = async (req, res) => {
+    const { grupo, subgrupo, abreviacao } = req.body;
+    if (!grupo || !subgrupo) {
+        return res.status(400).json({ message: 'Os campos Grupo e Subgrupo são obrigatórios.' });
+    }
+    try {
+        const query = 'INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES ($1, $2, $3) RETURNING *';
+        const { rows } = await db_1.default.query(query, [grupo, subgrupo, abreviacao || null]);
+        logger_1.default.info({ natureza: rows[0] }, 'Nova natureza de ocorrência criada.');
+        return res.status(201).json(rows[0]);
+    }
+    catch (error) {
+        if (error.code === '23505') {
+            return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
+        }
+        logger_1.default.error({ err: error, body: req.body }, 'Erro ao criar natureza.');
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.criarNatureza = criarNatureza;
 const atualizarNatureza = async (req, res) => {
     const { id } = req.params;
-    const { descricao } = req.body;
-    if (!descricao) {
-        res.status(400).json({ message: 'A descrição é obrigatória.' });
-        return;
+    const { grupo, subgrupo, abreviacao } = req.body;
+    if (!grupo || !subgrupo) {
+        return res.status(400).json({ message: 'Os campos Grupo e Subgrupo são obrigatórios.' });
     }
     try {
-        const query = 'UPDATE naturezas_ocorrencia SET descricao = $1 WHERE id = $2 RETURNING *';
-        const { rows } = await db_1.default.query(query, [descricao, id]);
+        const query = 'UPDATE naturezas_ocorrencia SET grupo = $1, subgrupo = $2, abreviacao = $3 WHERE id = $4 RETURNING *';
+        const { rows } = await db_1.default.query(query, [grupo, subgrupo, abreviacao || null, id]);
         if (rows.length === 0) {
-            res.status(404).json({ message: 'Natureza não encontrada.' });
-            return;
+            return res.status(404).json({ message: 'Natureza não encontrada.' });
         }
-        res.status(200).json(rows[0]);
+        logger_1.default.info({ natureza: rows[0] }, 'Natureza de ocorrência atualizada.');
+        return res.status(200).json(rows[0]);
     }
     catch (error) {
-        console.error('Erro ao atualizar natureza:', error);
-        res.status(500).json({ message: 'Erro ao atualizar natureza.' });
+        if (error.code === '23505') {
+            return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
+        }
+        logger_1.default.error({ err: error, params: req.params, body: req.body }, 'Erro ao atualizar natureza.');
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.atualizarNatureza = atualizarNatureza;
@@ -176,147 +88,17 @@ const excluirNatureza = async (req, res) => {
     try {
         const result = await db_1.default.query('DELETE FROM naturezas_ocorrencia WHERE id = $1', [id]);
         if (result.rowCount === 0) {
-            res.status(404).json({ message: 'Natureza não encontrada.' });
-            return;
+            return res.status(404).json({ message: 'Natureza não encontrada.' });
         }
-        res.status(200).json({ message: 'Natureza excluída com sucesso.' });
+        logger_1.default.info({ naturezaId: id }, 'Natureza de ocorrência excluída.');
+        return res.status(204).send();
     }
     catch (error) {
-        console.error('Erro ao excluir natureza:', error);
         if (error.code === '23503') {
-            res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a ocorrências existentes.' });
-            return;
+            return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a registros existentes.' });
         }
-        res.status(500).json({ message: 'Erro interno do servidor ao excluir natureza.' });
+        logger_1.default.error({ err: error, naturezaId: id }, 'Erro ao excluir natureza.');
+        return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.excluirNatureza = excluirNatureza;
-// ===============================================
-// OCORRÊNCIAS
-// ===============================================
-const criarOcorrencia = async (req, res) => {
-    const { ocorrencia, obitos } = req.body;
-    if (!ocorrencia || !ocorrencia.obm_id || !ocorrencia.natureza_id || !ocorrencia.data_ocorrencia) {
-        res.status(400).json({ message: 'Dados da ocorrência incompletos. OBM, Natureza e Data são obrigatórios.' });
-        return;
-    }
-    // CORREÇÃO: Usa a importação nomeada 'pool' para transações
-    const client = await db_1.pool.connect();
-    try {
-        await client.query('BEGIN');
-        const queryOcorrencia = `
-      INSERT INTO ocorrencias (data_ocorrencia, natureza_id, obm_id, quantidade_obitos)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id; 
-    `;
-        const ocorrenciaValues = [
-            ocorrencia.data_ocorrencia,
-            ocorrencia.natureza_id,
-            ocorrencia.obm_id,
-            obitos ? obitos.length : 0
-        ];
-        const resultOcorrencia = await client.query(queryOcorrencia, ocorrenciaValues);
-        const novaOcorrenciaId = resultOcorrencia.rows[0].id;
-        if (obitos && obitos.length > 0) {
-            for (const obito of obitos) {
-                const queryObito = `
-          INSERT INTO obitos (ocorrencia_id, nome_vitima, idade_vitima, genero)
-          VALUES ($1, $2, $3, $4);
-        `;
-                const obitoValues = [
-                    novaOcorrenciaId,
-                    obito.nome_vitima,
-                    obito.idade_vitima,
-                    obito.genero
-                ];
-                await client.query(queryObito, obitoValues);
-            }
-        }
-        await client.query('COMMIT');
-        res.status(201).json({
-            message: 'Ocorrência e óbitos registrados com sucesso!',
-            ocorrenciaId: novaOcorrenciaId
-        });
-    }
-    catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Erro ao registrar ocorrência (transação revertida):', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao registrar a ocorrência.' });
-    }
-    finally {
-        client.release();
-    }
-};
-exports.criarOcorrencia = criarOcorrencia;
-const getOcorrencias = async (req, res) => {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const offset = (page - 1) * limit;
-    try {
-        const ocorrenciasQuery = `
-      SELECT 
-        o.id, o.data_ocorrencia, o.quantidade_obitos, o.natureza_id, o.obm_id,
-        n.descricao AS natureza_descricao, obm.nome AS obm_nome, cr.nome AS crbm_nome
-      FROM ocorrencias o
-      JOIN naturezas_ocorrencia n ON o.natureza_id = n.id
-      JOIN obms obm ON o.obm_id = obm.id
-      JOIN crbms cr ON obm.crbm_id = cr.id
-      ORDER BY o.data_ocorrencia DESC, o.id DESC
-      LIMIT $1 OFFSET $2;
-    `;
-        const { rows: ocorrencias } = await db_1.default.query(ocorrenciasQuery, [limit, offset]);
-        const totalQuery = 'SELECT COUNT(*) FROM ocorrencias;';
-        const { rows: totalRows } = await db_1.default.query(totalQuery);
-        const total = parseInt(totalRows[0].count, 10);
-        res.status(200).json({
-            ocorrencias,
-            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-        });
-    }
-    catch (error) {
-        console.error('Erro ao buscar ocorrências:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao buscar ocorrências.' });
-    }
-};
-exports.getOcorrencias = getOcorrencias;
-const updateOcorrencia = async (req, res) => {
-    const { id } = req.params;
-    const { data_ocorrencia, natureza_id, obm_id } = req.body;
-    if (!data_ocorrencia || !natureza_id || !obm_id) {
-        res.status(400).json({ message: 'Todos os campos são obrigatórios para atualização.' });
-        return;
-    }
-    try {
-        const query = `
-      UPDATE ocorrencias SET data_ocorrencia = $1, natureza_id = $2, obm_id = $3
-      WHERE id = $4 RETURNING *;
-    `;
-        const { rows } = await db_1.default.query(query, [data_ocorrencia, natureza_id, obm_id, id]);
-        if (rows.length === 0) {
-            res.status(404).json({ message: 'Ocorrência não encontrada.' });
-            return;
-        }
-        res.status(200).json({ message: 'Ocorrência atualizada com sucesso!', ocorrencia: rows[0] });
-    }
-    catch (error) {
-        console.error('Erro ao atualizar ocorrência:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao atualizar a ocorrência.' });
-    }
-};
-exports.updateOcorrencia = updateOcorrencia;
-const deleteOcorrencia = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await db_1.default.query('DELETE FROM ocorrencias WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            res.status(404).json({ message: 'Ocorrência não encontrada.' });
-            return;
-        }
-        res.status(200).json({ message: 'Ocorrência excluída com sucesso.' });
-    }
-    catch (error) {
-        console.error('Erro ao excluir ocorrência:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao excluir a ocorrência.' });
-    }
-};
-exports.deleteOcorrencia = deleteOcorrencia;

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.proteger = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-require("dotenv/config");
+const logger_1 = __importDefault(require("../config/logger"));
 const proteger = (req, res, next) => {
     let token;
     const authHeader = req.headers.authorization;
@@ -13,19 +13,19 @@ const proteger = (req, res, next) => {
         try {
             token = authHeader.split(' ')[1];
             const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-            req.usuario = { id: decoded.id, nome: decoded.nome };
-            next();
-            return; // Saída explícita após chamar next()
+            // Anexa os dados do usuário decodificados ao objeto da requisição
+            req.usuario = decoded;
+            next(); // Continua para a próxima função (o controller da rota)
+            return;
         }
         catch (error) {
-            console.error('Erro de autenticação:', error.message);
-            res.status(401).json({ message: 'Não autorizado, token inválido.' });
+            logger_1.default.warn({ err: error, token }, 'Falha na autenticação do token.');
+            res.status(401).json({ message: 'Não autorizado, token inválido ou expirado.' });
             return;
         }
     }
     if (!token) {
         res.status(401).json({ message: 'Não autorizado, nenhum token fornecido.' });
-        return;
     }
 };
 exports.proteger = proteger;

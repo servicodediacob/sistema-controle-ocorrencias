@@ -1,0 +1,83 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getRelatorioCompleto = void 0;
+const db_1 = __importDefault(require("../db"));
+const logger_1 = __importDefault(require("../config/logger"));
+const getRelatorioCompleto = async (req, res) => {
+    const { data_inicio, data_fim } = req.query;
+    if (!data_inicio || !data_fim) {
+        res.status(400).json({ message: 'As datas de início e fim são obrigatórias.' });
+        return;
+    }
+    try {
+        const estatisticasQuery = `
+      WITH dados_unificados AS (
+        SELECT ed.natureza_id, ed.quantidade, o.nome AS obm_nome, o.crbm_id
+        FROM estatisticas_diarias ed
+        JOIN obms o ON ed.obm_id = o.id
+        WHERE ed.data_registro BETWEEN $1 AND $2
+        UNION ALL
+        SELECT od.natureza_id, 1 AS quantidade, o.nome AS obm_nome, o.crbm_id
+        FROM ocorrencias_detalhadas od
+        JOIN obms o ON od.cidade_id = o.id
+        WHERE od.data_ocorrencia BETWEEN $1 AND $2
+      )
+      SELECT
+        n.grupo, n.subgrupo,
+        COALESCE(SUM(CASE WHEN du.obm_nome = 'Goiânia - Diurno' THEN du.quantidade ELSE 0 END), 0)::int AS diurno,
+        COALESCE(SUM(CASE WHEN du.obm_nome = 'Goiânia - Noturno' THEN du.quantidade ELSE 0 END), 0)::int AS noturno,
+        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS total_capital,
+        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "1º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '2º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "2º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '3º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "3º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '4º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "4º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '5º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "5º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '6º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "6º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '7º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "7º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '8º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "8º CRBM",
+        COALESCE(SUM(CASE WHEN cr.nome = '9º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "9º CRBM",
+        COALESCE(SUM(du.quantidade), 0)::int AS total_geral
+      FROM naturezas_ocorrencia n
+      LEFT JOIN dados_unificados du ON n.id = du.natureza_id
+      LEFT JOIN crbms cr ON du.crbm_id = cr.id
+      WHERE n.grupo != 'Relatório de Óbitos'
+      GROUP BY n.grupo, n.subgrupo
+      ORDER BY CASE n.grupo WHEN 'Resgate' THEN 1 WHEN 'Incêndio' THEN 2 WHEN 'Busca e Salvamento' THEN 3 WHEN 'Ações Preventivas' THEN 4 WHEN 'Atividades Técnicas' THEN 5 WHEN 'Produtos Perigosos' THEN 6 WHEN 'Defesa Civil' THEN 7 ELSE 8 END, n.subgrupo;
+    `;
+        const obitosQuery = `
+      SELECT obr.id, obr.data_ocorrencia, n.subgrupo as natureza_nome, obr.numero_ocorrencia, o.nome as obm_nome, obr.quantidade_vitimas
+      FROM obitos_registros obr
+      JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
+      LEFT JOIN obms o ON obr.obm_id = o.id
+      WHERE obr.data_ocorrencia BETWEEN $1 AND $2
+      ORDER BY obr.data_ocorrencia DESC, n.subgrupo;
+    `;
+        const destaquesQuery = `
+      SELECT od.id, od.data_ocorrencia, n.subgrupo as natureza_descricao, obm.nome as obm_nome, cr.nome as crbm_nome
+      FROM ocorrencias_detalhadas od
+      JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
+      JOIN obms obm ON od.cidade_id = obm.id
+      JOIN crbms cr ON obm.crbm_id = cr.id
+      WHERE od.data_ocorrencia BETWEEN $1 AND $2
+      ORDER BY od.data_ocorrencia DESC;
+    `;
+        const [estatisticasResult, obitosResult, destaquesResult] = await Promise.all([
+            db_1.default.query(estatisticasQuery, [data_inicio, data_fim]),
+            db_1.default.query(obitosQuery, [data_inicio, data_fim]),
+            db_1.default.query(destaquesQuery, [data_inicio, data_fim])
+        ]);
+        res.status(200).json({
+            estatisticas: estatisticasResult.rows,
+            obitos: obitosResult.rows,
+            destaques: destaquesResult.rows,
+        });
+    }
+    catch (error) {
+        logger_1.default.error({ err: error, query: req.query }, 'Erro ao gerar relatório completo.');
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+};
+exports.getRelatorioCompleto = getRelatorioCompleto;
