@@ -1,12 +1,4 @@
 services:
-  # --- Serviço do Banco de Dados PostgreSQL ---
-  - type: pserv
-    name: postgres-siscob
-    env: postgres
-    plan: free
-    # A versão é um campo direto do serviço 'pserv'
-    postgresVersion: 15
-
   # --- Serviço da API Node.js ---
   - type: web
     name: api-siscob
@@ -27,3 +19,10 @@ services:
         value: production
       - key: LOG_LEVEL
         value: info
+
+  # --- Serviço do Banco de Dados PostgreSQL ---
+  - type: pserv
+    name: postgres-siscob
+    env: postgres
+    plan: free
+    postgresMajorVersion: 15
