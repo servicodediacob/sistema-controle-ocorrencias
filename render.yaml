@@ -1,15 +1,17 @@
 services:
   # --- Serviço do Banco de Dados PostgreSQL ---
   - type: pserv
-    name: postgres-siscob # Nome único para o seu banco de dados
+    name: postgres-siscob
     env: postgres
     plan: free
-    postgres:
+    # A versão é definida como uma propriedade do serviço, não aninhada.
+    # E removemos o campo "postgres:" que estava incorreto.
+    properties:
       version: 15
 
   # --- Serviço da API Node.js ---
   - type: web
-    name: api-siscob # Nome único para a sua API
+    name: api-siscob
     env: node
     plan: free
     buildCommand: "npm install && npm run build && npm run migrate"
@@ -19,10 +21,10 @@ services:
       - key: DATABASE_URL
         fromService:
           type: pserv
-          name: postgres-siscob # Deve ser o mesmo nome do serviço de banco de dados acima
+          name: postgres-siscob
           property: connectionString
       - key: JWT_SECRET
-        generateValue: true # O Render irá gerar um valor aleatório e seguro
+        generateValue: true
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL
