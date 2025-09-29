@@ -1,10 +1,8 @@
 services:
-  # --- Serviço da API Node.js ---
   - type: web
     name: api-siscob
     env: node
     plan: free
-    rootDir: ./
     buildCommand: "npm install --production=false && npm run build && npm run migrate"
     startCommand: "npm start"
     healthCheckPath: /api/diag
