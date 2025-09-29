@@ -1,9 +1,7 @@
-// Caminho: api/src/controllers/ocorrenciaDetalhadaController.ts
-
-import { Request, Response } from 'express';
-import { RequestWithUser } from '../middleware/authMiddleware';
-import db from '../db';
-import logger from '../config/logger';
+import { Response } from 'express';
+import { RequestWithUser } from '@/middleware/authMiddleware';
+import db from '@/db';
+import logger from '@/config/logger';
 
 interface OcorrenciaDetalhadaPayload {
   numero_ocorrencia?: string;
@@ -23,14 +21,11 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
   const payload: OcorrenciaDetalhadaPayload = req.body;
   const usuario_id = req.usuario?.id;
   
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // Agora usamos uma transação para garantir que ambas as operações (criar e definir destaque) ocorram com sucesso.
   const client = await db.pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // 1. Insere a nova ocorrência detalhada e obtém seu ID
     const queryInsert = `
       INSERT INTO ocorrencias_detalhadas 
         (numero_ocorrencia, natureza_id, endereco, bairro, cidade_id, viaturas, veiculos_envolvidos, dados_vitimas, resumo_ocorrencia, data_ocorrencia, horario_ocorrencia, usuario_id)
@@ -40,35 +35,30 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
     const values = [
       payload.numero_ocorrencia, payload.natureza_id, payload.endereco, payload.bairro, payload.cidade_id,
       payload.viaturas, payload.veiculos_envolvidos, payload.dados_vitimas, payload.resumo_ocorrencia,
-      payload.data_ocorrencia, payload.horario_ocorrencia, usuario_id
+      payload.data_ocorrencia, payload.horario_ocorrencia || null, usuario_id
     ];
     
     const result = await client.query(queryInsert, values);
     const novaOcorrencia = result.rows[0];
 
-    // 2. Atualiza a tabela 'ocorrencia_destaque' com o ID da ocorrência que acabamos de criar.
     const queryUpdateDestaque = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1';
     await client.query(queryUpdateDestaque, [novaOcorrencia.id]);
 
-    logger.info(`[DESTAQUE AUTOMÁTICO] Ocorrência ID ${novaOcorrencia.id} definida como novo destaque.`);
-
-    // 3. Confirma a transação
     await client.query('COMMIT');
     
+    logger.info({ ocorrenciaId: novaOcorrencia.id, usuarioId: usuario_id }, 'Ocorrência detalhada criada e definida como destaque.');
     return res.status(201).json(novaOcorrencia);
 
   } catch (error) {
-    await client.query('ROLLBACK'); // Desfaz tudo em caso de erro
-    logger.error({ err: error }, 'Erro ao criar ocorrência detalhada e definir como destaque.');
+    await client.query('ROLLBACK');
+    logger.error({ err: error, payload }, 'Erro ao criar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   } finally {
-    client.release(); // Libera a conexão
+    client.release();
   }
-  // ======================= FIM DA CORREÇÃO =======================
 };
 
-// O restante do arquivo permanece o mesmo
-export const getOcorrenciasDetalhadasPorData = async (req: Request, res: Response) => {
+export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res: Response) => {
   const { data_ocorrencia } = req.query;
 
   if (!data_ocorrencia || typeof data_ocorrencia !== 'string') {
@@ -92,12 +82,12 @@ export const getOcorrenciasDetalhadasPorData = async (req: Request, res: Respons
     const { rows } = await db.query(query, [data_ocorrencia]);
     return res.status(200).json(rows);
   } catch (error) {
-    console.error('Erro ao buscar ocorrências detalhadas:', error);
+    logger.error({ err: error, data: data_ocorrencia }, 'Erro ao buscar ocorrências detalhadas.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-export const atualizarOcorrenciaDetalhada = async (req: Request, res: Response) => {
+export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   const payload: OcorrenciaDetalhadaPayload = req.body;
 
@@ -106,37 +96,39 @@ export const atualizarOcorrenciaDetalhada = async (req: Request, res: Response) 
       UPDATE ocorrencias_detalhadas SET
         numero_ocorrencia = $1, natureza_id = $2, endereco = $3, bairro = $4, cidade_id = $5,
         viaturas = $6, veiculos_envolvidos = $7, dados_vitimas = $8, resumo_ocorrencia = $9,
-        data_ocorrencia = $10, horario_ocorrencia = $11
-      WHERE id = $12
+        data_ocorrencia = $10, horario_ocorrencia = $11, usuario_id = $12
+      WHERE id = $13
       RETURNING *;
     `;
     const values = [
       payload.numero_ocorrencia, payload.natureza_id, payload.endereco, payload.bairro, payload.cidade_id,
       payload.viaturas, payload.veiculos_envolvidos, payload.dados_vitimas, payload.resumo_ocorrencia,
-      payload.data_ocorrencia, payload.horario_ocorrencia, id
+      payload.data_ocorrencia, payload.horario_ocorrencia || null, req.usuario?.id, id
     ];
 
     const { rows } = await db.query(query, values);
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
     }
+    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada atualizada.');
     return res.status(200).json(rows[0]);
   } catch (error) {
-    console.error('Erro ao atualizar ocorrência detalhada:', error);
+    logger.error({ err: error, payload, ocorrenciaId: id }, 'Erro ao atualizar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-export const deletarOcorrenciaDetalhada = async (req: Request, res: Response) => {
+export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   try {
     const result = await db.query('DELETE FROM ocorrencias_detalhadas WHERE id = $1', [id]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
     }
-    return res.status(200).json({ message: 'Ocorrência excluída com sucesso.' });
+    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada deletada.');
+    return res.status(204).send(); // 204 No Content é mais apropriado para delete
   } catch (error) {
-    console.error('Erro ao excluir ocorrência detalhada:', error);
+    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

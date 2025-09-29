@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { RequestWithUser } from '@/middleware/authMiddleware'; // CORRIGIDO
-import db from '@/db'; // CORRIGIDO
+import { RequestWithUser } from '@/middleware/authMiddleware';
+import db from '@/db';
 import bcrypt from 'bcryptjs';
+import logger from '@/config/logger';
 
-// ... (o resto do arquivo permanece o mesmo)
 export const solicitarAcesso = async (req: Request, res: Response): Promise<void> => {
     const { nome, email, senha, obm_id } = req.body;
 
     if (!nome || !email || !senha || !obm_id) {
-        res.status(400).json({ message: 'Todos os campos são obrigatórios: nome, email e OBM.' });
+        res.status(400).json({ message: 'Todos os campos são obrigatórios: nome, email, senha e OBM.' });
         return;
     }
 
@@ -35,13 +35,14 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
         `;
         const { rows } = await db.query(query, [nome, email, senha_hash, obm_id]);
 
+        logger.info({ solicitacao: rows[0] }, 'Nova solicitação de acesso recebida.');
         res.status(201).json({
             message: 'Solicitação de acesso enviada com sucesso! Aguarde a aprovação de um administrador.',
             solicitacao: rows[0]
         });
 
     } catch (error) {
-        console.error('Erro ao criar solicitação de acesso:', error);
+        logger.error({ err: error }, 'Erro ao criar solicitação de acesso.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
@@ -57,7 +58,7 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
         const { rows } = await db.query(query);
         res.status(200).json(rows);
     } catch (error) {
-        console.error('Erro ao listar solicitações:', error);
+        logger.error({ err: error }, 'Erro ao listar solicitações de acesso.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
@@ -97,6 +98,7 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
             );
 
             await client.query('COMMIT');
+            logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Usuário ${solicitacao.nome} aprovado e criado.`);
             res.status(200).json({ message: `Usuário ${solicitacao.nome} aprovado e criado com sucesso.` });
 
         } else { // acao === 'recusar'
@@ -106,16 +108,15 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
             );
 
             await client.query('COMMIT');
+            logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Solicitação de ${solicitacao.nome} recusada.`);
             res.status(200).json({ message: `Solicitação de ${solicitacao.nome} recusada.` });
         }
 
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Erro ao gerenciar solicitação:', error);
+        logger.error({ err: error, solicitacaoId: id }, 'Erro ao gerenciar solicitação.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     } finally {
         client.release();
     }
 };
-// fim
-

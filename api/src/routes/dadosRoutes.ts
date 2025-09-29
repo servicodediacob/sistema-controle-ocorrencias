@@ -1,84 +1,70 @@
-// Caminho: api/src/routes/dadosRoutes.ts
-
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
+import { isAdmin } from '../middleware/roleMiddleware';
 
+// Importa TODOS os controllers necessários
 import {
   getNaturezas,
-  getNaturezasPorNomes,
   criarNatureza,
   atualizarNatureza,
   excluirNatureza,
-  criarOcorrencia,
-  getOcorrencias,
-  updateOcorrencia,
-  deleteOcorrencia
+  getNaturezasPorNomes // <-- ROTA FALTANTE ADICIONADA
 } from '../controllers/dadosController';
 
 import { 
+  getUnidades, criarUnidade, atualizarUnidade, excluirUnidade, getCrbms
+} from '../controllers/unidadesController';
+
+import {
+  listarUsuarios, criarUsuario, atualizarUsuario, excluirUsuario
+} from '../controllers/usuarioController';
+
+import {
   registrarEstatisticasLote,
   getEstatisticasAgrupadasPorData,
   limparTodosOsDadosDoDia
 } from '../controllers/estatisticasController';
 
 import { 
-  getObitosPorData, 
-  criarObitoRegistro,
-  atualizarObitoRegistro,
-  deletarObitoRegistro,
-  limparRegistrosPorData
+  getObitosPorData, criarObitoRegistro, atualizarObitoRegistro,
+  deletarObitoRegistro, limparRegistrosPorData
 } from '../controllers/obitosRegistrosController';
 
 import { getRelatorioCompleto } from '../controllers/relatorioController';
+import { getDashboardStats } from '../controllers/dashboardController';
 
 const router = Router();
 
-// --- Rotas de Naturezas de Ocorrência ---
-router.route('/naturezas')
-  .get(getNaturezas)
-  .post(proteger, criarNatureza);
+// Aplica proteção a todas as rotas deste arquivo
+router.use(proteger);
 
-router.route('/naturezas/por-nomes')
-  .post(proteger, getNaturezasPorNomes);
+// --- Rotas de Naturezas ---
+router.route('/naturezas').get(getNaturezas).post(isAdmin, criarNatureza);
+router.route('/naturezas/:id').put(isAdmin, atualizarNatureza).delete(isAdmin, excluirNatureza);
+router.post('/naturezas/por-nomes', getNaturezasPorNomes); // <-- ROTA ADICIONADA
 
-router.route('/naturezas/:id')
-  .put(proteger, atualizarNatureza)
-  .delete(proteger, excluirNatureza);
+// --- Rotas de Unidades (OBMs) e CRBMs ---
+router.route('/unidades').get(getUnidades).post(isAdmin, criarUnidade);
+router.route('/unidades/:id').put(isAdmin, atualizarUnidade).delete(isAdmin, excluirUnidade);
+router.get('/crbms', getCrbms);
 
-// --- Rotas de Ocorrências (CRUD principal - legado) ---
-router.route('/ocorrencias')
-  .get(proteger, getOcorrencias)
-  .post(proteger, criarOcorrencia);
+// --- Rotas de Usuários ---
+router.route('/usuarios').get(isAdmin, listarUsuarios).post(isAdmin, criarUsuario);
+router.route('/usuarios/:id').put(isAdmin, atualizarUsuario).delete(isAdmin, excluirUsuario);
 
-router.route('/ocorrencias/:id')
-  .put(proteger, updateOcorrencia)
-  .delete(proteger, deleteOcorrencia);
+// --- Rotas de Estatísticas ---
+router.post('/estatisticas/lote', registrarEstatisticasLote);
+router.get('/estatisticas/por-data', getEstatisticasAgrupadasPorData);
 
-// --- Rota para o formulário de lançamento em lote ---
-router.route('/estatisticas/lote')
-  .post(proteger, registrarEstatisticasLote);
+// --- Rotas de Óbitos ---
+router.route('/obitos-registros').get(getObitosPorData).post(criarObitoRegistro).delete(isAdmin, limparRegistrosPorData);
+router.route('/obitos-registros/:id').put(atualizarObitoRegistro).delete(deletarObitoRegistro);
 
-// --- Rota para o relatório consolidado ---
-router.route('/relatorio-completo')
-  .get(proteger, getRelatorioCompleto);
+// --- Rotas de Relatórios e Dashboard ---
+router.get('/relatorio-completo', getRelatorioCompleto);
+router.get('/dashboard/stats', getDashboardStats); // <-- ROTA ADICIONADA
 
-// --- Rota para buscar os dados da tabela de lançamentos ---
-router.route('/estatisticas/por-data')
-  .get(proteger, getEstatisticasAgrupadasPorData);
+// --- Rota de Limpeza ---
+router.delete('/limpeza/dia-completo', isAdmin, limparTodosOsDadosDoDia);
 
-// --- Rota de limpeza completa ---
-router.route('/limpeza/dia-completo')
-  .delete(proteger, limparTodosOsDadosDoDia);
-
-// --- Rotas para o CRUD de Registros de Óbitos ---
-router.route('/obitos-registros')
-  .get(proteger, getObitosPorData)
-  .post(proteger, criarObitoRegistro)
-  .delete(proteger, limparRegistrosPorData);
-
-router.route('/obitos-registros/:id')
-  .put(proteger, atualizarObitoRegistro)
-  .delete(proteger, deletarObitoRegistro);
-
-// Garante que o router seja exportado como padrão.
 export default router;

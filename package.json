@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "build": "cd api && npm install && npm run build",
-    "start": "cd api && npm run start",
-    "migrate": "cd api && npm run migrate"
+    "start": "cd api && node dist/server.js",
+    "migrate": "cd api && npm run migrate",
+    "diag": "cd api && npm run diag"
   },
   "workspaces": [
     "api",

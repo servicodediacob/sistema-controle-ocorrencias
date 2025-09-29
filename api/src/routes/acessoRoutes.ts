@@ -1,4 +1,3 @@
-// backend/src/routes/acessoRoutes.ts
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import { isAdmin } from '../middleware/roleMiddleware';
@@ -6,7 +5,10 @@ import { solicitarAcesso, listarSolicitacoes, gerenciarSolicitacao } from '../co
 
 const router = Router();
 
+// Rota pública para solicitar acesso
 router.post('/solicitar', solicitarAcesso);
+
+// Rotas protegidas que exigem que o usuário seja um administrador
 router.get('/', proteger, isAdmin, listarSolicitacoes);
 router.put('/:id/gerenciar', proteger, isAdmin, gerenciarSolicitacao);
 

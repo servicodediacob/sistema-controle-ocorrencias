@@ -1,24 +1,25 @@
-// Caminho: api/src/services/socketService.ts
-
 import { Server, Socket } from 'socket.io';
+import logger from '@/config/logger';
 
+// Interface para o usuário logado, incluindo quando ele entrou
 interface LoggedInUser {
   id: number;
   nome: string;
   email: string;
   role: 'admin' | 'user';
-  loginTime: string; // <-- 1. PROPRIEDADE ADICIONADA
+  loginTime: string;
 }
 
-// Mapeia userId para um Set de socketIds
-const userSockets = new Map<number, Set<string>>( );
-// Mapeia socketId para o objeto LoggedInUser
+// Mapeia userId para um Set de seus socketIds (permite múltiplas abas)
+const userSockets = new Map<number, Set<string>>();
+// Mapeia cada socketId para o objeto do usuário correspondente
 const socketToUser = new Map<string, LoggedInUser>();
 
+// Função para transmitir a lista atualizada de usuários online para todos
 const broadcastLoggedInUsers = (io: Server) => {
   const uniqueUsers = new Map<number, LoggedInUser>();
+  // Garante que cada usuário apareça apenas uma vez na lista
   for (const user of socketToUser.values()) {
-    // Para garantir que sempre pegamos o primeiro horário de login, caso o usuário tenha múltiplas abas
     if (!uniqueUsers.has(user.id)) {
       uniqueUsers.set(user.id, user);
     }
@@ -27,13 +28,13 @@ const broadcastLoggedInUsers = (io: Server) => {
   io.emit('update-logged-in-users', usersArray);
 };
 
+// Função principal que configura os listeners de eventos do Socket.IO
 export const onSocketConnection = (io: Server) => {
   io.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO] Novo cliente conectado: ${socket.id}`);
+    logger.info(`[Socket.IO] Cliente conectado: ${socket.id}`);
 
-    // --- INÍCIO DA ALTERAÇÃO ---
+    // Evento disparado pelo frontend quando um usuário faz login
     socket.on('user-login', (user: Omit<LoggedInUser, 'loginTime'>) => {
-      // 2. CRIA O OBJETO COMPLETO COM O HORÁRIO DO LOGIN
       const userWithLoginTime: LoggedInUser = {
         ...user,
         loginTime: new Date().toISOString(),
@@ -43,55 +44,18 @@ export const onSocketConnection = (io: Server) => {
         userSockets.set(userWithLoginTime.id, new Set<string>());
       }
       userSockets.get(userWithLoginTime.id)!.add(socket.id);
-      socketToUser.set(socket.id, userWithLoginTime); // Armazena o usuário com o timestamp
+      socketToUser.set(socket.id, userWithLoginTime);
 
-      console.log(`[Socket.IO] Usuário logado: ${userWithLoginTime.nome} (ID: ${userWithLoginTime.id}) com socket: ${socket.id}`);
+      logger.info({ user: { id: user.id, nome: user.nome }, socketId: socket.id }, `[Socket.IO] Usuário logado e associado.`);
       broadcastLoggedInUsers(io);
     });
-    // --- FIM DA ALTERAÇÃO ---
 
+    // Evento para um cliente pedir a lista de usuários atual
     socket.on('request-logged-in-users', () => {
-      const uniqueUsers = new Map<number, LoggedInUser>();
-      for (const user of socketToUser.values()) {
-        if (!uniqueUsers.has(user.id)) {
-          uniqueUsers.set(user.id, user);
-        }
-      }
-      const usersArray = Array.from(uniqueUsers.values());
-      socket.emit('update-logged-in-users', usersArray);
+      socket.emit('update-logged-in-users', Array.from(socketToUser.values()));
     });
 
-    socket.on('send-private-message', ({ recipientId, text }: { recipientId: number; text: string }) => {
-      const sender = socketToUser.get(socket.id);
-      if (!sender) {
-        console.warn(`[Chat Privado] Remetente não encontrado para socket ID: ${socket.id}`);
-        return;
-      }
-
-      const recipientSockets = userSockets.get(recipientId);
-      if (recipientSockets && recipientSockets.size > 0) {
-        const messagePayload = {
-          senderId: sender.id,
-          senderName: sender.nome,
-          recipientId: recipientId,
-          text: text,
-          timestamp: new Date().toISOString(),
-        };
-
-        recipientSockets.forEach(recSocketId => {
-          io.to(recSocketId).emit('new-private-message', messagePayload);
-        });
-        
-        userSockets.get(sender.id)?.forEach(senderSocketId => {
-          io.to(senderSocketId).emit('new-private-message', messagePayload);
-        });
-
-        console.log(`[Chat Privado] Mensagem de ${sender.nome} (ID: ${sender.id}) para ID: ${recipientId}`);
-      } else {
-        console.log(`[Chat Privado] Destinatário ID ${recipientId} não encontrado online.`);
-      }
-    });
-
+    // Evento de desconexão
     socket.on('disconnect', () => {
       const user = socketToUser.get(socket.id);
       if (user) {
@@ -103,32 +67,29 @@ export const onSocketConnection = (io: Server) => {
             }
         }
         socketToUser.delete(socket.id);
-
-        console.log(`[Socket.IO] Cliente desconectado: ${socket.id}. Usuário ID: ${user.id}.`);
+        logger.info({ user: { id: user.id, nome: user.nome }, socketId: socket.id }, `[Socket.IO] Cliente desconectado.`);
         broadcastLoggedInUsers(io);
-      } else {
-        console.log(`[Socket.IO] Cliente desconectado (sem usuário associado): ${socket.id}`);
       }
     });
     
+    // Evento de logout explícito
     socket.on('user-logout', () => {
-      const user = socketToUser.get(socket.id);
-      if (user) {
-        const userSocketSet = userSockets.get(user.id);
-        if (userSocketSet) {
-            // Remove todos os sockets associados a este usuário
-            userSocketSet.forEach(socketId => {
-                socketToUser.delete(socketId);
-                const socketInstance = io.sockets.sockets.get(socketId);
-                if (socketInstance) {
-                    socketInstance.disconnect(true);
-                }
-            });
-            userSockets.delete(user.id);
+        const user = socketToUser.get(socket.id);
+        if (user) {
+            const userSocketSet = userSockets.get(user.id);
+            if (userSocketSet) {
+                userSocketSet.forEach(socketId => {
+                    socketToUser.delete(socketId);
+                    const socketInstance = io.sockets.sockets.get(socketId);
+                    if (socketInstance) {
+                        socketInstance.disconnect(true);
+                    }
+                });
+                userSockets.delete(user.id);
+            }
+            logger.info({ userId: user.id }, `[Socket.IO] Logout explícito. Todas as sessões do usuário foram encerradas.`);
+            broadcastLoggedInUsers(io);
         }
-        console.log(`[Socket.IO] Logout explícito de: ID ${user.id}. Todas as sessões foram encerradas.`);
-        broadcastLoggedInUsers(io);
-      }
     });
   });
 };

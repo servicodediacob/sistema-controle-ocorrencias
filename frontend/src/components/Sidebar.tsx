@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
     { key: 'report', path: '/relatorio', label: 'Relatório Estatístico', adminOnly: false },
     { key: 'obitos', path: '/relatorio-obitos', label: 'Relatório de Óbitos', adminOnly: false },
     { key: 'launch', path: '/lancamento', label: 'Lançar Ocorrências', adminOnly: false },
-    { key: 'manage', path: '/gestao-ocorrencias', label: 'Gerenciar Ocorrências', adminOnly: true },
+    // { key: 'manage', path: '/gestao-ocorrencias', label: 'Gerenciar Ocorrências', adminOnly: true }, // <-- COMENTE OU REMOVA ESTA LINHA
     { key: 'users', path: '/gestao-usuarios', label: 'Gerenciar Usuários', adminOnly: true },
     { key: 'access', path: '/gestao-acesso', label: 'Gerenciar Acessos', adminOnly: true },
     { key: 'data', path: '/gestao-dados', label: 'Gerenciar Dados', adminOnly: true },

@@ -1,0 +1,29 @@
+services:
+  # --- Serviço do Banco de Dados PostgreSQL ---
+  - type: pserv
+    name: postgres-siscob # Nome único para o seu banco de dados
+    env: postgres
+    plan: free
+    postgres:
+      version: 15
+
+  # --- Serviço da API Node.js ---
+  - type: web
+    name: api-siscob # Nome único para a sua API
+    env: node
+    plan: free
+    buildCommand: "npm install && npm run build && npm run migrate"
+    startCommand: "npm run start"
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: postgres-siscob # Deve ser o mesmo nome do serviço de banco de dados acima
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true # O Render irá gerar um valor aleatório e seguro
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info

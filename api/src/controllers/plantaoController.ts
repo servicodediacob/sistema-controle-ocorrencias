@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import db from '../db';
+import db from '@/db';
+import logger from '@/config/logger';
 
 export const getPlantao = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Trocamos 'JOIN' por 'LEFT JOIN' para evitar erros se a ocorrência de destaque for deletada.
     const destaqueQuery = `
       SELECT 
         od.*,
@@ -37,17 +37,17 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
     });
 
   } catch (error) {
-    console.error('Erro ao buscar dados do plantão:', error);
+    logger.error({ err: error }, 'Erro ao buscar dados do plantão.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
 export const getSupervisores = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const { rows } = await db.query('SELECT id, nome FROM usuarios ORDER BY nome ASC');
+    const { rows } = await db.query("SELECT id, nome FROM usuarios WHERE role = 'admin' ORDER BY nome ASC");
     res.status(200).json(rows);
   } catch (error) {
-    console.error('Erro ao buscar supervisores:', error);
+    logger.error({ err: error }, 'Erro ao buscar lista de supervisores.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -57,9 +57,10 @@ export const setSupervisorPlantao = async (req: Request, res: Response): Promise
   try {
     const query = 'UPDATE supervisor_plantao SET usuario_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1 RETURNING *';
     const { rows } = await db.query(query, [usuario_id]);
+    logger.info({ novoSupervisorId: usuario_id }, 'Supervisor de plantão atualizado.');
     res.status(200).json(rows[0]);
   } catch (error) {
-    console.error('Erro ao definir supervisor de plantão:', error);
+    logger.error({ err: error, body: req.body }, 'Erro ao definir supervisor de plantão.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

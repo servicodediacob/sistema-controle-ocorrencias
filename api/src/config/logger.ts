@@ -5,7 +5,7 @@ const loggerConfig = {
   level: process.env.LOG_LEVEL || 'info', // Nível mínimo de log a ser exibido
   transport: process.env.NODE_ENV !== 'production' 
     ? {
-        // Em desenvolvimento, usa um formato mais legível para humanos
+        // Em desenvolvimento, usa um formato mais legível
         target: 'pino-pretty',
         options: {
           colorize: true,

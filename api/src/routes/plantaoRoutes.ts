@@ -1,24 +1,21 @@
-// Caminho: api/src/routes/plantaoRoutes.ts
-
 import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
+import { isAdmin } from '../middleware/roleMiddleware';
 import {
   getPlantao,
-  // A importação de 'setOcorrenciaDestaque' foi REMOVIDA
   setSupervisorPlantao,
   getSupervisores
 } from '../controllers/plantaoController';
 
 const router = Router();
 
-router.get('/', proteger, getPlantao);
-router.get('/supervisores', proteger, getSupervisores);
+// Todas as rotas de plantão são protegidas
+router.use(proteger);
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A rota POST para '/destaque' que usava a função removida foi completamente EXCLUÍDA.
-// router.post('/destaque', proteger, setOcorrenciaDestaque); // <--- ESTA LINHA FOI REMOVIDA
-// ======================= FIM DA CORREÇÃO =======================
+router.get('/', getPlantao);
+router.get('/supervisores', getSupervisores);
 
-router.post('/supervisor', proteger, setSupervisorPlantao);
+// Apenas administradores podem definir o supervisor
+router.post('/supervisor', isAdmin, setSupervisorPlantao);
 
 export default router;

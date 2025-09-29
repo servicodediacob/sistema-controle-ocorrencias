@@ -1,34 +1,19 @@
-// Caminho: api/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "rootDir": "./src",
     "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
+    "rootDir": "./src",
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]
-    }
-    // A propriedade "typeRoots" foi completamente removida.
+    },
+    "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts"
-, "src/controllers/estatisticasController.ts.bak"    // A referência a "src/**/*.d.ts" também é removida, pois não temos mais arquivos de declaração personalizados.
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "src/tests",
-    "src/__tests__",
-    "src/__mocks__"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "src/tests", "src/__tests__"]
 }

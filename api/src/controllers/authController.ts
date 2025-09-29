@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '@/db'; // CORRIGIDO
-import logger from '@/config/logger'; // CORRIGIDO
+import db from '@/db';
+import logger from '@/config/logger';
 
+// Interface para o tipo de usuário que vem do banco
 interface IUser {
   id: number;
   nome: string;
@@ -11,10 +12,8 @@ interface IUser {
   senha_hash: string;
   role: 'admin' | 'user';
   obm_id: number | null;
-  criado_em: Date;
 }
 
-// ... (o resto do arquivo permanece o mesmo)
 export const login = async (req: Request, res: Response): Promise<Response> => {
   const { email, senha } = req.body;
 
@@ -27,12 +26,14 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     const usuario: IUser | undefined = rows[0];
 
     if (!usuario) {
+      logger.warn({ email }, 'Tentativa de login com email não cadastrado.');
       return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
     const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
 
     if (!senhaValida) {
+      logger.warn({ email: usuario.email, id: usuario.id }, 'Tentativa de login com senha incorreta.');
       return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
@@ -45,6 +46,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     // Retorna os dados do usuário sem o hash da senha
     const { senha_hash, ...usuarioSemSenha } = usuario;
 
+    logger.info({ user: { id: usuario.id, nome: usuario.nome } }, 'Usuário logado com sucesso.');
     return res.status(200).json({
       message: 'Login bem-sucedido!',
       usuario: usuarioSemSenha,
@@ -52,7 +54,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     });
 
   } catch (error) {
-    logger.error({ err: error }, 'Erro no processo de login.');
+    logger.error({ err: error }, 'Erro crítico no processo de login.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

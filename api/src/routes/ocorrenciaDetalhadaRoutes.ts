@@ -3,22 +3,21 @@ import { proteger } from '../middleware/authMiddleware';
 import { 
   criarOcorrenciaDetalhada, 
   getOcorrenciasDetalhadasPorData,
-  atualizarOcorrenciaDetalhada, // Importar
-  deletarOcorrenciaDetalhada   // Importar
+  atualizarOcorrenciaDetalhada,
+  deletarOcorrenciaDetalhada
 } from '../controllers/ocorrenciaDetalhadaController';
 
 const router = Router();
 
-// Rota para criar (POST) e listar (GET)
-router.route('/')
-  .post(proteger, criarOcorrenciaDetalhada)
-  .get(proteger, getOcorrenciasDetalhadasPorData);
+// Todas as rotas aqui são protegidas, exigindo um token válido
+router.use(proteger);
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// Adiciona as rotas para atualizar (PUT) e deletar (DELETE) por ID
+router.route('/')
+  .post(criarOcorrenciaDetalhada)
+  .get(getOcorrenciasDetalhadasPorData);
+
 router.route('/:id')
-  .put(proteger, atualizarOcorrenciaDetalhada)
-  .delete(proteger, deletarOcorrenciaDetalhada);
-// ======================= FIM DA CORREÇÃO =======================
+  .put(atualizarOcorrenciaDetalhada)
+  .delete(deletarOcorrenciaDetalhada);
 
 export default router;

@@ -25,10 +25,9 @@ const timePromise = async (promise: Promise<any>): Promise<[any, number]> => {
 interface IDiagnosticCheck {
   status: 'ok' | 'error' | 'degraded';
   message: string;
-  durationMs?: number;
-  details?: string;
+  durationMs?: number; // <-- ADICIONE ESTA LINHA (torna a propriedade opcional)
+  details?: string;    // <-- ADICIONE ESTA LINHA (torna a propriedade opcional)
 }
-
 interface IDiagnosticsReport {
   geral: {
     status: 'ok' | 'error' | 'degraded';
