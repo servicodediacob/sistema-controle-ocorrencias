@@ -4,24 +4,14 @@ services:
     name: api-siscob
     env: node
     plan: free
-    # Define o diretório raiz para os comandos, garantindo que ele encontre o package.json principal
+    # Garante que os comandos rodem a partir da raiz do monorepo
     rootDir: ./
     buildCommand: "npm install && npm run build && npm run migrate"
     startCommand: "npm run start"
     healthCheckPath: /api/health
+    # As variáveis de ambiente serão adicionadas manualmente no dashboard do Render
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: postgres-siscob # O nome do serviço de banco definido abaixo
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL
         value: info
-
-  # --- Serviço do Banco de Dados PostgreSQL ---
-  - type: pserv
-    name: postgres-siscob
-    plan: free
