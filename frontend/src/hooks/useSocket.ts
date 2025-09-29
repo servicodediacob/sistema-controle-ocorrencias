@@ -1,24 +1,25 @@
+// Caminho: frontend/src/hooks/useSocket.ts
+
 import { useEffect, useState, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/useAuth';
 
 export const useSocket = () => {
-  const { usuario, logout } = useAuth();
+  const { usuario } = useAuth();
   const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
 
-  // Memoiza a URL do socket para evitar recriações desnecessárias
+  // A URL do socket deve apontar para a raiz do servidor da API.
   const socketUrl = useMemo(() => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    // CORREÇÃO: Remove o '/api' do final da URL para conectar na raiz do servidor
-    return apiUrl.replace('/api', '' );
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+    // Remove '/api' do final, se existir, para conectar na raiz do servidor.
+    return apiUrl.endsWith('/api' ) ? apiUrl.slice(0, -4) : apiUrl;
   }, []);
 
   useEffect(() => {
     if (usuario && !socketInstance) {
       console.log(`[Socket.IO] Tentando conectar a: ${socketUrl}`);
       const newSocket = io(socketUrl, {
-        // Força o uso de polling primeiro, que é mais compatível com ambientes de nuvem
-        transports: ['polling', 'websocket'],
+        transports: ['polling', 'websocket'], // Prioriza polling para compatibilidade
       });
 
       newSocket.on('connect', () => {
@@ -43,7 +44,6 @@ export const useSocket = () => {
       setSocketInstance(null);
     }
 
-    // Função de limpeza para desconectar o socket quando o componente desmontar
     return () => {
       if (socketInstance) {
         socketInstance.disconnect();
@@ -51,12 +51,8 @@ export const useSocket = () => {
     };
   }, [usuario, socketInstance, socketUrl]);
 
-  const logoutWithSocket = () => {
-    if (socketInstance) {
-      socketInstance.emit('user-logout');
-    }
-    logout();
-  };
+  // A função de logout foi removida daqui para simplificar,
+  // pois o logout principal já é tratado no AuthContext.
 
-  return { socket: socketInstance, logoutWithSocket };
+  return { socket: socketInstance };
 };

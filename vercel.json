@@ -11,7 +11,11 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
+      "destination": "https://api-siscob.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.* )",
       "destination": "/index.html"
     }
   ]

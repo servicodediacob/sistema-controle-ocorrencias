@@ -8,7 +8,7 @@ async function seedDevelopmentDatabase() {
   try {
     await client.query('BEGIN');
     console.log('1. Limpando tabelas existentes...');
-    await client.query('TRUNCATE TABLE solicitacoes_acesso, obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, obitos, ocorrencias_detalhadas, ocorrencias, usuarios, obms, crbms, naturezas_ocorrencia RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE TABLE solicitacoes_acesso, obitos_registros, estatisticas_diarias, supervisor_plantao, ocorrencia_destaque, ocorrencias_detalhadas, usuarios, obms, crbms, naturezas_ocorrencia RESTART IDENTITY CASCADE');
 
     console.log('2. Inserindo CRBMs...');
     await client.query(`
@@ -34,30 +34,30 @@ async function seedDevelopmentDatabase() {
 
     console.log('4. Inserindo todas as Naturezas de Ocorrência...');
     const naturezasParaInserir = [
-      { grupo: 'Resgate', subgrupo: 'Resgate', abreviacao: 'RESGATE' },
-      { grupo: 'Incêndio', subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
-      { grupo: 'Incêndio', subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
-      { grupo: 'Incêndio', subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
-      { grupo: 'Busca e Salvamento', subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
-      { grupo: 'Busca e Salvamento', subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
-      { grupo: 'Ações Preventivas', subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
-      { grupo: 'Ações Preventivas', subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
-      { grupo: 'Ações Preventivas', subgrupo: 'Outros', abreviacao: 'AP. OUT' },
-      { grupo: 'Ações Preventivas', subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
-      { grupo: 'Atividades Técnicas', subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-      { grupo: 'Atividades Técnicas', subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
-      { grupo: 'Atividades Técnicas', subgrupo: 'Atividades Técnicas - Outros', abreviacao: 'AT. OUT' },
-      { grupo: 'Produtos Perigosos', subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
-      { grupo: 'Produtos Perigosos', subgrupo: 'Vazamentos', abreviacao: 'PPV' },
-      { grupo: 'Defesa Civil', subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
-      { grupo: 'Defesa Civil', subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTE DE TRÂNSITO', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'AFOGAMENTO OU CADÁVER', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ARMA DE FOGO/BRANCA/AGRESSÃO', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'AUTO EXTÉRMÍNIO', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'MAL SÚBITO', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTES COM VIATURAS', abreviacao: null },
-      { grupo: 'Relatório de Óbitos', subgrupo: 'OUTROS', abreviacao: null },
+        { grupo: 'Resgate', subgrupo: 'Resgate', abreviacao: 'RESGATE' },
+        { grupo: 'Incêndio', subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
+        { grupo: 'Incêndio', subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
+        { grupo: 'Incêndio', subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
+        { grupo: 'Busca e Salvamento', subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
+        { grupo: 'Busca e Salvamento', subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
+        { grupo: 'Ações Preventivas', subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
+        { grupo: 'Ações Preventivas', subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
+        { grupo: 'Ações Preventivas', subgrupo: 'Outros', abreviacao: 'AP. OUT' },
+        { grupo: 'Ações Preventivas', subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
+        { grupo: 'Atividades Técnicas', subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
+        { grupo: 'Atividades Técnicas', subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
+        { grupo: 'Atividades Técnicas', subgrupo: 'Atividades Técnicas - Outros', abreviacao: 'AT. OUT' },
+        { grupo: 'Produtos Perigosos', subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
+        { grupo: 'Produtos Perigosos', subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+        { grupo: 'Defesa Civil', subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+        { grupo: 'Defesa Civil', subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTE DE TRÂNSITO', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'AFOGAMENTO OU CADÁVER', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'ARMA DE FOGO/BRANCA/AGRESSÃO', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'AUTO EXTÉRMÍNIO', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'MAL SÚBITO', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'ACIDENTES COM VIATURAS', abreviacao: null },
+        { grupo: 'Relatório de Óbitos', subgrupo: 'OUTROS', abreviacao: null },
     ];
     for (const nat of naturezasParaInserir) {
       await client.query("INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES ($1, $2, $3) ON CONFLICT (grupo, subgrupo) DO NOTHING", [nat.grupo, nat.subgrupo, nat.abreviacao]);
