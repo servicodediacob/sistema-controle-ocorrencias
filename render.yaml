@@ -4,10 +4,8 @@ services:
     name: postgres-siscob
     env: postgres
     plan: free
-    # A versão é definida como uma propriedade do serviço, não aninhada.
-    # E removemos o campo "postgres:" que estava incorreto.
-    properties:
-      version: 15
+    # A versão é um campo direto do serviço 'pserv'
+    postgresVersion: 15
 
   # --- Serviço da API Node.js ---
   - type: web
