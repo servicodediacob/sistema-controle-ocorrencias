@@ -4,12 +4,10 @@ services:
     name: api-siscob
     env: node
     plan: free
-    # Garante que os comandos rodem a partir da raiz do monorepo
     rootDir: ./
-    buildCommand: "npm install && npm run build && npm run migrate"
+    buildCommand: "npm install --production=false && npm run build && npm run migrate"
     startCommand: "npm start"
     healthCheckPath: /api/diag
-    # As variáveis de ambiente serão adicionadas manualmente no dashboard do Render
     envVars:
       - key: NODE_ENV
         value: production
