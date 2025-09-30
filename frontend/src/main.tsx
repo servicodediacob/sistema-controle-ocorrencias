@@ -1,4 +1,4 @@
-// Caminho: frontend/src/main.tsx
+﻿// Caminho: frontend/src/main.tsx
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -10,6 +10,7 @@ import { DataProvider } from './contexts/DataProvider.tsx';
 import { ChatProvider } from './contexts/ChatProvider.tsx';
 import { ThemeProvider } from './contexts/ThemeProvider.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
+import { SocketProvider } from './hooks/useSocket';
 
 const rootElement = document.getElementById('root');
 
@@ -20,11 +21,13 @@ if (rootElement) {
         <ThemeProvider>
           <NotificationProvider>
             <AuthProvider>
-              <DataProvider>
-                <ChatProvider>
-                  <App />
-                </ChatProvider>
-              </DataProvider>
+              <SocketProvider>
+                <DataProvider>
+                  <ChatProvider>
+                    <App />
+                  </ChatProvider>
+                </DataProvider>
+              </SocketProvider>
             </AuthProvider>
           </NotificationProvider>
         </ThemeProvider>

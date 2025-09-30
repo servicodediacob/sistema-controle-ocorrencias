@@ -1,4 +1,4 @@
-// Caminho: frontend/src/contexts/ChatProvider.tsx
+﻿// Caminho: frontend/src/contexts/ChatProvider.tsx
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { useNotification } from './NotificationContext';
@@ -16,7 +16,7 @@ interface ChatMessage {
 
 type Conversations = Record<number, ChatMessage[]>;
 
-// --- INÍCIO DA ALTERAÇÃO ---
+// --- INÃCIO DA ALTERAÃ‡ÃƒO ---
 interface LoggedInUser {
   id: number;
   nome: string;
@@ -24,7 +24,7 @@ interface LoggedInUser {
   role: string;
   loginTime: string; // <-- ADICIONE ESTA LINHA
 }
-// --- FIM DA ALTERAÇÃO ---
+// --- FIM DA ALTERAÃ‡ÃƒO ---
 
 interface IChatContext {
   conversations: Conversations;
@@ -72,13 +72,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [socket]);
 
   useEffect(() => {
-    console.log('[ChatProvider Effect] Socket:', socket ? 'Ativo' : 'Inativo', '| Usuário:', usuario ? usuario.nome : 'Nenhum');
+    console.log('[ChatProvider Effect] Socket:', socket ? 'Ativo' : 'Inativo', '| UsuÃ¡rio:', usuario ? usuario.nome : 'Nenhum');
 
     if (socket && usuario) {
-      console.log('[ChatProvider] Socket e usuário OK. Configurando listeners...');
+      console.log('[ChatProvider] Socket e usuÃ¡rio OK. Configurando listeners...');
 
       const handleUpdateUsers = (users: LoggedInUser[]) => {
-        console.log('[ChatProvider] Evento \'update-logged-in-users\' recebido. Usuários:', users);
+        console.log('[ChatProvider] Evento \'update-logged-in-users\' recebido. UsuÃ¡rios:', users);
         setOnlineUsers(users);
       };
 
@@ -96,7 +96,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
           addNotification(`Nova mensagem de ${message.senderName}`, 'info');
           const audio = new Audio('/sounds/notification.mp3');
-          audio.play().catch(e => console.warn('Não foi possível tocar o som de notificação:', e));
+          audio.play().catch(e => console.warn('NÃ£o foi possÃ­vel tocar o som de notificaÃ§Ã£o:', e));
         }
       };
 
@@ -114,7 +114,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [socket, usuario, addNotification, openChatWith]);
 
-  console.log('[ChatProvider Render] Usuários Online Atuais:', onlineUsers);
+  console.log('[ChatProvider Render] UsuÃ¡rios Online Atuais:', onlineUsers);
 
   return (
     <ChatContext.Provider value={{ conversations, openChats, onlineUsers, openChatWith, closeChat, sendMessage }}>

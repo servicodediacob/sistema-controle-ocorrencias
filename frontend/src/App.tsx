@@ -1,4 +1,4 @@
-// Caminho: frontend/src/App.tsx
+﻿// Caminho: frontend/src/App.tsx
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -16,10 +16,6 @@ import RelatorioObitosPage from './pages/RelatorioObitosPage';
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import GestaoAcessoPage from './pages/GestaoAcessoPage';
 
-// Importação de Componentes Globais
-import { useSocket } from './hooks/useSocket';
-// A importação do SystemStatusIndicator foi REMOVIDA daqui.
-
 /**
  * Componente de Rota Privada
  */
@@ -33,14 +29,6 @@ function PrivateRoute({ children }: PrivateRouteProps): React.ReactElement {
 }
 
 /**
- * Componente auxiliar para inicializar o socket.
- */
-const SocketInitializer: React.FC = () => {
-  useSocket();
-  return null;
-};
-
-/**
  * Componente Principal da Aplicação
  */
 function App(): React.ReactElement {
@@ -48,22 +36,19 @@ function App(): React.ReactElement {
 
   return (
     <Router>
-      {/* O SystemStatusIndicator foi REMOVIDO daqui */}
-      {isAuthenticated && <SocketInitializer />}
-      
       <Routes>
         {/* --- Rotas Públicas --- */}
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-        <Route 
+        <Route
           path="/solicitar-acesso"
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <SolicitarAcessoPage />}
         />
-        
+
         {/* --- Rota Raiz --- */}
-        <Route 
+        <Route
           path="/"
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
         />
@@ -77,9 +62,9 @@ function App(): React.ReactElement {
         <Route path="/gestao-usuarios" element={<PrivateRoute><GestaoUsuariosPage /></PrivateRoute>} />
         <Route path="/gestao-acesso" element={<PrivateRoute><GestaoAcessoPage /></PrivateRoute>} />
         <Route path="/gestao-dados" element={<PrivateRoute><GestaoDadosApoioPage /></PrivateRoute>} />
-        
+
         {/* --- Rota de Fallback --- */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} />} />
       </Routes>
     </Router>
   );
