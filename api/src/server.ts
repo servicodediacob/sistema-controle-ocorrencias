@@ -1,4 +1,6 @@
-﻿import './config/envLoader'; // Garante que as variaveis de ambiente sejam carregadas primeiro
+﻿// Caminho: api/src/server.ts
+
+import './config/envLoader'; // Garante que as variaveis de ambiente sejam carregadas primeiro
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -14,11 +16,16 @@ import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
 import dadosRoutes from './routes/dadosRoutes';
 import { runDiagnostics } from './controllers/diagController';
 
+// ======================= INÍCIO DA CORREÇÃO =======================
 // --- Configuracao de CORS ---
+// Adicionamos a nova URL de produção do frontend à lista de origens permitidas.
 const defaultAllowedOrigins = [
-  'http://localhost:5173',
-  'https://sistema-ocorrencias-frontend-alpha.vercel.app',
+  'http://localhost:5173', // Para desenvolvimento local
+  'https://siscob-iota.vercel.app', // SUA NOVA URL DE PRODUÇÃO
+  'https://sistema-ocorrencias-frontend-alpha.vercel.app', // URL antiga (pode ser mantida ou removida )
 ];
+// ======================= FIM DA CORREÇÃO =======================
+
 const extraAllowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter((origin) => origin.length > 0)
   : [];
@@ -59,13 +66,13 @@ app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
 app.use('/api', dadosRoutes); // Agrupa a maioria das rotas de dados
 
 // --- Configuracao do Servidor HTTP e Socket.IO ---
-const httpServer = createServer(app);
-const io = new SocketIOServer(httpServer, { cors: corsOptions });
+const httpServer = createServer(app );
+const io = new SocketIOServer(httpServer, { cors: corsOptions } );
 onSocketConnection(io);
 
 // --- Inicializacao do Servidor ---
 const PORT = process.env.PORT || 3001;
-const server = httpServer.listen(PORT, () => {
+const server = httpServer.listen(PORT, ( ) => {
   logger.info(`Servidor rodando na porta ${PORT} em modo ${process.env.NODE_ENV || 'development'}`);
 });
 
