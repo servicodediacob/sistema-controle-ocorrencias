@@ -18,6 +18,7 @@ const candidateSchemaPaths: string[] = [
   path.resolve(__dirname, '../../src/db/schema.sql'),
   path.resolve(process.cwd(), 'api/src/db/schema.sql'),
   path.resolve(process.cwd(), 'src/db/schema.sql'),
+  path.resolve(process.cwd(), 'db/schema.sql'),
 ];
 
 let schemaPath: string;
