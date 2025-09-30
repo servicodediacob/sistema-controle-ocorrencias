@@ -13,5 +13,7 @@ services:
         value: info
       - key: JWT_SECRET
         sync: false
+      - key: ALLOW_SCHEMA_RESET
+        value: false
       - key: DATABASE_URL
         sync: false

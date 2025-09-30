@@ -5,15 +5,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import Icon from './Icon';
 import SystemStatusIndicator from './SystemStatusIndicator';
-import OnlineUsersDropdown from './OnlineUsersDropdown'; // 1. Importar o novo componente
+import OnlineUsersDropdown from './OnlineUsersDropdown';
 
-// Ícones (sem alteração)
 const ICONS = {
   dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
   obitos: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z",
   launch: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
-  manage: "M14.06 9.94L15.12 11l-4.18 4.17-1.42-1.42 4.52-4.52zM20.5 2c-3.04 0-5.5 2.46-5.5 5.5 0 1.02.28 1.97.75 2.8l-5.81 5.81-2.12-2.12-5.3 5.3L4.22 21l5.3-5.3 2.12 2.12 5.81-5.81c.83.47 1.78.75 2.8.75 3.04 0 5.5-2.46 5.5-5.5S23.54 2 20.5 2z",
   users: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
   access: "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z",
   data: "M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm14 14H5V5h14v14zM7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z",
@@ -49,14 +47,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
     { key: 'report', path: '/relatorio', label: 'Relatório Estatístico', adminOnly: false },
     { key: 'obitos', path: '/relatorio-obitos', label: 'Relatório de Óbitos', adminOnly: false },
     { key: 'launch', path: '/lancamento', label: 'Lançar Ocorrências', adminOnly: false },
-    // { key: 'manage', path: '/gestao-ocorrencias', label: 'Gerenciar Ocorrências', adminOnly: true }, // <-- COMENTE OU REMOVA ESTA LINHA
     { key: 'users', path: '/gestao-usuarios', label: 'Gerenciar Usuários', adminOnly: true },
     { key: 'access', path: '/gestao-acesso', label: 'Gerenciar Acessos', adminOnly: true },
     { key: 'data', path: '/gestao-dados', label: 'Gerenciar Dados', adminOnly: true },
   ];
 
   const handleNavigate = (path: string) => { navigate(path); closeMobileMenu(); };
-  const handleLogout = () => { onLogout(); closeMobileMenu(); };
+  
+  // A função handleLogout foi simplificada para chamar diretamente a prop onLogout
+  const handleLogout = () => {
+    onLogout();
+    closeMobileMenu();
+  };
 
   const sidebarWidth = isCollapsed ? 'w-[80px]' : 'w-[250px]';
 
@@ -85,7 +87,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
           <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
         </div>
 
-        {/* 2. Adicionar o componente de dropdown de usuários online aqui */}
         <OnlineUsersDropdown isCollapsed={isCollapsed} />
 
         <div className="hidden lg:block">
