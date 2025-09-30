@@ -20,16 +20,19 @@ const candidateSchemaPaths: string[] = [
   path.resolve(process.cwd(), 'src/db/schema.sql'),
 ];
 
-let schemaPath: string | undefined;
-for (const possiblePath of candidateSchemaPaths) {
-  if (fs.existsSync(possiblePath)) {
-    schemaPath = possiblePath;
-    break;
-  }
-}
-
-if (!schemaPath) {
-  logger.error(`[Migrate] Nao foi possivel localizar o arquivo schema.sql. Caminhos verificados: ${candidateSchemaPaths.join(', ')}`);
+let schemaPath: string;
+try {
+  schemaPath = (() => {
+    for (const possiblePath of candidateSchemaPaths) {
+      if (fs.existsSync(possiblePath)) {
+        return possiblePath;
+      }
+    }
+    const message = `[Migrate] Nao foi possivel localizar o arquivo schema.sql. Caminhos verificados: ${candidateSchemaPaths.join(', ')}`;
+    throw new Error(message);
+  })();
+} catch (error) {
+  logger.error({ err: error }, '[Migrate] Falha ao resolver caminho do schema.');
   process.exit(1);
 }
 
