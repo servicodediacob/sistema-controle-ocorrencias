@@ -1,47 +1,54 @@
-// Caminho: api/src/scripts/migrate.ts
+﻿// Caminho: api/src/scripts/migrate.ts
 
 import fs from 'fs';
 import path from 'path';
 // Caminhos relativos a partir de 'src/scripts/'
-import db from '../db'; 
+import db from '../db';
 import logger from '../config/logger';
 
-// O script compilado estará em 'dist/scripts/'. O schema estará em 'dist/db/'.
-// O caminho relativo de um para o outro é '../db/schema.sql'.
-// Usar path.join com __dirname torna o caminho absoluto e à prova de erros.
+const isProduction = process.env.NODE_ENV === 'production';
+const allowSchemaReset = process.env.ALLOW_SCHEMA_RESET === 'true';
+
+if (isProduction && !allowSchemaReset) {
+  logger.warn('[Migrate] Migracao destrutiva detectada. Abortando porque NODE_ENV=production e ALLOW_SCHEMA_RESET nao esta definido como "true".');
+  process.exit(0);
+}
+
+// O script compilado estara em 'dist/scripts/'. O schema estara em 'dist/db/'.
+// O caminho relativo de um para o outro e '../db/schema.sql'.
+// Usar path.join com __dirname torna o caminho absoluto e confiavel.
 const SCHEMA_FILE_PATH = path.join(__dirname, '../db/schema.sql');
 
 async function migrate() {
-  logger.info('🚀 Iniciando a migração do schema do banco de dados...');
-  logger.info(`🔍 Procurando schema em: ${SCHEMA_FILE_PATH}`);
+  logger.info('[Migrate] Iniciando aplicacao do schema do banco de dados.');
+  logger.info(`[Migrate] Procurando schema em: ${SCHEMA_FILE_PATH}`);
 
   const client = await db.pool.connect();
-  logger.info('✅ Conectado ao banco de dados.');
+  logger.info('[Migrate] Conectado ao banco de dados.');
 
   try {
-    logger.info('📄 Lendo o arquivo de schema (schema.sql)...');
+    logger.info('[Migrate] Lendo o arquivo de schema...');
     const schemaSql = fs.readFileSync(SCHEMA_FILE_PATH, 'utf-8');
 
-    logger.info('🔄 Executando o script para criar/atualizar as tabelas...');
+    logger.info('[Migrate] Executando o script de schema completo.');
     await client.query(schemaSql);
-    
-    logger.info('🎉 Schema do banco de dados aplicado com sucesso!');
 
+    logger.info('[Migrate] Schema aplicado com sucesso.');
   } catch (error) {
-    logger.error({ err: error }, '❌ Erro durante a migração do schema:');
+    logger.error({ err: error }, '[Migrate] Erro durante a aplicacao do schema.');
     throw error;
   } finally {
     client.release();
-    logger.info('🔌 Conexão com o banco de dados liberada.');
+    logger.info('[Migrate] Conexao com o banco liberada.');
   }
 }
 
 migrate()
   .then(() => {
-    logger.info('Migração concluída. O processo será encerrado.');
+    logger.info('[Migrate] Finalizado sem erros.');
     process.exit(0);
   })
   .catch((err) => {
-    logger.error("A migração falhou. O processo de build será encerrado.", err);
+    logger.error('[Migrate] Falha na migracao. Encerrando processo.', err);
     process.exit(1);
   });

@@ -1,14 +1,15 @@
-// api/jest.config.js
+﻿// api/jest.config.js
 
 module.exports = {
+  maxWorkers: 1,
   preset: 'ts-jest',
   testEnvironment: 'node',
-  
+
   testMatch: [
     '**/__tests__/**/*.test.ts',
     '**/tests/**/*.test.ts',
   ],
-  
+
   setupFilesAfterEnv: [
     '<rootDir>/src/tests/setup.ts'
   ],
@@ -19,9 +20,11 @@ module.exports = {
     }],
   },
 
-  // --- ADIÇÃO CRÍTICA ---
-  // Esta configuração instrui o Jest a NÃO transformar o módulo 'bcryptjs'.
-  // Isso é essencial para que módulos nativos ou com bindings em C++ funcionem corretamente.
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+
+  // Mantem bcryptjs fora do pipeline de transformacao para evitar problemas com bindings nativos.
   transformIgnorePatterns: [
     '/node_modules/(?!bcryptjs)/'
   ],
