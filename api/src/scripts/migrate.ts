@@ -14,10 +14,7 @@ if (isProduction && !allowSchemaReset) {
   process.exit(0);
 }
 
-// O script compilado estara em 'dist/scripts/'. O schema estara em 'dist/db/'.
-// O caminho relativo de um para o outro e '../db/schema.sql'.
-// Usar path.join com __dirname torna o caminho absoluto e confiavel.
-const SCHEMA_FILE_PATH = path.join(__dirname, '../db/schema.sql');
+const SCHEMA_FILE_PATH = path.join(process.cwd(), 'src/db/schema.sql');
 
 async function migrate() {
   logger.info('[Migrate] Iniciando aplicacao do schema do banco de dados.');
