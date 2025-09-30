@@ -19,7 +19,13 @@ const candidateSchemaPaths: string[] = [
   path.join(process.cwd(), 'db/schema.sql'),
 ];
 
-const resolvedSchemaPath = candidateSchemaPaths.find((possiblePath) => fs.existsSync(possiblePath));
+let resolvedSchemaPath: string | undefined;
+for (const possiblePath of candidateSchemaPaths) {
+  if (fs.existsSync(possiblePath)) {
+    resolvedSchemaPath = possiblePath;
+    break;
+  }
+}
 
 if (!resolvedSchemaPath) {
   logger.error('[Migrate] Nao foi possivel localizar o arquivo schema.sql em nenhum dos caminhos candidatos.');
