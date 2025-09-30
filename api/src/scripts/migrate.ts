@@ -13,15 +13,15 @@ if (isProduction && !allowSchemaReset) {
   process.exit(0);
 }
 
-const candidateSchemaPaths = [
+const candidateSchemaPaths: string[] = [
   path.join(__dirname, '../db/schema.sql'),
   path.join(process.cwd(), 'src/db/schema.sql'),
   path.join(process.cwd(), 'db/schema.sql'),
 ];
 
-const SCHEMA_FILE_PATH = candidateSchemaPaths.find((schemaPath) => fs.existsSync(schemaPath));
+const schemaPath = candidateSchemaPaths.find((schemaPath) => fs.existsSync(schemaPath));
 
-if (!SCHEMA_FILE_PATH) {
+if (!schemaPath) {
   logger.error('[Migrate] Nao foi possivel localizar o arquivo schema.sql em nenhum dos caminhos candidatos.', {
     candidateSchemaPaths,
   });
@@ -30,14 +30,14 @@ if (!SCHEMA_FILE_PATH) {
 
 async function migrate() {
   logger.info('[Migrate] Iniciando aplicacao do schema do banco de dados.');
-  logger.info(`[Migrate] Procurando schema em: ${SCHEMA_FILE_PATH}`);
+  logger.info(`[Migrate] Procurando schema em: ${schemaPath}`);
 
   const client = await db.pool.connect();
   logger.info('[Migrate] Conectado ao banco de dados.');
 
   try {
     logger.info('[Migrate] Lendo o arquivo de schema...');
-    const schemaSql = fs.readFileSync(SCHEMA_FILE_PATH, 'utf-8');
+    const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
     logger.info('[Migrate] Executando o script de schema completo.');
     await client.query(schemaSql);
