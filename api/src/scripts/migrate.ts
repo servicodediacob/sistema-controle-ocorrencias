@@ -19,25 +19,23 @@ const candidateSchemaPaths: string[] = [
   path.join(process.cwd(), 'db/schema.sql'),
 ];
 
-const schemaPath = candidateSchemaPaths.find((schemaPath) => fs.existsSync(schemaPath));
+const resolvedSchemaPath = candidateSchemaPaths.find((possiblePath) => fs.existsSync(possiblePath));
 
-if (!schemaPath) {
-  logger.error('[Migrate] Nao foi possivel localizar o arquivo schema.sql em nenhum dos caminhos candidatos.', {
-    candidateSchemaPaths,
-  });
+if (!resolvedSchemaPath) {
+  logger.error('[Migrate] Nao foi possivel localizar o arquivo schema.sql em nenhum dos caminhos candidatos.');
   process.exit(1);
 }
 
 async function migrate() {
   logger.info('[Migrate] Iniciando aplicacao do schema do banco de dados.');
-  logger.info(`[Migrate] Procurando schema em: ${schemaPath}`);
+  logger.info(`[Migrate] Procurando schema em: ${resolvedSchemaPath}`);
 
   const client = await db.pool.connect();
   logger.info('[Migrate] Conectado ao banco de dados.');
 
   try {
     logger.info('[Migrate] Lendo o arquivo de schema...');
-    const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
+    const schemaSql = fs.readFileSync(resolvedSchemaPath, 'utf-8');
 
     logger.info('[Migrate] Executando o script de schema completo.');
     await client.query(schemaSql);
@@ -58,6 +56,6 @@ migrate()
     process.exit(0);
   })
   .catch((err) => {
-    logger.error('[Migrate] Falha na migracao. Encerrando processo.', err);
+    logger.error({ err }, '[Migrate] Falha na migracao. Encerrando processo.');
     process.exit(1);
   });
