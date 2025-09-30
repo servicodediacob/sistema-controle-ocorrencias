@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import path from 'path';
-// Caminhos relativos a partir de 'src/scripts/'
 import db from '../db';
 import logger from '../config/logger';
 
@@ -14,7 +13,20 @@ if (isProduction && !allowSchemaReset) {
   process.exit(0);
 }
 
-const SCHEMA_FILE_PATH = path.join(process.cwd(), 'src/db/schema.sql');
+const candidateSchemaPaths = [
+  path.join(__dirname, '../db/schema.sql'),
+  path.join(process.cwd(), 'src/db/schema.sql'),
+  path.join(process.cwd(), 'db/schema.sql'),
+];
+
+const SCHEMA_FILE_PATH = candidateSchemaPaths.find((schemaPath) => fs.existsSync(schemaPath));
+
+if (!SCHEMA_FILE_PATH) {
+  logger.error('[Migrate] Nao foi possivel localizar o arquivo schema.sql em nenhum dos caminhos candidatos.', {
+    candidateSchemaPaths,
+  });
+  process.exit(1);
+}
 
 async function migrate() {
   logger.info('[Migrate] Iniciando aplicacao do schema do banco de dados.');
