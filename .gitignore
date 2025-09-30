@@ -32,3 +32,4 @@ sync_db.sh
 # Arquivos de configuração de IDE
 .vscode/
 
+!api/src/db/schema.sql
