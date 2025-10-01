@@ -29,22 +29,22 @@ import Icon from '../components/Icon';
 
 const ORDEM_COLUNAS = [
     { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
-    { subgrupo: 'Incêndio', abreviacao: 'INC. OUT.' },
+    { subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
     { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
     { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
-    { subgrupo: 'Busca e Salvamento', abreviacao: 'B. SALV.' },
+    { subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
     { subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
-    { subgrupo: 'Ações Preventivas', abreviacao: 'AP. OUT' },
+    { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
     { subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
     { subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
     { subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
-    { subgrupo: 'Atividades Técnicas', abreviacao: 'AT. OUT' },
+    { subgrupo: 'Atividades Técnicas - Outros', abreviacao: 'AT. OUT' },
     { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
     { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Produtos Perigosos', abreviacao: 'PPV' }, 
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' }, 
-    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' }, 
-    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' }, 
+    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
+    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
+    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
 ];
 
 function LancamentoPage() {
