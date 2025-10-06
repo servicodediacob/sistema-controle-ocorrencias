@@ -1,10 +1,13 @@
 /* eslint-disable camelcase */
-// Caminho: api/src/db/migrations/xxxxxxxxxxxxx_initial-schema.js
 
 exports.shorthands = undefined;
 
 exports.up = pgm => {
-  // Usando crases (`) para o bloco SQL, pois não há crases dentro dele.
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // O conteúdo desta função foi comentado para evitar que a migração
+  // tente recriar tabelas que já existem no ambiente de produção.
+  // Em um próximo deploy, apenas a nova migração (adicionar-tabela-auditoria) será executada.
+  /*
   pgm.sql(`
     -- COMANDOS DE CRIAÇÃO (CREATE)
 
@@ -119,14 +122,14 @@ exports.up = pgm => {
     INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
     INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
   `);
+  */
+  // ======================= FIM DA CORREÇÃO =======================
 };
 
 exports.down = pgm => {
-  // ======================= INÍCIO DA CORREÇÃO DEFINITIVA =======================
-  // Usando aspas simples (') para delimitar a string, já que não há aspas simples dentro do código SQL.
-  // Isso evita o conflito com as crases usadas nos comentários.
   pgm.sql(
     '-- 1. COMANDOS DE EXCLUSÃO (DROP) \n' +
+    'DROP TABLE IF EXISTS auditoria_logs CASCADE; \n' + // Adicionado para consistência
     'DROP TABLE IF EXISTS ocorrencia_destaque CASCADE; \n' +
     'DROP TABLE IF EXISTS supervisor_plantao CASCADE; \n' +
     'DROP TABLE IF EXISTS obitos_registros CASCADE; \n' +
@@ -138,5 +141,4 @@ exports.down = pgm => {
     'DROP TABLE IF EXISTS crbms CASCADE; \n' +
     'DROP TABLE IF EXISTS naturezas_ocorrencia CASCADE;'
   );
-  // ======================= FIM DA CORREÇÃO DEFINITIVA =======================
 };
