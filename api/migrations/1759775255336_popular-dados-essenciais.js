@@ -3,8 +3,6 @@
 exports.shorthands = undefined;
 
 exports.up = pgm => {
-  // Usamos ON CONFLICT DO NOTHING para garantir que, se os dados já existirem,
-  // o script não falhe. Ele simplesmente não fará nada.
   pgm.sql(`
     -- Inserindo CRBMs
     INSERT INTO crbms (nome) VALUES
@@ -34,7 +32,6 @@ exports.up = pgm => {
     ('Planaltina', (SELECT id FROM crbms WHERE nome = '9º CRBM'))
     ON CONFLICT (nome) DO NOTHING;
 
-    -- ======================= INÍCIO DA CORREÇÃO =======================
     -- Inserindo TODAS as Naturezas de Ocorrência
     INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES
       ('Resgate', 'Resgate', 'RESGATE'),
@@ -62,15 +59,16 @@ exports.up = pgm => {
       ('Relatório de Óbitos', 'ACIDENTES COM VIATURAS', NULL),
       ('Relatório de Óbitos', 'OUTROS', NULL)
     ON CONFLICT (grupo, subgrupo) DO NOTHING;
-    -- ======================= FIM DA CORREÇÃO =======================
   `);
 };
 
+// ======================= INÍCIO DA CORREÇÃO =======================
+// A função 'down' foi reescrita para usar aspas simples e evitar conflito de sintaxe.
 exports.down = pgm => {
-  // A função 'down' agora também remove as naturezas para manter a consistência.
-  pgm.sql(\`
-    DELETE FROM naturezas_ocorrencia;
-    DELETE FROM obms;
-    DELETE FROM crbms;
-  \`);
+  pgm.sql(
+    'DELETE FROM naturezas_ocorrencia;' +
+    'DELETE FROM obms;' +
+    'DELETE FROM crbms;'
+  );
 };
+// ======================= FIM DA CORREÇÃO =======================
