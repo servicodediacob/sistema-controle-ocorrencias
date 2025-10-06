@@ -20,8 +20,10 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: ADMIN_EMAIL
-        value: admin@cbm.go.gov.br
+        sync: false
       - key: ADMIN_PASSWORD
+        sync: false
+      - key: SEED_SECRET_KEY
         sync: false
       - key: DATABASE_URL
         fromDatabase:
