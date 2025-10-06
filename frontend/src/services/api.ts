@@ -63,7 +63,7 @@ const apiService = {
   getCrbms: async (): Promise<ICrbm[]> => api.get('/crbms').then(res => res.data),
   getCidades: async (): Promise<ICidade[]> => api.get('/unidades').then(res => res.data),
   getNaturezas: async (): Promise<IDataApoio[]> => api.get('/naturezas').then(res => res.data),
-    getNaturezasPorNomes: async (nomes: string[]): Promise<IDataApoio[]> => api.post('/naturezas/por-nomes', { nomes }).then(res => res.data),
+  getNaturezasPorNomes: async (nomes: string[]): Promise<IDataApoio[]> => api.post('/naturezas/por-nomes', { nomes }).then(res => res.data),
   
   // ======================= INÍCIO DA CORREÇÃO =======================
   // Funções de ocorrências legadas que foram re-adicionadas

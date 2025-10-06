@@ -1,4 +1,4 @@
-// Caminho: api/generate-hash.js
+// api/generate-hash.js
 
 const bcrypt = require('bcryptjs');
 

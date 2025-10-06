@@ -1,12 +1,11 @@
+// api/src/db/migrations/1759758968107_initial-schema.js
 /* eslint-disable camelcase */
 
 exports.shorthands = undefined;
 
 exports.up = pgm => {
-  // Comentários removidos, o código está ativo novamente.
+  // CRIAÇÃO DE TODAS AS TABELAS INICIAIS
   pgm.sql(`
-    -- COMANDOS DE CRIAÇÃO (CREATE)
-
     CREATE TABLE crbms (
         id SERIAL PRIMARY KEY,
         nome VARCHAR(100) NOT NULL UNIQUE
@@ -113,26 +112,72 @@ exports.up = pgm => {
         CONSTRAINT fk_obm_obito_registro FOREIGN KEY(obm_id) REFERENCES obms(id) ON DELETE CASCADE,
         CONSTRAINT fk_usuario_obito_registro FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
     );
+  `);
 
-    -- INSERÇÕES INICIAIS DE CONTROLE
+  // INSERÇÕES DE DADOS ESSENCIAIS
+  pgm.sql(`
+    INSERT INTO crbms (nome) VALUES
+    ('1º CRBM'), ('2º CRBM'), ('3º CRBM'), ('4º CRBM'), ('5º CRBM'),
+    ('6º CRBM'), ('7º CRBM'), ('8º CRBM'), ('9º CRBM')
+    ON CONFLICT (nome) DO NOTHING;
+
+    INSERT INTO obms (nome, crbm_id) VALUES
+    ('Goiânia - Diurno', (SELECT id FROM crbms WHERE nome = '1º CRBM')),
+    ('Goiânia - Noturno', (SELECT id FROM crbms WHERE nome = '1º CRBM')),
+    ('Rio Verde', (SELECT id FROM crbms WHERE nome = '2º CRBM')),
+    ('Jataí', (SELECT id FROM crbms WHERE nome = '2º CRBM')),
+    ('Anápolis', (SELECT id FROM crbms WHERE nome = '3º CRBM')),
+    ('Pirenópolis', (SELECT id FROM crbms WHERE nome = '3º CRBM')),
+    ('Luziânia', (SELECT id FROM crbms WHERE nome = '4º CRBM')),
+    ('Águas Lindas', (SELECT id FROM crbms WHERE nome = '4º CRBM')),
+    ('Aparecida de Goiânia - Diurno', (SELECT id FROM crbms WHERE nome = '5º CRBM')),
+    ('Aparecida de Goiânia - Noturno', (SELECT id FROM crbms WHERE nome = '5º CRBM')),
+    ('Goiás', (SELECT id FROM crbms WHERE nome = '6º CRBM')),
+    ('Iporá', (SELECT id FROM crbms WHERE nome = '6º CRBM')),
+    ('Itumbiara', (SELECT id FROM crbms WHERE nome = '7º CRBM')),
+    ('Caldas', (SELECT id FROM crbms WHERE nome = '7º CRBM')),
+    ('Porangatu', (SELECT id FROM crbms WHERE nome = '8º CRBM')),
+    ('Goianésia', (SELECT id FROM crbms WHERE nome = '8º CRBM')),
+    ('Formosa', (SELECT id FROM crbms WHERE nome = '9º CRBM')),
+    ('Planaltina', (SELECT id FROM crbms WHERE nome = '9º CRBM'))
+    ON CONFLICT (nome) DO NOTHING;
+
+    INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES
+      ('Resgate', 'Resgate', 'RESGATE'),
+      ('Incêndio', 'Incêndio - Outros', 'INC. OUT.'),
+      ('Incêndio', 'Incêndio em Edificação', 'INC. EDIF'),
+      ('Incêndio', 'Incêndio em Vegetação', 'INC. VEG'),
+      ('Busca e Salvamento', 'Busca de Cadáver', 'B. CADÁVER'),
+      ('Busca e Salvamento', 'Busca e Salvamento - Diversos', 'B. SALV.'),
+      ('Ações Preventivas', 'Eventos', 'AP. EVE'),
+      ('Ações Preventivas', 'Folders / Panfletos', 'AP. FOL'),
+      ('Ações Preventivas', 'Outros', 'AP. OUT'),
+      ('Ações Preventivas', 'Palestras', 'AP. PAL'),
+      ('Atividades Técnicas', 'Análise de Projetos', 'AN. PROJ'),
+      ('Atividades Técnicas', 'Inspeções', 'AT. INS'),
+      ('Atividades Técnicas', 'Atividades Técnicas - Outros', 'AT. OUT'),
+      ('Produtos Perigosos', 'Outros / Diversos', 'PPO'),
+      ('Produtos Perigosos', 'Vazamentos', 'PPV'),
+      ('Defesa Civil', 'De Resposta', 'DC RESP.'),
+      ('Defesa Civil', 'Preventiva', 'DC PREV.')
+    ON CONFLICT (grupo, subgrupo) DO NOTHING;
+
     INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
     INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
   `);
 };
 
 exports.down = pgm => {
-  pgm.sql(
-    '-- 1. COMANDOS DE EXCLUSÃO (DROP) \n' +
-    'DROP TABLE IF EXISTS auditoria_logs CASCADE; \n' +
-    'DROP TABLE IF EXISTS ocorrencia_destaque CASCADE; \n' +
-    'DROP TABLE IF EXISTS supervisor_plantao CASCADE; \n' +
-    'DROP TABLE IF EXISTS obitos_registros CASCADE; \n' +
-    'DROP TABLE IF EXISTS estatisticas_diarias CASCADE; \n' +
-    'DROP TABLE IF EXISTS ocorrencias_detalhadas CASCADE; \n' +
-    'DROP TABLE IF EXISTS solicitacoes_acesso CASCADE; \n' +
-    'DROP TABLE IF EXISTS usuarios CASCADE; \n' +
-    'DROP TABLE IF EXISTS obms CASCADE; \n' +
-    'DROP TABLE IF EXISTS crbms CASCADE; \n' +
-    'DROP TABLE IF EXISTS naturezas_ocorrencia CASCADE;'
-  );
+  pgm.sql(`
+    DROP TABLE IF EXISTS ocorrencia_destaque CASCADE;
+    DROP TABLE IF EXISTS supervisor_plantao CASCADE;
+    DROP TABLE IF EXISTS obitos_registros CASCADE;
+    DROP TABLE IF EXISTS estatisticas_diarias CASCADE;
+    DROP TABLE IF EXISTS ocorrencias_detalhadas CASCADE;
+    DROP TABLE IF EXISTS solicitacoes_acesso CASCADE;
+    DROP TABLE IF EXISTS usuarios CASCADE;
+    DROP TABLE IF EXISTS obms CASCADE;
+    DROP TABLE IF EXISTS crbms CASCADE;
+    DROP TABLE IF EXISTS naturezas_ocorrencia CASCADE;
+  `);
 };
