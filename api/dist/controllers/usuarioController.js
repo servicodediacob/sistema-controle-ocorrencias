@@ -1,4 +1,5 @@
 "use strict";
+// Caminho: api/src/controllers/usuarioController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,6 +8,7 @@ exports.excluirUsuario = exports.atualizarUsuario = exports.criarUsuario = expor
 const db_1 = __importDefault(require("../db"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const logger_1 = __importDefault(require("../config/logger"));
+// 2. ATUALIZAR A ASSINATURA DA FUNÇÃO
 const listarUsuarios = async (_req, res) => {
     try {
         const query = `
@@ -24,6 +26,7 @@ const listarUsuarios = async (_req, res) => {
     }
 };
 exports.listarUsuarios = listarUsuarios;
+// 3. ATUALIZAR AS OUTRAS FUNÇÕES NO MESMO ARQUIVO POR CONSISTÊNCIA
 const criarUsuario = async (req, res) => {
     const { nome, email, senha, role = 'user', obm_id = null } = req.body;
     if (!nome || !email || !senha) {
@@ -78,16 +81,15 @@ const atualizarUsuario = async (req, res) => {
     }
 };
 exports.atualizarUsuario = atualizarUsuario;
+// A função excluirUsuario já estava correta, mas é bom confirmar.
 const excluirUsuario = async (req, res) => {
     const { id } = req.params;
     const idNumerico = parseInt(id, 10);
-    // Impede que um admin se auto-exclua
     if (req.usuario?.id === idNumerico) {
         res.status(400).json({ message: 'Você não pode excluir a si mesmo.' });
         return;
     }
     try {
-        // Verifica se o usuário a ser excluído está definido como supervisor de plantão
         const plantaoCheck = await db_1.default.query('SELECT usuario_id FROM supervisor_plantao WHERE usuario_id = $1', [idNumerico]);
         if (plantaoCheck.rows.length > 0) {
             res.status(400).json({ message: 'Não é possível excluir o usuário que está definido como supervisor de plantão. Remova-o do plantão primeiro.' });
@@ -99,7 +101,7 @@ const excluirUsuario = async (req, res) => {
             return;
         }
         logger_1.default.info({ usuarioIdExcluido: id, adminId: req.usuario?.id }, 'Usuário excluído com sucesso.');
-        res.status(204).send(); // 204 No Content é o status correto para exclusão bem-sucedida
+        res.status(204).send();
     }
     catch (error) {
         if (error.code === '23503') {

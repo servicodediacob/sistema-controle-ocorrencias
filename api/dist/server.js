@@ -1,9 +1,11 @@
 "use strict";
-// Caminho: api/src/server.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Caminho: api/src/server.ts
+const perfilRoutes_1 = __importDefault(require("./routes/perfilRoutes"));
+const auditoriaRoutes_1 = __importDefault(require("./routes/auditoriaRoutes"));
 require("./config/envLoader"); // Garante que as variaveis de ambiente sejam carregadas primeiro
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -60,6 +62,8 @@ app.use('/api/acesso', acessoRoutes_1.default); // Rota publica para solicitar a
 // A partir daqui, todas as rotas podem (e devem) ser protegidas pelo middleware de autenticacao.
 app.use('/api/plantao', plantaoRoutes_1.default);
 app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes_1.default);
+app.use('/api/perfil', perfilRoutes_1.default);
+app.use('/api/auditoria', auditoriaRoutes_1.default);
 app.use('/api', dadosRoutes_1.default); // Agrupa a maioria das rotas de dados
 // --- Configuracao do Servidor HTTP e Socket.IO ---
 const httpServer = (0, http_1.createServer)(app);

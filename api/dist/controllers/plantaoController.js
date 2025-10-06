@@ -1,4 +1,5 @@
 "use strict";
+// Caminho: api/src/controllers/plantaoController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,18 +9,22 @@ const db_1 = __importDefault(require("../db"));
 const logger_1 = __importDefault(require("../config/logger"));
 const getPlantao = async (_req, res) => {
     try {
-        const destaqueQuery = `
+        // --- INÍCIO DA CORREÇÃO ---
+        // 1. A consulta agora busca TODAS as ocorrências detalhadas da data ATUAL.
+        //    A ordenação é feita pelo horário, garantindo uma sequência lógica.
+        const destaquesQuery = `
       SELECT 
         od.*,
         n.grupo as natureza_grupo,
         n.subgrupo as natureza_nome,
         c.nome as cidade_nome
-      FROM ocorrencia_destaque d
-      LEFT JOIN ocorrencias_detalhadas od ON d.ocorrencia_id = od.id
+      FROM ocorrencias_detalhadas od
       LEFT JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
       LEFT JOIN obms c ON od.cidade_id = c.id
-      WHERE d.id = 1 AND d.ocorrencia_id IS NOT NULL;
+      WHERE od.data_ocorrencia = CURRENT_DATE
+      ORDER BY od.horario_ocorrencia ASC, od.id ASC;
     `;
+        // --- FIM DA CORREÇÃO ---
         const supervisorQuery = `
       SELECT 
         sp.usuario_id,
@@ -28,12 +33,13 @@ const getPlantao = async (_req, res) => {
       LEFT JOIN usuarios u ON sp.usuario_id = u.id
       WHERE sp.id = 1;
     `;
-        const [destaqueResult, supervisorResult] = await Promise.all([
-            db_1.default.query(destaqueQuery),
+        const [destaquesResult, supervisorResult] = await Promise.all([
+            db_1.default.query(destaquesQuery),
             db_1.default.query(supervisorQuery)
         ]);
+        // 2. O nome da propriedade é alterado para refletir que agora é uma lista.
         res.status(200).json({
-            ocorrenciaDestaque: destaqueResult.rows[0] || null,
+            ocorrenciasDestaque: destaquesResult.rows || [], // Renomeado de 'ocorrenciaDestaque' para 'ocorrenciasDestaque'
             supervisorPlantao: supervisorResult.rows[0] || null,
         });
     }

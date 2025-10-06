@@ -1,4 +1,5 @@
 "use strict";
+// Caminho: api/src/middleware/authMiddleware.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -15,7 +16,7 @@ const proteger = (req, res, next) => {
             const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
             // Anexa os dados do usuário decodificados ao objeto da requisição
             req.usuario = decoded;
-            next(); // Continua para a próxima função (o controller da rota)
+            next();
             return;
         }
         catch (error) {
