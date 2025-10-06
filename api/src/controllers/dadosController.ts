@@ -12,6 +12,7 @@ export const getNaturezas = async (_req: Request, res: Response) => {
   }
 };
 
+// ======================= INÍCIO DA CORREÇÃO =======================
 export const getNaturezasPorNomes = async (req: Request, res: Response) => {
   const { nomes } = req.body;
 
@@ -20,16 +21,17 @@ export const getNaturezasPorNomes = async (req: Request, res: Response) => {
   }
 
   try {
-    const inPlaceholders = nomes.map((_, index) => `$${index + 1}`).join(', ');
-    
+    // Consulta SQL corrigida para usar ANY com um array, que é a forma
+    // idiomática e segura de fazer isso no PostgreSQL com o driver 'pg'.
     const query = `
       SELECT id, subgrupo 
       FROM naturezas_ocorrencia 
-      WHERE subgrupo IN (${inPlaceholders})
+      WHERE subgrupo = ANY($1::text[])
       ORDER BY subgrupo;
     `;
     
-    const { rows } = await db.query(query, nomes);
+    // Passamos o array 'nomes' diretamente como o primeiro (e único) parâmetro.
+    const { rows } = await db.query(query, [nomes]);
     
     return res.status(200).json(rows);
   } catch (error) {
@@ -37,6 +39,7 @@ export const getNaturezasPorNomes = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
+// ======================= FIM DA CORREÇÃO =======================
 
 export const criarNatureza = async (req: Request, res: Response) => {
   const { grupo, subgrupo, abreviacao } = req.body;
