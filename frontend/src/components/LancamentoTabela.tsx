@@ -2,10 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
-import Spinner from './Spinner';
 import Icon from './Icon';
+// ======================= INÍCIO DA CORREÇÃO =======================
+// 1. Importar o novo componente de esqueleto
+import SkeletonTable from './SkeletonTable';
+// ======================= FIM DA CORREÇÃO =======================
 
-// --- Interfaces (sem alteração) ---
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
@@ -23,7 +25,6 @@ interface CardProps {
   showActions: boolean;
 }
 
-// --- Componente MobileCard (sem alteração) ---
 const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, showActions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
@@ -73,8 +74,6 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
   );
 };
 
-
-// --- Componente CrbmAccordion (sem alteração) ---
 interface CrbmAccordionProps {
   crbmNome: string;
   cidadesDoCrbm: ICidade[];
@@ -141,7 +140,6 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
   );
 };
 
-// --- Componente LancamentoTabela (COM AS ALTERAÇÕES PRINCIPAIS) ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -150,13 +148,12 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   onEdit, 
   showActions = true 
 }) => {
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // 2. Se estiver carregando, renderiza o SkeletonTable.
   if (loading) {
-    return (
-      <div className="mt-8 flex items-center justify-center rounded-lg bg-surface p-12">
-        <Spinner size="lg" text="Carregando dados da tabela..." />
-      </div>
-    );
+    return <SkeletonTable />;
   }
+  // ======================= FIM DA CORREÇÃO =======================
 
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
@@ -226,11 +223,9 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
       </div>
 
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
-        {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
         <table className="min-w-[1300px] w-full border-collapse table-fixed">
           <thead className="bg-gray-700 text-white">
             <tr>
-              {/* 1. Adicionamos classes de largura fixa (w-XX) para as duas primeiras colunas */}
               <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
               <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
@@ -262,7 +257,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
                 return (
                   <tr key={cidade.id} className={`text-center hover:bg-border/50 ${rowClasses}`}>
-                    {/* 2. Adicionamos a mesma classe de largura fixa na célula de dados correspondente */}
                     {index === 0 && (
                       <td rowSpan={listaCidades.length} className="sticky left-0 z-20 w-[150px] border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
                     )}
@@ -314,7 +308,6 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
             </tr>
           </tfoot>
         </table>
-        {/* ======================= FIM DA CORREÇÃO ======================= */}
       </div>
     </>
   );

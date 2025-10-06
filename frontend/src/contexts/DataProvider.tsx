@@ -30,10 +30,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // 2. A função de busca de dados agora é um 'useCallback' que depende de 'isAuthenticated'.
   //    Ela só será executada se o usuário estiver autenticado.
   const fetchDadosDeApoio = useCallback(async () => {
-    // Se não estiver autenticado, não faz nada.
+    // Se não estiver autenticado, não faz nada e garante que os dados estejam limpos.
     if (!isAuthenticated) {
       console.log('[DataProvider] Usuário não autenticado. Nenhuma busca de dados será feita.');
-      setCidades([]); // Limpa os dados se o usuário deslogar
+      setCidades([]);
       setNaturezas([]);
       return;
     }
@@ -48,6 +48,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       ]);
       setCidades(cidadesData);
       setNaturezas(naturezasData);
+      console.log(`[DataProvider] Dados carregados: ${cidadesData.length} cidades, ${naturezasData.length} naturezas.`);
     } catch (error) {
       console.error('Falha ao carregar dados de apoio globais:', error);
       // Em caso de erro, limpa os estados para evitar dados inconsistentes
