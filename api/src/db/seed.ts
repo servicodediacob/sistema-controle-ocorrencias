@@ -1,11 +1,11 @@
 // api/src/db/seed.ts
 import bcrypt from 'bcryptjs';
-import db from './index';
-import './config/envLoader';
-import logger from '../config/logger';
+import db from '@/db'; // <-- CORRIGIDO
+import '@/config/envLoader'; // <-- CORRIGIDO
+import logger from '@/config/logger'; // <-- CORRIGIDO
 
-// A função agora é exportada para ser usada em outro lugar
 export async function seedProductionAdmin() {
+  // ... (o resto da função permanece igual)
   logger.info('--- INICIANDO SCRIPT DE SEED PARA USUÁRIO ADMIN ---');
 
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -14,7 +14,6 @@ export async function seedProductionAdmin() {
   if (!adminEmail || !adminPassword) {
     const errorMsg = '[SEED] ERRO: As variáveis de ambiente ADMIN_EMAIL e ADMIN_PASSWORD são obrigatórias.';
     logger.error(errorMsg);
-    // Em vez de process.exit, lançamos um erro para ser capturado pelo controller
     throw new Error(errorMsg);
   }
 
@@ -50,7 +49,6 @@ export async function seedProductionAdmin() {
   }
 }
 
-// O bloco abaixo só será executado se o arquivo for chamado diretamente via 'node'
 if (require.main === module) {
   seedProductionAdmin()
     .then(() => {

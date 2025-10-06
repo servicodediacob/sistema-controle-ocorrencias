@@ -1,26 +1,22 @@
 ﻿// api/src/server.ts
-import './config/envLoader';
-import express, { Request, Response } from 'express'; // Adicionado Request e Response
+import '@/config/envLoader'; // <-- CORRIGIDO
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import logger from './config/logger';
-import { onSocketConnection } from './services/socketService';
+import logger from '@/config/logger'; // <-- CORRIGIDO
+import { onSocketConnection } from '@/services/socketService'; // <-- CORRIGIDO
 
 // Importação das rotas
-import authRoutes from './routes/authRoutes';
-import acessoRoutes from './routes/acessoRoutes';
-import plantaoRoutes from './routes/plantaoRoutes';
-import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
-import perfilRoutes from './routes/perfilRoutes';
-import auditoriaRoutes from './routes/auditoriaRoutes';
-import dadosRoutes from './routes/dadosRoutes';
-import { runDiagnostics } from './controllers/diagController';
-
-// ======================= INÍCIO DA CORREÇÃO =======================
-// Importa a função de seed que acabamos de exportar
-import { seedProductionAdmin } from './db/seed';
-// ======================= FIM DA CORREÇÃO =======================
+import authRoutes from '@/routes/authRoutes'; // <-- CORRIGIDO
+import acessoRoutes from '@/routes/acessoRoutes'; // <-- CORRIGIDO
+import plantaoRoutes from '@/routes/plantaoRoutes'; // <-- CORRIGIDO
+import ocorrenciaDetalhadaRoutes from '@/routes/ocorrenciaDetalhadaRoutes'; // <-- CORRIGIDO
+import perfilRoutes from '@/routes/perfilRoutes'; // <-- CORRIGIDO
+import auditoriaRoutes from '@/routes/auditoriaRoutes'; // <-- CORRIGIDO
+import dadosRoutes from '@/routes/dadosRoutes'; // <-- CORRIGIDO
+import { runDiagnostics } from '@/controllers/diagController'; // <-- CORRIGIDO
+import { seedProductionAdmin } from '@/db/seed'; // <-- CORRIGIDO
 
 // --- Configuração de CORS (sem alterações ) ---
 const defaultAllowedOrigins = [
@@ -57,12 +53,10 @@ app.get('/api/diag', runDiagnostics);
 app.use('/api/auth', authRoutes);
 app.use('/api/acesso', acessoRoutes);
 
-// ======================= INÍCIO DA CORREÇÃO =======================
 // --- ROTA DE SETUP TEMPORÁRIA E SEGURA ---
 app.post('/api/setup/run-seed', async (req: Request, res: Response) => {
   const { secret } = req.body;
 
-  // A chave secreta DEVE ser definida nas variáveis de ambiente do Render
   if (!process.env.SEED_SECRET_KEY || secret !== process.env.SEED_SECRET_KEY) {
     logger.warn('Tentativa de acesso não autorizado ao endpoint de seed.');
     return res.status(403).json({ message: 'Acesso negado.' });
@@ -76,7 +70,6 @@ app.post('/api/setup/run-seed', async (req: Request, res: Response) => {
     return res.status(500).json({ message });
   }
 });
-// ======================= FIM DA CORREÇÃO =======================
 
 // --- Rotas Protegidas ---
 app.use('/api/plantao', plantaoRoutes);
