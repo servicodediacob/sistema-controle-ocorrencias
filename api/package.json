@@ -10,9 +10,6 @@
     "test": "jest",
     "test:integration": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --detectOpenHandles",
     "db:migrate": "node-pg-migrate",
-    "db:migrate:up": "node-pg-migrate up",
-    "db:migrate:down": "node-pg-migrate down",
-    "db:migrate:create": "node-pg-migrate create",
     "db:seed": "npm run build && node dist/db/seed.js"
   },
   "dependencies": {

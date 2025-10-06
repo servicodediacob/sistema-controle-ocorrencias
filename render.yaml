@@ -5,12 +5,19 @@ services:
     name: api-siscob
     env: node
     plan: free
-    # ======================= INÍCIO DA CORREÇÃO =======================
-    # O comando de build agora chama o script correto 'db:migrate:up'
-    # que existe no package.json da raiz.
-    buildCommand: "npm install && npm run build && npm run db:migrate:up"
-    # ======================= FIM DA CORREÇÃO =======================
-    startCommand: "cd api && npm start"
+    # ======================= INÍCIO DA CORREÇÃO DEFINITIVA =======================
+    # Define o diretório raiz do serviço como a pasta 'api'
+    rootDir: api
+    
+    # Executa os comandos diretamente, agora dentro do contexto da pasta 'api'
+    # 1. Instala TODAS as dependências (incluindo devDependencies para o build)
+    # 2. Compila o código TypeScript e resolve os aliases
+    # 3. Executa o comando de migração 'up'
+    buildCommand: "npm install && npm run build && npm run db:migrate up"
+    
+    # O comando de start não precisa mais do 'cd api'
+    startCommand: "npm start"
+    # ======================= FIM DA CORREÇÃO DEFINITIVA =======================
     healthCheckPath: /api/diag
     envVars:
       - key: NODE_ENV
