@@ -15,7 +15,13 @@ export const getUnidades = async (_req: Request, res: Response): Promise<void> =
       ORDER BY cr.nome, obm.nome;
     `;
     const { rows } = await db.query(query);
-    res.status(200).json(rows);
+    
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Garante que a resposta seja sempre um JSON com um array,
+    // mesmo que a consulta não retorne nenhuma linha.
+    res.status(200).json(rows || []);
+    // --- FIM DA CORREÇÃO ---
+
   } catch (error) {
     logger.error({ err: error }, 'Erro ao buscar unidades (OBMs).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
