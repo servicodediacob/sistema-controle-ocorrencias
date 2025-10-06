@@ -109,7 +109,7 @@ function DashboardPage(): ReactElement {
 
       {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
       {/* 2. Substituir o widget antigo pelo novo */}
-      <DestaqueDetalhadoWidget destaque={plantaoData?.ocorrenciaDestaque as any} />
+      <DestaqueDetalhadoWidget destaques={plantaoData?.ocorrenciasDestaque || []} />
       {/* ======================= FIM DA CORREÇÃO ======================= */}
 
       {/* Widgets de Relatórios */}

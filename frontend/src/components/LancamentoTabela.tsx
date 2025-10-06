@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Spinner from './Spinner';
-import Icon from './Icon'; // 1. Importamos o componente Icon
+import Icon from './Icon';
 
 // --- Interfaces (sem alteração) ---
 interface LancamentoTabelaProps {
@@ -74,7 +74,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
 };
 
 
-// --- Componente CrbmAccordion (COM A CORREÇÃO) ---
+// --- Componente CrbmAccordion (sem alteração) ---
 interface CrbmAccordionProps {
   crbmNome: string;
   cidadesDoCrbm: ICidade[];
@@ -102,13 +102,10 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
-          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-          {/* 2. Substituímos o <span> por um componente Icon SVG */}
           <Icon 
-            path="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" // Path de um ícone "chevron_right"
+            path="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
             className={`transform text-text-strong transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
           />
-          {/* ======================= FIM DA CORREÇÃO ======================= */}
           <p className="font-bold text-text-strong">{crbmNome}</p>
         </div>
         <div className="text-right">
@@ -144,7 +141,7 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
   );
 };
 
-// --- Componente LancamentoTabela (sem mais alterações) ---
+// --- Componente LancamentoTabela (COM AS ALTERAÇÕES PRINCIPAIS) ---
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
   cidades, 
@@ -229,9 +226,11 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
       </div>
 
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
-        <table className="min-w-[1300px] w-full border-collapse">
+        {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+        <table className="min-w-[1300px] w-full border-collapse table-fixed">
           <thead className="bg-gray-700 text-white">
             <tr>
+              {/* 1. Adicionamos classes de largura fixa (w-XX) para as duas primeiras colunas */}
               <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
               <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
@@ -255,19 +254,33 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                   totalLinha += qtd;
                 });
 
-                const cellClass = totalLinha > 0
-                  ? 'dark:bg-green-900/30 dark:text-green-300 bg-green-100 text-green-800'
-                  : 'dark:bg-red-900/50 dark:text-red-300 bg-red-100 text-red-800';
+                const hasData = totalLinha > 0;
+                const rowClasses = hasData ? 'bg-green-900/20' : '';
+                const cellCidadeClasses = hasData
+                  ? 'text-green-300'
+                  : 'bg-red-900/40 text-red-300';
 
                 return (
-                  <tr key={cidade.id} className="text-center hover:bg-border/50">
+                  <tr key={cidade.id} className={`text-center hover:bg-border/50 ${rowClasses}`}>
+                    {/* 2. Adicionamos a mesma classe de largura fixa na célula de dados correspondente */}
                     {index === 0 && (
-                      <td rowSpan={listaCidades.length} className="sticky left-0 z-20 border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
+                      <td rowSpan={listaCidades.length} className="sticky left-0 z-20 w-[150px] border-b border-r border-border bg-surface p-3 text-left align-top font-bold text-text-strong">{crbm}</td>
                     )}
-                    <td className={`sticky left-[150px] z-20 border-b border-r border-border p-3 text-left font-bold ${cellClass}`}>{cidade.cidade_nome}</td>
-                    {naturezas.map(nat => (
-                      <td key={nat.subgrupo} className="whitespace-nowrap border-x border-border p-3">{ocorrências[nat.subgrupo]}</td>
-                    ))}
+                    <td className={`sticky left-[150px] z-20 w-[250px] border-b border-r border-border p-3 text-left font-bold ${cellCidadeClasses}`}>
+                      {cidade.cidade_nome}
+                    </td>
+                    {naturezas.map(nat => {
+                      const qtd = ocorrências[nat.subgrupo];
+                      const cellValueClasses = qtd > 0
+                        ? 'font-bold text-teal-300'
+                        : 'text-gray-500';
+
+                      return (
+                        <td key={nat.subgrupo} className={`whitespace-nowrap border-x border-border p-3 ${cellValueClasses}`}>
+                          {qtd}
+                        </td>
+                      );
+                    })}
                     <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
                       <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3">
@@ -301,6 +314,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
             </tr>
           </tfoot>
         </table>
+        {/* ======================= FIM DA CORREÇÃO ======================= */}
       </div>
     </>
   );

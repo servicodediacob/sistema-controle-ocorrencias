@@ -1,3 +1,5 @@
+// Caminho: frontend/src/services/api.ts
+
 import axios, { AxiosError } from 'axios';
 import { IUser } from '../contexts/AuthProvider';
 
@@ -71,8 +73,10 @@ export interface IDashboardStats {
   ocorrenciasPorCrbm: { nome: string; total: number }[];
 }
 
+// --- INÍCIO DA CORREÇÃO ---
+// 1. A interface IPlantao agora espera um ARRAY de ocorrências.
 export interface IPlantao {
-  ocorrenciaDestaque: {
+  ocorrenciasDestaque: { // Renomeado para o plural
     id: number;
     numero_ocorrencia?: string;
     natureza_id: number;
@@ -89,12 +93,13 @@ export interface IPlantao {
     data_ocorrencia: string;
     horario_ocorrencia?: string;
     usuario_id: number;
-  } | null;
+  }[]; // <-- Agora é um array!
   supervisorPlantao: {
     usuario_id: number | null;
     supervisor_nome: string | null;
   } | null;
 }
+// --- FIM DA CORREÇÃO ---
 
 export interface ISupervisor {
   id: number;
@@ -176,11 +181,11 @@ interface ApiError {
 }
 
 // ===============================================
-// --- Configuração do Axios ---
+// --- Configuração do Axios (sem alterações) ---
 // ===============================================
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-console.log(`[INFO] A API está se comunicando com: ${baseURL}`  );
+console.log(`[INFO] A API está se comunicando com: ${baseURL}`   );
 
 export const api = axios.create({ baseURL });
 
@@ -198,19 +203,15 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Adicionamos um interceptador de resposta para lidar com erros 401.
 api.interceptors.response.use(
-  (response) => response, // Se a resposta for bem-sucedida, apenas a retorne.
+  (response) => response,
   (error) => {
-    // Se o erro for 401 (Não Autorizado), limpa o localStorage e recarrega a página.
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       console.warn('[Axios Interceptor] Erro 401 detectado. Token inválido ou expirado. Realizando logout forçado.');
       localStorage.removeItem('usuario');
       localStorage.removeItem('token');
-      // Recarrega a página para forçar o redirecionamento para a tela de login.
       window.location.href = '/login'; 
     }
-    // Para todos os outros erros, apenas os rejeite para que sejam tratados localmente.
     return Promise.reject(error);
   }
 );
@@ -232,7 +233,7 @@ export const extractErrorMessage = (error: unknown): string => {
 };
 
 // ===============================================
-// --- Funções da API Tipadas ---
+// --- Funções da API Tipadas (sem alterações) ---
 // ===============================================
 
 // Auth & Acesso
