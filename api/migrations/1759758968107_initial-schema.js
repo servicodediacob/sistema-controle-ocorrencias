@@ -3,11 +3,7 @@
 exports.shorthands = undefined;
 
 exports.up = pgm => {
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // O conteúdo desta função foi comentado para evitar que a migração
-  // tente recriar tabelas que já existem no ambiente de produção.
-  // Em um próximo deploy, apenas a nova migração (adicionar-tabela-auditoria) será executada.
-  /*
+  // Comentários removidos, o código está ativo novamente.
   pgm.sql(`
     -- COMANDOS DE CRIAÇÃO (CREATE)
 
@@ -122,14 +118,12 @@ exports.up = pgm => {
     INSERT INTO ocorrencia_destaque (id, ocorrencia_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
     INSERT INTO supervisor_plantao (id, usuario_id) VALUES (1, NULL) ON CONFLICT (id) DO NOTHING;
   `);
-  */
-  // ======================= FIM DA CORREÇÃO =======================
 };
 
 exports.down = pgm => {
   pgm.sql(
     '-- 1. COMANDOS DE EXCLUSÃO (DROP) \n' +
-    'DROP TABLE IF EXISTS auditoria_logs CASCADE; \n' + // Adicionado para consistência
+    'DROP TABLE IF EXISTS auditoria_logs CASCADE; \n' +
     'DROP TABLE IF EXISTS ocorrencia_destaque CASCADE; \n' +
     'DROP TABLE IF EXISTS supervisor_plantao CASCADE; \n' +
     'DROP TABLE IF EXISTS obitos_registros CASCADE; \n' +
