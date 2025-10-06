@@ -6,11 +6,9 @@ services:
     env: node
     plan: free
     # ======================= INÍCIO DA CORREÇÃO =======================
-    # O comando de build agora executa a migração 'up' explicitamente.
-    # 1. Instala dependências (incluindo devDependencies necessárias para build).
-    # 2. Compila o código TypeScript e resolve os aliases.
-    # 3. Roda 'npm run db:migrate:up', que aplica as migrações pendentes.
-    buildCommand: "cd api && npm install && npm run build && npm run db:migrate:up"
+    # O comando de build agora chama o script correto 'db:migrate:up'
+    # que existe no package.json da raiz.
+    buildCommand: "npm install && npm run build && npm run db:migrate:up"
     # ======================= FIM DA CORREÇÃO =======================
     startCommand: "cd api && npm start"
     healthCheckPath: /api/diag
@@ -21,12 +19,11 @@ services:
         value: info
       - key: JWT_SECRET
         sync: false
-      # As variáveis de admin que adicionamos no passo anterior
       - key: ADMIN_EMAIL
         value: admin@cbm.go.gov.br
       - key: ADMIN_PASSWORD
         sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: sistema_ocorrencias_db # Nome do seu banco no Neon
+          name: sistema_ocorrencias_db # Confirme se este é o nome do seu banco no Neon
           property: connectionString
