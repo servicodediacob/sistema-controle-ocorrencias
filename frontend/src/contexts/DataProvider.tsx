@@ -1,5 +1,3 @@
-// Caminho: frontend/src/contexts/DataProvider.tsx
-
 import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { getCidades, getNaturezas, ICidade, IDataApoio } from '../services/api';
 import { useAuth } from './useAuth'; // O hook para obter o estado de autenticação
