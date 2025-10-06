@@ -1,3 +1,5 @@
+// Caminho: api/src/middleware/authMiddleware.ts
+
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import logger from '../config/logger';
@@ -7,6 +9,7 @@ export interface JwtPayload {
   id: number;
   role: 'admin' | 'user';
   obm_id: number | null;
+  nome: string; // <-- CORREÇÃO: ADICIONAMOS A PROPRIEDADE 'nome'
 }
 
 // Estende a interface Request do Express para incluir nosso payload de usuário
@@ -27,7 +30,7 @@ export const proteger = (req: RequestWithUser, res: Response, next: NextFunction
       // Anexa os dados do usuário decodificados ao objeto da requisição
       req.usuario = decoded;
       
-      next(); // Continua para a próxima função (o controller da rota)
+      next();
       return;
 
     } catch (error) {

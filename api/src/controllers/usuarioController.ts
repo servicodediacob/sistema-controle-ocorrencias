@@ -1,10 +1,14 @@
-import { Request, Response } from 'express';
+// Caminho: api/src/controllers/usuarioController.ts
+
+import { Response } from 'express';
+// 1. IMPORTAR O TIPO CORRETO
+import { RequestWithUser } from '@/middleware/authMiddleware';
 import db from '@/db';
 import bcrypt from 'bcryptjs';
 import logger from '@/config/logger';
-import { RequestWithUser } from '@/middleware/authMiddleware';
 
-export const listarUsuarios = async (_req: Request, res: Response): Promise<void> => {
+// 2. ATUALIZAR A ASSINATURA DA FUNÇÃO
+export const listarUsuarios = async (_req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const query = `
       SELECT u.id, u.nome, u.email, u.role, u.criado_em, o.nome as obm_nome
@@ -20,7 +24,8 @@ export const listarUsuarios = async (_req: Request, res: Response): Promise<void
   }
 };
 
-export const criarUsuario = async (req: Request, res: Response): Promise<void> => {
+// 3. ATUALIZAR AS OUTRAS FUNÇÕES NO MESMO ARQUIVO POR CONSISTÊNCIA
+export const criarUsuario = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { nome, email, senha, role = 'user', obm_id = null } = req.body;
 
   if (!nome || !email || !senha) {
@@ -49,7 +54,7 @@ export const criarUsuario = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const atualizarUsuario = async (req: Request, res: Response): Promise<void> => {
+export const atualizarUsuario = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { id } = req.params;
   const { nome, email, role, obm_id } = req.body;
 
@@ -82,18 +87,17 @@ export const atualizarUsuario = async (req: Request, res: Response): Promise<voi
   }
 };
 
+// A função excluirUsuario já estava correta, mas é bom confirmar.
 export const excluirUsuario = async (req: RequestWithUser, res: Response): Promise<void> => {
   const { id } = req.params;
   const idNumerico = parseInt(id, 10);
 
-  // Impede que um admin se auto-exclua
   if (req.usuario?.id === idNumerico) {
     res.status(400).json({ message: 'Você não pode excluir a si mesmo.' });
     return;
   }
 
   try {
-    // Verifica se o usuário a ser excluído está definido como supervisor de plantão
     const plantaoCheck = await db.query('SELECT usuario_id FROM supervisor_plantao WHERE usuario_id = $1', [idNumerico]);
     if (plantaoCheck.rows.length > 0) {
       res.status(400).json({ message: 'Não é possível excluir o usuário que está definido como supervisor de plantão. Remova-o do plantão primeiro.' });
@@ -108,7 +112,7 @@ export const excluirUsuario = async (req: RequestWithUser, res: Response): Promi
     }
 
     logger.info({ usuarioIdExcluido: id, adminId: req.usuario?.id }, 'Usuário excluído com sucesso.');
-    res.status(204).send(); // 204 No Content é o status correto para exclusão bem-sucedida
+    res.status(204).send();
   } catch (error) {
     if ((error as any).code === '23503') {
       logger.warn({ usuarioIdExcluido: id }, 'Tentativa de excluir usuário com registros associados.');

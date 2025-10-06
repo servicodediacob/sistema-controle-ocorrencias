@@ -1,7 +1,5 @@
 // Caminho: frontend/src/components/SkeletonTable.tsx
 
-import React from 'react';
-
 // Componente para uma única linha do esqueleto
 const SkeletonRow = () => (
   <tr className="animate-pulse">

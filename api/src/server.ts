@@ -1,5 +1,6 @@
 ﻿// Caminho: api/src/server.ts
-
+import perfilRoutes from './routes/perfilRoutes';
+import auditoriaRoutes from './routes/auditoriaRoutes';
 import './config/envLoader'; // Garante que as variaveis de ambiente sejam carregadas primeiro
 import express from 'express';
 import cors from 'cors';
@@ -63,6 +64,8 @@ app.use('/api/acesso', acessoRoutes); // Rota publica para solicitar acesso
 // A partir daqui, todas as rotas podem (e devem) ser protegidas pelo middleware de autenticacao.
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
+app.use('/api/perfil', perfilRoutes);
+app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api', dadosRoutes); // Agrupa a maioria das rotas de dados
 
 // --- Configuracao do Servidor HTTP e Socket.IO ---

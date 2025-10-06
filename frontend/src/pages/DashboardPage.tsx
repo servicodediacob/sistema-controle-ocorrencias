@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth';
 
 import MainLayout from '../components/MainLayout';
 import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget'; // 1. Importar o novo widget
@@ -72,7 +71,6 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
 
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
-  const { usuario } = useAuth();
   
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);

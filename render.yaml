@@ -1,9 +1,17 @@
+# Caminho: render.yaml
+
 services:
   - type: web
     name: api-siscob
     env: node
     plan: free
-    buildCommand: "npm install --production=false && npm run build && npm run migrate"
+    # ======================= INÍCIO DA CORREÇÃO =======================
+    # O comando de build agora executa a migração segura ANTES de iniciar o servidor.
+    # 1. Instala dependências.
+    # 2. Compila o código TypeScript.
+    # 3. Roda 'npm run db:migrate:up', que aplica apenas as migrações pendentes.
+    buildCommand: "npm install --production=false && npm run build && npm run db:migrate:up"
+    # ======================= FIM DA CORREÇÃO =======================
     startCommand: "npm start"
     healthCheckPath: /api/diag
     envVars:
@@ -13,7 +21,11 @@ services:
         value: info
       - key: JWT_SECRET
         sync: false
+      # A variável ALLOW_SCHEMA_RESET não é mais necessária para o fluxo de migração.
+      # Pode ser mantida por segurança, mas não é usada pelo node-pg-migrate.
       - key: ALLOW_SCHEMA_RESET
         value: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: sistema_ocorrencias_prod # CONFIRME SE ESTE É O NOME CORRETO DO SEU DB NO RENDER
+          property: connectionString

@@ -12,14 +12,18 @@ const ICONS = {
   report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
   obitos: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z",
   launch: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+  manage: "M14.06 9.94L15.12 11l-4.18 4.17-1.42-1.42 4.52-4.52zM20.5 2c-3.04 0-5.5 2.46-5.5 5.5 0 1.02.28 1.97.75 2.8l-5.81 5.81-2.12-2.12-5.3 5.3L4.22 21l5.3-5.3 2.12 2.12 5.81-5.81c.83.47 1.78.75 2.8.75 3.04 0 5.5-2.46 5.5-5.5S23.54 2 20.5 2z",
   users: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
   access: "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z",
   data: "M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm14 14H5V5h14v14zM7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z",
   logout: "M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z",
   collapse: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
   expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+  profile: "M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z",
+  audit: "M19.5 9.5c-1.03 0-1.9.62-2.29 1.5h-2.92c-.39-.88-1.26-1.5-2.29-1.5s-1.9.62-2.29 1.5H6.81c-.39-.88-1.26-1.5-2.29-1.5C3.12 9.5 2 10.62 2 12s1.12 2.5 2.52 2.5c1.03 0 1.9-.62 2.29-1.5h2.92c.39.88 1.26 1.5 2.29 1.5s1.9-.62 2.29-1.5h2.92c.39.88 1.26 1.5 2.29 1.5C18.88 14.5 20 13.38 20 12s-1.12-2.5-2.5-2.5z", // Ícone de auditoria
 };
 
+// ... (Componente NavButton não muda)
 interface NavButtonProps {
   onClick: () => void; isCollapsed: boolean; isActive: boolean; title: string; children: React.ReactNode; className?: string;
 }
@@ -42,6 +46,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
   const navigate = useNavigate();
   const location = useLocation();
 
+  // --- INÍCIO DA CORREÇÃO ---
+  // 3. Adiciona o novo item de menu na lista
   const navItems = [
     { key: 'dashboard', path: '/dashboard', label: 'Dashboard', adminOnly: false },
     { key: 'report', path: '/relatorio', label: 'Relatório Estatístico', adminOnly: false },
@@ -50,15 +56,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
     { key: 'users', path: '/gestao-usuarios', label: 'Gerenciar Usuários', adminOnly: true },
     { key: 'access', path: '/gestao-acesso', label: 'Gerenciar Acessos', adminOnly: true },
     { key: 'data', path: '/gestao-dados', label: 'Gerenciar Dados', adminOnly: true },
+    { key: 'audit', path: '/auditoria', label: 'Logs de Auditoria', adminOnly: true }, // <-- ITEM ADICIONADO
   ];
+  // --- FIM DA CORREÇÃO ---
 
   const handleNavigate = (path: string) => { navigate(path); closeMobileMenu(); };
-  
-  // A função handleLogout foi simplificada para chamar diretamente a prop onLogout
-  const handleLogout = () => {
-    onLogout();
-    closeMobileMenu();
-  };
+  const handleLogout = () => { onLogout(); closeMobileMenu(); };
 
   const sidebarWidth = isCollapsed ? 'w-[80px]' : 'w-[250px]';
 
@@ -83,6 +86,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMob
       <div className="flex-grow" />
 
       <div className="flex flex-col gap-4 border-t border-border pt-4">
+        <div className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
+          <NavButton onClick={() => handleNavigate('/perfil')} isCollapsed={isCollapsed} isActive={location.pathname === '/perfil'} title="Meu Perfil">
+            <Icon path={ICONS.profile} />
+            <span className="whitespace-nowrap">Meu Perfil</span>
+          </NavButton>
+        </div>
+
         <div className={`text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
           <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
         </div>
