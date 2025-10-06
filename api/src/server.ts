@@ -1,7 +1,4 @@
-﻿// Caminho: api/src/server.ts
-import perfilRoutes from './routes/perfilRoutes';
-import auditoriaRoutes from './routes/auditoriaRoutes';
-import './config/envLoader'; // Garante que as variaveis de ambiente sejam carregadas primeiro
+﻿import './config/envLoader'; // Garante que as variaveis de ambiente sejam carregadas primeiro
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -14,31 +11,26 @@ import authRoutes from './routes/authRoutes';
 import acessoRoutes from './routes/acessoRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
-import dadosRoutes from './routes/dadosRoutes';
+import perfilRoutes from './routes/perfilRoutes';
+import auditoriaRoutes from './routes/auditoriaRoutes';
+import dadosRoutes from './routes/dadosRoutes'; // Mantém a importação
 import { runDiagnostics } from './controllers/diagController';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// --- Configuracao de CORS ---
-// Adicionamos a nova URL de produção do frontend à lista de origens permitidas.
+// --- Configuracao de CORS (sem alterações ) ---
 const defaultAllowedOrigins = [
-  'http://localhost:5173', // Para desenvolvimento local
-  'https://siscob-iota.vercel.app', // SUA NOVA URL DE PRODUÇÃO
-  'https://sistema-ocorrencias-frontend-alpha.vercel.app', // URL antiga (pode ser mantida ou removida )
+  'http://localhost:5173',
+  'https://siscob-iota.vercel.app',
+  'https://sistema-ocorrencias-frontend-alpha.vercel.app',
 ];
-// ======================= FIM DA CORREÇÃO =======================
-
 const extraAllowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter((origin) => origin.length > 0)
+  ? process.env.CORS_ORIGINS.split(',' ).map((origin) => origin.trim()).filter((origin) => origin.length > 0)
   : [];
 const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...extraAllowedOrigins]));
-
 if (extraAllowedOrigins.length > 0) {
   logger.info({ allowedOrigins }, '[CORS] Origem(s) adicionais carregadas de CORS_ORIGINS.');
 }
-
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Permite requisicoes sem origin (ex: Postman, apps mobile) ou das origens listadas
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -55,18 +47,24 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Rotas Publicas ---
-// Rotas que nao exigem autenticacao devem vir primeiro.
-app.get('/api/diag', runDiagnostics); // Rota de diagnostico (Health Check)
-app.use('/api/auth', authRoutes); // Rotas de login
-app.use('/api/acesso', acessoRoutes); // Rota publica para solicitar acesso
+app.get('/api/diag', runDiagnostics);
+app.use('/api/auth', authRoutes);
+app.use('/api/acesso', acessoRoutes);
 
-// --- Rotas Protegidas ---
-// A partir daqui, todas as rotas podem (e devem) ser protegidas pelo middleware de autenticacao.
+// ======================= INÍCIO DA CORREÇÃO =======================
+// --- Rotas Protegidas com Prefixos Corretos ---
+// Cada grupo de rotas agora tem seu próprio prefixo, eliminando a ambiguidade.
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
 app.use('/api/perfil', perfilRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
-app.use('/api', dadosRoutes); // Agrupa a maioria das rotas de dados
+
+// O arquivo 'dadosRoutes.ts' agora é montado sob o prefixo '/api'
+// e as rotas dentro dele serão relativas a isso.
+// Ex: /api/naturezas, /api/usuarios, etc.
+app.use('/api', dadosRoutes); 
+// ======================= FIM DA CORREÇÃO =======================
+
 
 // --- Configuracao do Servidor HTTP e Socket.IO ---
 const httpServer = createServer(app );
