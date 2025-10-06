@@ -1,14 +1,18 @@
+# render.yaml
+
 services:
   - type: web
     name: api-siscob
     env: node
     plan: free
-    # --- CORREÇÃO APLICADA AQUI ---
-    # Separamos os comandos para maior clareza e controle no processo de deploy.
-    buildCommand: "cd api && npm install && npm run build"
-    preStartCommand: "cd api && npm run migrate" # Executa a migração ANTES de iniciar o servidor
+    # ======================= INÍCIO DA CORREÇÃO =======================
+    # O comando de build agora executa a migração 'up' explicitamente.
+    # 1. Instala dependências (incluindo devDependencies necessárias para build).
+    # 2. Compila o código TypeScript e resolve os aliases.
+    # 3. Roda 'npm run db:migrate:up', que aplica as migrações pendentes.
+    buildCommand: "cd api && npm install && npm run build && npm run db:migrate:up"
+    # ======================= FIM DA CORREÇÃO =======================
     startCommand: "cd api && npm start"
-    # --- FIM DA CORREÇÃO ---
     healthCheckPath: /api/diag
     envVars:
       - key: NODE_ENV
@@ -17,7 +21,12 @@ services:
         value: info
       - key: JWT_SECRET
         sync: false
+      # As variáveis de admin que adicionamos no passo anterior
+      - key: ADMIN_EMAIL
+        value: admin@cbm.go.gov.br
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: sistema_ocorrencias_prod # CONFIRME SE ESTE É O NOME CORRETO DO SEU DB NO RENDER
+          name: sistema_ocorrencias_db # Nome do seu banco no Neon
           property: connectionString
