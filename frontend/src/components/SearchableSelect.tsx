@@ -37,8 +37,15 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     }
   }, [selectedId, items]);
 
+  // Normaliza strings removendo acentos para buscas mais tolerantes
+  const normalize = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
   const filteredItems = items.filter(item =>
-    item.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    normalize(item.nome).includes(normalize(searchTerm))
   );
 
   useEffect(() => {
@@ -62,6 +69,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div className="relative w-full" ref={dropdownRef}>
       <input
+        data-cy="searchable-select-input"
         type="text"
         value={searchTerm}
         onChange={(e) => {
@@ -74,13 +82,13 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
       />
       {isOpen && !disabled && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-600 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+        <ul data-cy="searchable-select-list" className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-600 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
           {filteredItems.length > 0 ? (
             filteredItems.map(item => {
               // Verifica se o ID do item atual está no conjunto de IDs destacados
               const isHighlighted = highlightedIds.has(item.id);
               return (
-                <li
+                <li data-cy="searchable-select-option"
                   key={item.id}
                   onClick={() => handleSelect(item)}
                   // Aplica a classe de destaque condicionalmente

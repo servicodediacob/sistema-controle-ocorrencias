@@ -28,7 +28,9 @@ export const registrarAcao = async (
       INSERT INTO auditoria_logs (usuario_id, usuario_nome, acao, detalhes)
       VALUES ($1, $2, $3, $4)
     `;
-    await db.query(query, [usuario_id, usuario_nome || 'Nome não disponível', acao, detalhes]);
+    // Garante JSON válido ao inserir na coluna jsonb
+    const detalhesJson = JSON.stringify(detalhes ?? {});
+    await db.query(query, [usuario_id, usuario_nome || 'Nome não disponível', acao, detalhesJson]);
     
     logger.info({ auditoria: { usuario_id, acao, detalhes } }, 'Ação de auditoria registrada com sucesso.');
 
@@ -41,3 +43,4 @@ export const registrarAcao = async (
     }, 'Falha ao registrar ação de auditoria.');
   }
 };
+

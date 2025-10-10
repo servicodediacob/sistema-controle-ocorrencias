@@ -2,10 +2,10 @@
 
 import { useState, useEffect, ReactElement } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import { z } from 'zod';
 
-// Esquema de validação com Zod
+// Esquema de validação com Zod (sem alterações)
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um email válido." }),
   senha: z.string().min(6, { message: "A senha deve ter no mínimo 6 caracteres." }),
@@ -14,7 +14,7 @@ const loginSchema = z.object({
 type LoginFormInputs = z.infer<typeof loginSchema>;
 type FormErrors = { [key in keyof LoginFormInputs]?: string };
 
-// Componente Spinner
+// Componente Spinner (sem alterações)
 const Spinner = (): ReactElement => (
   <div
     className="h-5 w-5 animate-spin rounded-full border-4 border-white/30 border-t-white"
@@ -24,12 +24,10 @@ const Spinner = (): ReactElement => (
 );
 
 function LoginPage(): ReactElement {
-  // --- INÍCIO DA CORREÇÃO ---
   const [formData, setFormData] = useState({
-    email: '', // Campo de email agora começa vazio
-    senha: '', // Campo de senha agora começa vazio
+    email: '',
+    senha: '',
   });
-  // --- FIM DA CORREÇÃO ---
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
@@ -71,7 +69,14 @@ function LoginPage(): ReactElement {
 
     setLoading(true);
     try {
-      await login(formData.email, formData.senha);
+      // ======================= MODO DE DIAGNÓSTICO E CORREÇÃO =======================
+      // 1. Código de Diagnóstico: Mostra os dados que estão sendo enviados.
+      console.log('[DIAGNÓSTICO | LoginPage] 1. Dados coletados do formulário:', formData);
+
+      // 2. Correção: A função 'login' é chamada com UM único objeto 'formData'.
+      await login(formData);
+      // ==========================================================================
+
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
       setApiError(errorMessage);
@@ -82,6 +87,7 @@ function LoginPage(): ReactElement {
 
   const isFormInvalid = Object.keys(errors).length > 0;
 
+  // --- O SEU LAYOUT JSX PERMANECE 100% IDÊNTICO ---
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
       <div className="w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">

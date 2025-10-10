@@ -5,19 +5,21 @@ services:
     name: api-siscob
     env: node
     plan: free
-    # ======================= INÍCIO DA CORREÇÃO DEFINITIVA =======================
-    # Define o diretório raiz do serviço como a pasta 'api'
+    # ======================= INÍCIO DA CORREÇÃO =======================
+    # Define o diretório raiz do serviço como a pasta 'api'.
+    # O Render irá operar dentro deste diretório.
     rootDir: api
     
-    # Executa os comandos diretamente, agora dentro do contexto da pasta 'api'
-    # 1. Instala TODAS as dependências (incluindo devDependencies para o build)
-    # 2. Compila o código TypeScript e resolve os aliases
-    # 3. Executa o comando de migração 'up'
+    # Comandos de build executados no diretório 'api'.
+    # 1. npm install: Instala dependências de produção e desenvolvimento.
+    # 2. npm run build: Compila o TypeScript para JavaScript.
+    # 3. npm run db:migrate up: Aplica migrações pendentes no banco de dados de produção.
     buildCommand: "npm install && npm run build && npm run db:migrate up"
     
-    # O comando de start não precisa mais do 'cd api'
+    # Comando para iniciar o servidor após o build.
+    # Não precisa mais de 'cd api', pois já estamos no diretório correto.
     startCommand: "npm start"
-    # ======================= FIM DA CORREÇÃO DEFINITIVA =======================
+    # ======================= FIM DA CORREÇÃO =======================
     healthCheckPath: /api/diag
     envVars:
       - key: NODE_ENV
@@ -30,9 +32,9 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: SEED_SECRET_KEY
-        sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: sistema_ocorrencias_db # Confirme se este é o nome do seu banco no Neon
+          # Certifique-se de que o nome do banco de dados no Render
+          # corresponde a este valor.
+          name: sistema_ocorrencias_db 
           property: connectionString

@@ -1,119 +1,114 @@
-// Caminho: frontend/src/components/Sidebar.tsx
+// frontend/src/components/Sidebar.tsx
 
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth';
-import Icon from './Icon';
+import React, { useState } from 'react';
+import { NavLink, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthProvider';
+import {
+  LayoutDashboard, BarChart3, FileText, FilePlus, Users, UserCheck,
+  Database, ShieldAlert, UserCircle, ChevronDown, ChevronUp, LogOut,
+  ChevronsLeft, ChevronsRight
+} from 'lucide-react';
 import SystemStatusIndicator from './SystemStatusIndicator';
-import OnlineUsersDropdown from './OnlineUsersDropdown';
 
-const ICONS = {
-  dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
-  report: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
-  obitos: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z",
-  launch: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
-  manage: "M14.06 9.94L15.12 11l-4.18 4.17-1.42-1.42 4.52-4.52zM20.5 2c-3.04 0-5.5 2.46-5.5 5.5 0 1.02.28 1.97.75 2.8l-5.81 5.81-2.12-2.12-5.3 5.3L4.22 21l5.3-5.3 2.12 2.12 5.81-5.81c.83.47 1.78.75 2.8.75 3.04 0 5.5-2.46 5.5-5.5S23.54 2 20.5 2z",
-  users: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
-  access: "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z",
-  data: "M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm14 14H5V5h14v14zM7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z",
-  logout: "M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z",
-  collapse: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
-  expand: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
-  profile: "M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z",
-  audit: "M19.5 9.5c-1.03 0-1.9.62-2.29 1.5h-2.92c-.39-.88-1.26-1.5-2.29-1.5s-1.9.62-2.29 1.5H6.81c-.39-.88-1.26-1.5-2.29-1.5C3.12 9.5 2 10.62 2 12s1.12 2.5 2.52 2.5c1.03 0 1.9-.62 2.29-1.5h2.92c.39.88 1.26 1.5 2.29 1.5s1.9-.62 2.29-1.5h2.92c.39.88 1.26 1.5 2.29 1.5C18.88 14.5 20 13.38 20 12s-1.12-2.5-2.5-2.5z", // Ícone de auditoria
-};
-
-// ... (Componente NavButton não muda)
-interface NavButtonProps {
-  onClick: () => void; isCollapsed: boolean; isActive: boolean; title: string; children: React.ReactNode; className?: string;
-}
-const NavButton: React.FC<NavButtonProps> = ({ onClick, isCollapsed, isActive, title, children, className = '' }) => {
-  const baseClasses = "w-full flex items-center gap-4 p-3 rounded-md text-left transition-colors duration-200";
-  const activeClasses = isActive ? 'bg-blue-600 text-white' : 'text-text hover:bg-gray-700';
-  const collapsedClasses = isCollapsed ? "justify-center px-3" : "px-4";
-  return (<button onClick={onClick} title={title} className={`${baseClasses} ${activeClasses} ${collapsedClasses} ${className}`}>{children}</button>);
-};
-
+// ======================= INÍCIO DA CORREÇÃO =======================
+// 1. Definir a interface para as props que o Sidebar recebe.
 interface SidebarProps {
-  isCollapsed: boolean;
-  setIsCollapsed: (isCollapsed: boolean) => void;
-  closeMobileMenu: () => void;
   onLogout: () => void;
+  isCollapsed: boolean;
+  setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  closeMobileMenu: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, closeMobileMenu, onLogout }) => {
-  const { usuario } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // --- INÍCIO DA CORREÇÃO ---
-  // 3. Adiciona o novo item de menu na lista
-  const navItems = [
-    { key: 'dashboard', path: '/dashboard', label: 'Dashboard', adminOnly: false },
-    { key: 'report', path: '/relatorio', label: 'Relatório Estatístico', adminOnly: false },
-    { key: 'obitos', path: '/relatorio-obitos', label: 'Relatório de Óbitos', adminOnly: false },
-    { key: 'launch', path: '/lancamento', label: 'Lançar Ocorrências', adminOnly: false },
-    { key: 'users', path: '/gestao-usuarios', label: 'Gerenciar Usuários', adminOnly: true },
-    { key: 'access', path: '/gestao-acesso', label: 'Gerenciar Acessos', adminOnly: true },
-    { key: 'data', path: '/gestao-dados', label: 'Gerenciar Dados', adminOnly: true },
-    { key: 'audit', path: '/auditoria', label: 'Logs de Auditoria', adminOnly: true }, // <-- ITEM ADICIONADO
-  ];
-  // --- FIM DA CORREÇÃO ---
-
-  const handleNavigate = (path: string) => { navigate(path); closeMobileMenu(); };
-  const handleLogout = () => { onLogout(); closeMobileMenu(); };
-
-  const sidebarWidth = isCollapsed ? 'w-[80px]' : 'w-[250px]';
+// Componente para os links do menu
+const NavItem: React.FC<{ to: string; icon: React.ReactNode; label: string; isCollapsed: boolean; onClick: () => void; }> = ({ to, icon, label, isCollapsed, onClick }) => {
+  const navLinkClasses = "flex items-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700";
+  const activeClasses = "bg-blue-700 text-white";
 
   return (
-    <aside className={`flex h-full flex-col bg-surface border-r border-border p-4 transition-all duration-300 ${sidebarWidth}`}>
-      <button onClick={() => handleNavigate('/dashboard')} title="Ir para o Dashboard Principal" className={`flex items-center justify-center border-b border-border pb-4 mb-4 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 h-[41px] visible'}`}>
-        <span className="text-2xl font-bold text-yellow-500">COCB</span>
-      </button>
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) => `${navLinkClasses} ${isActive ? activeClasses : ''} ${isCollapsed ? 'justify-center' : ''}`}
+      title={isCollapsed ? label : undefined}
+    >
+      {icon}
+      {!isCollapsed && <span className="font-medium">{label}</span>}
+    </NavLink>
+  );
+};
 
-      <nav className="flex flex-col gap-2">
-        {navItems.map(item => {
-          if (item.adminOnly && usuario?.role !== 'admin') return null;
-          return (
-            <NavButton key={item.path} onClick={() => handleNavigate(item.path)} isCollapsed={isCollapsed} isActive={location.pathname === item.path} title={item.label}>
-              <Icon path={ICONS[item.key as keyof typeof ICONS]} />
-              <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>{item.label}</span>
-            </NavButton>
-          );
-        })}
+// 2. Aplicar a interface de props ao componente Sidebar.
+const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed, closeMobileMenu }) => {
+// ======================= FIM DA CORREÇÃO =======================
+  const { user } = useAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(!isCollapsed);
+
+  React.useEffect(() => {
+    setIsUserMenuOpen(!isCollapsed);
+  }, [isCollapsed]);
+
+  return (
+    <aside className={`flex h-screen flex-col bg-gray-800 text-white transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <div className="flex h-[73px] items-center justify-center border-b border-gray-700">
+        <Link to="/dashboard" className="text-2xl font-bold text-white" onClick={closeMobileMenu}>
+          {isCollapsed ? 'O' : 'COCB'}
+        </Link>
+      </div>
+
+      <nav className="flex-1 space-y-2 p-2">
+        <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatório Estatístico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatório de Óbitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lançar Ocorrências" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+
+        {(user?.role === 'admin' || user?.perfil === 'admin') && (
+          <>
+            <div className="px-3 pt-4 pb-2">
+              <span className={`text-xs font-semibold uppercase text-gray-400 ${isCollapsed ? 'hidden' : 'block'}`}>
+                Admin
+              </span>
+            </div>
+            <NavItem to="/gerenciar-usuarios" icon={<Users size={20} />} label="Gerenciar Usuários" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            <NavItem to="/gerenciar-acessos" icon={<UserCheck size={20} />} label="Gerenciar Acessos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            <NavItem to="/gerenciar-dados" icon={<Database size={20} />} label="Gerenciar Dados" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            <NavItem to="/auditoria" icon={<ShieldAlert size={20} />} label="Logs de Auditoria" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+          </>
+        )}
       </nav>
 
-      <div className="flex-grow" />
-
-      <div className="flex flex-col gap-4 border-t border-border pt-4">
-        <div className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
-          <NavButton onClick={() => handleNavigate('/perfil')} isCollapsed={isCollapsed} isActive={location.pathname === '/perfil'} title="Meu Perfil">
-            <Icon path={ICONS.profile} />
-            <span className="whitespace-nowrap">Meu Perfil</span>
-          </NavButton>
+      <div className="border-t border-gray-700 p-2">
+        <div className="mb-2">
+          <SystemStatusIndicator isCollapsed={isCollapsed} />
         </div>
+        <button
+          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+          className={`flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-gray-700 ${isCollapsed ? 'justify-center' : ''}`}
+        >
+          <div className="flex items-center gap-3">
+            <UserCircle size={24} />
+            {!isCollapsed && <span className="font-semibold truncate">{user?.nome || 'Usuário'}</span>}
+          </div>
+          {!isCollapsed && (isUserMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
+        </button>
 
-        <div className={`text-center transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 invisible' : 'opacity-100 visible'}`}>
-          <p className="text-sm text-text">Olá, <strong className="font-semibold text-text-strong">{usuario?.nome?.split(' ')[0].toUpperCase() || 'USUÁRIO'}</strong></p>
-        </div>
-
-        <OnlineUsersDropdown isCollapsed={isCollapsed} />
-
-        <div className="hidden lg:block">
-          <NavButton onClick={() => setIsCollapsed(!isCollapsed)} isCollapsed={isCollapsed} isActive={false} title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}>
-            <Icon path={isCollapsed ? ICONS.expand : ICONS.collapse} />
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Recolher</span>
-          </NavButton>
-        </div>
-
-        <SystemStatusIndicator isCollapsed={isCollapsed} />
-
-        <div className="mt-2">
-          <NavButton onClick={handleLogout} isCollapsed={isCollapsed} isActive={false} title="Sair" className="!bg-red-600 hover:!bg-red-700 !text-white">
-            <Icon path={ICONS.logout} />
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'block'}`}>Sair</span>
-          </NavButton>
-        </div>
+        {isUserMenuOpen && !isCollapsed && (
+          <div className="mt-2 space-y-2">
+            <NavItem to="/meu-perfil" icon={<UserCircle size={20} />} label="Meu Perfil" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            <button
+              onClick={onLogout}
+              className="flex w-full items-center gap-4 rounded-md bg-red-800/50 px-3 py-2.5 text-left text-red-300 transition-all duration-200 hover:bg-red-700 hover:text-white"
+            >
+              <LogOut size={20} />
+              <span>Sair</span>
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="hidden lg:flex w-full items-center justify-center gap-4 rounded-md p-2 mt-2 text-gray-400 hover:bg-gray-700 hover:text-white"
+        >
+          {isCollapsed ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
+        </button>
       </div>
     </aside>
   );

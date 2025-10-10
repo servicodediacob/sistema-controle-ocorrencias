@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registrarAcao = void 0;
-const db_1 = __importDefault(require("../db"));
-const logger_1 = __importDefault(require("../config/logger"));
+const db_1 = __importDefault(require("@/db"));
+const logger_1 = __importDefault(require("@/config/logger"));
 /**
  * Registra uma ação de auditoria no banco de dados.
  * @param req - O objeto de requisição, que deve conter as informações do usuário autenticado.
@@ -25,7 +25,9 @@ const registrarAcao = async (req, acao, detalhes = {}) => {
       INSERT INTO auditoria_logs (usuario_id, usuario_nome, acao, detalhes)
       VALUES ($1, $2, $3, $4)
     `;
-        await db_1.default.query(query, [usuario_id, usuario_nome || 'Nome não disponível', acao, detalhes]);
+        // Garante JSON válido ao inserir na coluna jsonb
+        const detalhesJson = JSON.stringify(detalhes ?? {});
+        await db_1.default.query(query, [usuario_id, usuario_nome || 'Nome não disponível', acao, detalhesJson]);
         logger_1.default.info({ auditoria: { usuario_id, acao, detalhes } }, 'Ação de auditoria registrada com sucesso.');
     }
     catch (error) {

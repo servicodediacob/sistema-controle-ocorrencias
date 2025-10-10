@@ -1,44 +1,55 @@
+// api/src/db/index.ts
 import { Pool, PoolConfig } from 'pg';
-import '../config/envLoader'; // Garante que as variáveis de ambiente sejam carregadas primeiro
 import logger from '../config/logger';
 
-// 1. Validação da Variável de Ambiente
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  logger.fatal('ERRO FATAL: A variável de ambiente DATABASE_URL não está definida.');
-  process.exit(1); // Encerra a aplicação se a URL do banco não existir
+// Garante que as variáveis de ambiente sejam carregadas antes do pool
+import '../config/envLoader';
+
+// Usa explicitamente a connectionString para evitar problemas quando
+// o processo é iniciado fora do diretório api/.
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  logger.error('[DB] DATABASE_URL não definida. Verifique seu arquivo .env');
 }
 
-// 2. Determina se estamos em produção de forma mais segura
-const isProduction = process.env.NODE_ENV === 'production';
-
-// 3. Monta o objeto de configuração da conexão
-const connectionConfig: PoolConfig = {
-  connectionString: databaseUrl,
-  // Adiciona configuração SSL apenas em produção
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+const config: PoolConfig = {
+  connectionString,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 };
 
-// 4. Log de diagnóstico aprimorado
-logger.info(
-  {
-    production_mode: isProduction,
-    ssl_enabled: connectionConfig.ssl !== false,
-    db_host: new URL(databaseUrl).hostname, 
-  },
-  '[DB] Configurando pool de conexão.'
-);
+const pool = new Pool(config);
 
-// 5. Cria o pool com a configuração correta
-const pool = new Pool(connectionConfig);
-
-// Adiciona um listener para erros no pool
-pool.on('error', (err) => {
-  logger.error({ err }, 'Erro inesperado no cliente do pool de banco de dados');
+pool.on('connect', () => {
+  logger.info('Nova conexão com o banco de dados estabelecida pelo pool.');
 });
 
-// 6. Exporta o pool e uma função query para uso no restante da aplicação
+pool.on('error', (err) => {
+  logger.error({ err }, 'Erro inesperado no cliente do pool de banco de dados.');
+});
+
 export default {
   query: (text: string, params?: any[]) => pool.query(text, params),
-  pool: pool,
+  pool,
 };
+
+// Garante a existência da tabela de auditoria em ambientes de desenvolvimento
+// para evitar erro 42P01 (relation does not exist) quando o banco está limpo.
+(async () => {
+  try {
+    const createSQL = `
+      CREATE TABLE IF NOT EXISTS auditoria_logs (
+        id SERIAL PRIMARY KEY,
+        usuario_id INTEGER,
+        usuario_nome VARCHAR(100),
+        acao VARCHAR(120) NOT NULL,
+        detalhes JSONB DEFAULT '{}'::jsonb,
+        criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
+    await pool.query(createSQL);
+    logger.info('[DB] auditoria_logs verificada/criada.');
+  } catch (err) {
+    logger.warn({ err }, '[DB] Falha ao garantir a tabela auditoria_logs.');
+  }
+})();

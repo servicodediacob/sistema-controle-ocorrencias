@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '../contexts/ChatProvider';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import Icon from './Icon'; // Usaremos nosso componente de ícone
 
 // Ícone para o popover

@@ -1,22 +1,28 @@
-// Caminho: frontend/src/components/LancamentoTabela.tsx
+// frontend/src/components/LancamentoTabela.tsx
 
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
 import Icon from './Icon';
-// ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Importar o novo componente de esqueleto
 import SkeletonTable from './SkeletonTable';
-// ======================= FIM DA CORREÇÃO =======================
+
+export interface NaturezaTabela {
+  codigo: string;
+  nome: string;
+  subgrupo?: string;
+  abreviacao?: string | null;
+  grupo?: string;
+}
 
 interface LancamentoTabelaProps {
   dadosApi: IEstatisticaAgrupada[];
   cidades: ICidade[];
-  naturezas: Array<{ subgrupo: string; abreviacao: string }>;
+  naturezas: NaturezaTabela[];
   loading: boolean;
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
   showActions?: boolean;
 }
 
+// --- MobileCard e CrbmAccordion permanecem os mesmos ---
 interface CardProps {
   cidade: ICidade;
   ocorrencias: Record<string, number>;
@@ -54,10 +60,12 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
         <div className="border-t border-border p-4">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {Object.entries(ocorrencias).map(([natureza, qtd]) => (
-              <div key={natureza} className="flex justify-between border-b border-dashed border-border py-1">
-                <span className="text-text">{natureza}</span>
-                <span className="font-semibold text-text-strong">{qtd}</span>
-              </div>
+              qtd > 0 && (
+                <div key={natureza} className="flex justify-between border-b border-dashed border-border py-1">
+                  <span className="text-text">{natureza}</span>
+                  <span className="font-semibold text-text-strong">{qtd}</span>
+                </div>
+              )
             ))}
           </div>
           {showActions && (
@@ -78,18 +86,21 @@ interface CrbmAccordionProps {
   crbmNome: string;
   cidadesDoCrbm: ICidade[];
   dadosMapa: Record<string, number>;
-  naturezas: Array<{ subgrupo: string; abreviacao: string }>;
+  naturezas: NaturezaTabela[];
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
   showActions: boolean;
 }
 
 const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, dadosMapa, naturezas, onEdit, showActions }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // helpers locais
+  const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const keyForLocal = (cidadeNome: string, codigo: string) => `${normalizeStr(cidadeNome)}|${codigo}`;
 
   const totalCrbm = useMemo(() => {
     return cidadesDoCrbm.reduce((acc, cidade) => {
       return acc + naturezas.reduce((cityAcc, nat) => {
-        return cityAcc + (dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0);
+        return cityAcc + (dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0);
       }, 0);
     }, 0);
   }, [cidadesDoCrbm, dadosMapa, naturezas]);
@@ -119,17 +130,25 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
             const ocorrências: Record<string, number> = {};
             let totalLinha = 0;
             naturezas.forEach(nat => {
-              const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-              ocorrências[nat.subgrupo] = qtd;
+              const qtd = dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0;
+              if (qtd > 0 && nat.abreviacao) {
+                ocorrências[nat.abreviacao] = qtd;
+              }
               totalLinha += qtd;
             });
+            
+            const dadosParaEdicao = naturezas.reduce((acc, nat) => {
+                acc[nat.codigo] = dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0;
+                return acc;
+            }, {} as Record<string, number>);
+
             return (
               <MobileCard
                 key={`mobile-${cidade.id}`}
                 cidade={cidade}
                 ocorrencias={ocorrências}
                 total={totalLinha}
-                onEdit={() => onEdit(cidade, ocorrências)}
+                onEdit={() => onEdit(cidade, dadosParaEdicao)}
                 showActions={showActions}
               />
             );
@@ -139,6 +158,8 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
     </div>
   );
 };
+// --- Fim dos componentes Mobile ---
+
 
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
   dadosApi, 
@@ -148,20 +169,50 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   onEdit, 
   showActions = true 
 }) => {
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // 2. Se estiver carregando, renderiza o SkeletonTable.
   if (loading) {
-    return <SkeletonTable />;
+    return <SkeletonTable data-testid="skeleton-table" />;
   }
-  // ======================= FIM DA CORREÇÃO =======================
+
+  // Normalização e mapeamentos robustos para evitar divergências
+  const normalize = (s: string) => s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  const keyFor = (cidadeNome: string, codigo: string) => `${normalize(cidadeNome)}|${codigo}`;
+
+  // Mapas auxiliares para resolução por nome e por par grupo|subgrupo
+  const naturezaNomeParaCodigo = useMemo(() =>
+    naturezas.reduce((acc, nat) => {
+      acc[normalize(nat.nome)] = nat.codigo;
+      if (nat.subgrupo) acc[normalize(nat.subgrupo)] = nat.codigo;
+      if (nat.grupo && nat.subgrupo) acc[`${normalize(nat.grupo)}|${normalize(nat.subgrupo)}`] = nat.codigo;
+      return acc;
+    }, {} as Record<string, string>)
+  , [naturezas]);
+
+  const naturezaAbrevParaCodigo = useMemo(() =>
+    naturezas.reduce((acc, nat) => {
+      if (nat.abreviacao) acc[normalize(nat.abreviacao)] = nat.codigo;
+      return acc;
+    }, {} as Record<string, string>)
+  , [naturezas]);
 
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
-      const key = `${item.cidade_nome}|${item.natureza_nome}`;
-      acc[key] = item.quantidade;
+      const nomeChave = normalize(item.natureza_nome);
+      const abrevChave = item.natureza_abreviacao ? normalize(item.natureza_abreviacao) : '';
+      const grupoSubChave = item.natureza_grupo ? `${normalize(item.natureza_grupo)}|${nomeChave}` : '';
+      const codigo = naturezaNomeParaCodigo[grupoSubChave] || naturezaNomeParaCodigo[nomeChave] || (abrevChave ? naturezaAbrevParaCodigo[abrevChave] : undefined);
+      if (codigo) {
+        const key = keyFor(item.cidade_nome, codigo);
+        acc[key] = (acc[key] || 0) + item.quantidade;
+      }
       return acc;
     }, {});
-  }, [dadosApi]);
+  }, [dadosApi, naturezaNomeParaCodigo, naturezaAbrevParaCodigo]);
 
   const cidadesAgrupadas = useMemo(() => {
     return cidades.reduce((acc: Record<string, ICidade[]>, cidade: ICidade) => {
@@ -177,31 +228,33 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     const totaisGeral: Record<string, number> = {};
 
     naturezas.forEach(nat => {
-      totaisGeral[nat.subgrupo] = 0;
+      totaisGeral[nat.codigo] = 0;
     });
     totaisGeral['TOTAL'] = 0;
 
     Object.keys(cidadesAgrupadas).forEach(crbm => {
       totaisCrbm[crbm] = {};
       naturezas.forEach(nat => {
-        totaisCrbm[crbm][nat.subgrupo] = 0;
+        totaisCrbm[crbm][nat.codigo] = 0;
       });
       totaisCrbm[crbm]['TOTAL'] = 0;
     });
 
-    cidades.forEach(cidade => {
-      let totalCidade = 0;
-      naturezas.forEach(nat => {
-        const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-        if (qtd > 0) {
-          totaisCrbm[cidade.crbm_nome][nat.subgrupo] += qtd;
-          totaisGeral[nat.subgrupo] += qtd;
+    for (const crbmNome in cidadesAgrupadas) {
+      let totalCrbm = 0;
+      cidadesAgrupadas[crbmNome].forEach(cidade => {
+        let totalCidade = 0;
+        naturezas.forEach(nat => {
+          const qtd = dadosMapa[keyFor(cidade.cidade_nome, nat.codigo)] || 0;
+          totaisCrbm[crbmNome][nat.codigo] = (totaisCrbm[crbmNome][nat.codigo] || 0) + qtd;
+          totaisGeral[nat.codigo] = (totaisGeral[nat.codigo] || 0) + qtd;
           totalCidade += qtd;
-        }
+        });
+        totalCrbm += totalCidade;
       });
-      totaisCrbm[cidade.crbm_nome]['TOTAL'] += totalCidade;
-      totaisGeral['TOTAL'] += totalCidade;
-    });
+      totaisCrbm[crbmNome]['TOTAL'] = totalCrbm;
+      totaisGeral['TOTAL'] += totalCrbm;
+    }
 
     return { crbm: totaisCrbm, geral: totaisGeral };
   }, [cidades, naturezas, dadosMapa, cidadesAgrupadas]);
@@ -229,7 +282,9 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
               <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
               <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.subgrupo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase">{nat.abreviacao}</th>
+                <th key={nat.codigo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase" title={nat.nome}>
+                  {nat.abreviacao || nat.nome}
+                </th>
               ))}
               <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
               {showActions && (
@@ -241,19 +296,17 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
           {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
             <tbody key={crbm} className="bg-surface">
               {listaCidades.map((cidade, index) => {
-                const ocorrências: Record<string, number> = {};
+                const dadosParaEdicao: Record<string, number> = {};
                 let totalLinha = 0;
                 naturezas.forEach(nat => {
-                  const qtd = dadosMapa[`${cidade.cidade_nome}|${nat.subgrupo}`] || 0;
-                  ocorrências[nat.subgrupo] = qtd;
+                  const qtd = dadosMapa[keyFor(cidade.cidade_nome, nat.codigo)] || 0;
+                  dadosParaEdicao[nat.codigo] = qtd;
                   totalLinha += qtd;
                 });
 
                 const hasData = totalLinha > 0;
                 const rowClasses = hasData ? 'bg-green-900/20' : '';
-                const cellCidadeClasses = hasData
-                  ? 'text-green-300'
-                  : 'bg-red-900/40 text-red-300';
+                const cellCidadeClasses = hasData ? 'text-green-300' : 'bg-red-900/40 text-red-300';
 
                 return (
                   <tr key={cidade.id} className={`text-center hover:bg-border/50 ${rowClasses}`}>
@@ -264,13 +317,10 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                       {cidade.cidade_nome}
                     </td>
                     {naturezas.map(nat => {
-                      const qtd = ocorrências[nat.subgrupo];
-                      const cellValueClasses = qtd > 0
-                        ? 'font-bold text-teal-300'
-                        : 'text-gray-500';
-
+                      const qtd = dadosParaEdicao[nat.codigo] || 0;
+                      const cellValueClasses = qtd > 0 ? 'font-bold text-teal-300' : 'text-gray-500';
                       return (
-                        <td key={nat.subgrupo} className={`whitespace-nowrap border-x border-border p-3 ${cellValueClasses}`}>
+                        <td key={nat.codigo} className={`whitespace-nowrap border-x border-border p-3 ${cellValueClasses}`}>
                           {qtd}
                         </td>
                       );
@@ -278,7 +328,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                     <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
                       <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3">
-                        <button onClick={() => onEdit(cidade, ocorrências)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        <button onClick={() => onEdit(cidade, dadosParaEdicao)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
                       </td>
                     )}
                   </tr>
@@ -289,7 +339,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                   SUB TOTAL
                 </td>
                 {naturezas.map(nat => (
-                  <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.subgrupo] || 0}</td>
+                  <td key={`subtotal-${nat.codigo}`} className="border-x border-gray-700 p-3 text-center">{totais.crbm[crbm]?.[nat.codigo] || 0}</td>
                 ))}
                 <td className="sticky right-0 z-20 border-l border-gray-700 bg-blue-900 p-3 text-center">{totais.crbm[crbm]?.['TOTAL'] || 0}</td>
                 {showActions && <td className="sticky right-0 z-20 border-l border-gray-700 p-3"></td>}
@@ -301,7 +351,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
             <tr className="bg-yellow-600 font-bold text-black">
               <td colSpan={2} className="sticky left-0 z-20 border-r border-gray-600 bg-yellow-600 p-3 text-center">TOTAL GERAL</td>
               {naturezas.map(nat => (
-                <td key={nat.subgrupo} className="border-x border-gray-700 p-3 text-center">{totais.geral[nat.subgrupo] || 0}</td>
+                <td key={`total-${nat.codigo}`} className="border-x border-gray-700 p-3 text-center">{totais.geral[nat.codigo] || 0}</td>
               ))}
               <td className="sticky right-0 z-20 border-l border-gray-700 bg-yellow-700 p-3 text-center">{totais.geral['TOTAL']}</td>
               {showActions && <td className="sticky right-0 z-20 border-l border-gray-700 p-3"></td>}

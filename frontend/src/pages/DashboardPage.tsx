@@ -1,14 +1,16 @@
-// Caminho: frontend/src/pages/DashboardPage.tsx
+// frontend/src/pages/DashboardPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
+import MainLayout from '../components/MainLayout';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 
-import MainLayout from '../components/MainLayout';
-import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget'; // 1. Importar o novo widget
+// Os componentes de widget permanecem os mesmos
+import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget';
 import ObitosDoDiaWidget from '../components/ObitosDoDiaWidget';
 import RelatorioWidget from '../components/RelatorioWidget';
 import LancamentoWidget from '../components/LancamentoWidget';
+import LoggedInUsersWidget from '../components/LoggedInUsersWidget'; // Adicionado para completar o dashboard
 
 // --- Componentes Funcionais (StatCard, DataTable - sem alterações) ---
 interface StatCardProps {
@@ -69,6 +71,7 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   );
 }
 
+
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
   
@@ -97,25 +100,23 @@ function DashboardPage(): ReactElement {
     fetchData();
   }, [fetchData]);
 
+  // Renderiza conteúdo dentro do MainLayout para usar sidebar, header e chat
   return (
-    <MainLayout pageTitle="Dashboard do Supervisor">
+    <MainLayout pageTitle="Dashboard">
       {/* Cards de Estatísticas */}
       <div className="flex flex-col gap-6 md:flex-row">
         <StatCard title="Total de Ocorrências" value={stats?.totalOcorrencias ?? 0} loading={loading} />
         <StatCard title="Total de Óbitos" value={stats?.totalObitos ?? 0} loading={loading} />
       </div>
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-      {/* 2. Substituir o widget antigo pelo novo */}
       <DestaqueDetalhadoWidget destaques={plantaoData?.ocorrenciasDestaque || []} />
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
 
       {/* Widgets de Relatórios */}
       <RelatorioWidget />
       <ObitosDoDiaWidget />
       <LancamentoWidget />
 
-      {/* Tabelas de Dados */}
+      {/* Tabelas de Dados e Usuários Online */}
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <DataTable
           title="Ocorrências por Natureza"
@@ -129,11 +130,11 @@ function DashboardPage(): ReactElement {
           data={stats?.ocorrenciasPorCrbm}
           columns={[{ header: 'CRBM', key: 'nome' }, { header: 'Total', key: 'total' }]}
         />
+        <LoggedInUsersWidget />
       </div>
-      
-      {/* A seção de controle de plantão foi removida, pois a funcionalidade foi integrada em outras partes */}
     </MainLayout>
   );
+  // =================================================================
 }
 
 export default DashboardPage;

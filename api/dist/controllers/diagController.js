@@ -1,5 +1,5 @@
 "use strict";
-// Caminho: api/src/controllers/diagController.ts
+// api/src/controllers/diagController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -61,7 +61,6 @@ const runDiagnostics = async (_req, res) => {
         if (!secret) {
             throw new Error('A variável de ambiente JWT_SECRET não está definida.');
         }
-        // Simula a criação e verificação de um token
         const testPayload = { id: 'test' };
         const testToken = jsonwebtoken_1.default.sign(testPayload, secret, { expiresIn: '1s' });
         jsonwebtoken_1.default.verify(testToken, secret);
@@ -79,7 +78,7 @@ const runDiagnostics = async (_req, res) => {
         report.geral.status = 'error';
         logger_1.default.error({ err: error }, 'Diagnóstico falhou na verificação do JWT.');
     }
-    const httpStatus = report.geral.status === 'ok' ? 200 : 503; // 503 Service Unavailable
+    const httpStatus = report.geral.status === 'ok' ? 200 : 503;
     logger_1.default.info(`Diagnóstico concluído com status: ${report.geral.status}`);
     res.status(httpStatus).json(report);
 };

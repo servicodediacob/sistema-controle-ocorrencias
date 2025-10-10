@@ -1,37 +1,40 @@
-// Caminho: frontend/src/components/UsuarioModal.tsx
+// frontend/src/components/UsuarioModal.tsx
 
 import { useState, useEffect, ReactElement } from 'react';
-import { IUser, ICidade } from '../services/api'; // 1. IMPORTAR ICidade
+import { IUser, ICidade } from '../services/api';
 
-// 2. ATUALIZAR AS PROPS PARA RECEBER A LISTA DE CIDADES (OBMs)
 interface UsuarioModalProps {
   usuario: IUser | null;
-  cidades: ICidade[]; // Adicionamos a lista de OBMs
+  cidades: ICidade[];
   onClose: () => void;
-  onSave: (formData: Partial<IUser> & { senha?: string }) => void;
+  onSave: (formData: Partial<IUser> & { senha?: string }) => void | Promise<void>;
 }
 
 function UsuarioModal({ usuario, cidades, onClose, onSave }: UsuarioModalProps): ReactElement {
-  const [formData, setFormData] = useState({
+  const isEditing = !!usuario;
+
+  // Função para obter o estado inicial do formulário
+  const getInitialState = () => ({
     nome: usuario?.nome || '',
     email: usuario?.email || '',
+    // --- INÍCIO DA CORREÇÃO ---
+    // Garante que 'role' sempre tenha um valor padrão, mesmo para novos usuários.
+    // Isso resolve o erro de tipo, pois o estado nunca será 'undefined'.
     role: usuario?.role || 'user',
-    obm_id: usuario?.obm_id || '', // Estado inicial para o select
+    // --- FIM DA CORREÇÃO ---
+    obm_id: usuario?.obm_id || '',
     senha: '',
   });
-  const isEditing = !!usuario;
+
+  const [formData, setFormData] = useState(getInitialState);
 
   // Sincroniza o estado do formulário se o usuário em edição mudar
   useEffect(() => {
     if (usuario) {
-      setFormData({
-        nome: usuario.nome,
-        email: usuario.email,
-        role: usuario.role,
-        obm_id: usuario.obm_id || '',
-        senha: '',
-      });
+      setFormData(getInitialState());
     }
+    // A dependência `getInitialState` não é necessária, pois a função é recriada a cada render.
+    // As dependências corretas são `usuario`.
   }, [usuario]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -78,7 +81,6 @@ function UsuarioModal({ usuario, cidades, onClose, onSave }: UsuarioModalProps):
             />
           </div>
 
-          {/* --- INÍCIO DAS ALTERAÇÕES NA UI --- */}
           {/* Campo Role (Nível de Acesso) */}
           <div className="flex flex-col gap-2">
             <label htmlFor="role" className="text-sm text-text">Nível de Acesso</label>
@@ -106,7 +108,6 @@ function UsuarioModal({ usuario, cidades, onClose, onSave }: UsuarioModalProps):
               ))}
             </select>
           </div>
-          {/* --- FIM DAS ALTERAÇÕES NA UI --- */}
 
           {/* Campo Senha (apenas para criação) */}
           {!isEditing && (

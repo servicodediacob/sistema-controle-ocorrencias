@@ -1,27 +1,25 @@
-// Carrega as variáveis de ambiente corretas antes de qualquer outra coisa
-// Isso garante que DATABASE_URL seja lido do arquivo .env apropriado
-// quando rodamos localmente, e do ambiente do Render em produção.
+// api/migrate-config.js
+
+// Carrega as variáveis de ambiente corretas antes de qualquer outra coisa.
+// Isso garante que a DATABASE_URL seja lida do ambiente correto (desenvolvimento ou produção).
 require('./dist/config/envLoader');
 
 const dbConfig = {
-  // A biblioteca usará a variável de ambiente DATABASE_URL por padrão,
-  // que já configuramos nos arquivos .env e no Render.
-  // Não precisamos especificar usuário, senha, etc., diretamente aqui.
+  // A biblioteca 'node-pg-migrate' usa a variável de ambiente DATABASE_URL por padrão
+  // quando nenhuma outra configuração de conexão é fornecida.
   
-  // Diretório onde os arquivos de migração serão criados e lidos.
-  // Corrigido para apontar para a pasta correta na raiz da 'api'.
-  dir: 'migrations',
+  // Diretório onde os arquivos de migração estão localizados.
+  dir: 'src/db/migrations',
 
-  // Tabela que a biblioteca usará para controlar quais migrações já foram executadas.
+  // Tabela que a biblioteca usará para controlar o histórico de migrações.
   migrationsTable: 'pgmigrations',
 
-  // Informa à biblioteca que estamos usando o driver 'pg' (PostgreSQL).
+  // Informa à biblioteca que estamos usando o driver 'pg'.
   driver: 'pg',
 
-  // Configuração de SSL.
-  // Em produção (Render/Neon), o SSL é obrigatório e gerenciado pela connection string.
-  // Em outros ambientes, é desativado para facilitar a conexão local.
-  ssl: process.env.NODE_ENV === 'production',
+  // Em produção (Render/Neon), o SSL é obrigatório e gerenciado pela string de conexão.
+  // Em outros ambientes, pode ser desativado se não for necessário.
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 };
 
 module.exports = dbConfig;

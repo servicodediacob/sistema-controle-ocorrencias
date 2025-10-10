@@ -1,4 +1,4 @@
-// Caminho: api/src/controllers/diagController.ts
+// api/src/controllers/diagController.ts
 
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
@@ -21,13 +21,13 @@ const timePromise = async (promise: Promise<any>): Promise<[any, number]> => {
   }
 };
 
-// Interface para a estrutura do nosso relatório de diagnóstico
 interface IDiagnosticCheck {
   status: 'ok' | 'error' | 'degraded';
   message: string;
-  durationMs?: number; // <-- ADICIONE ESTA LINHA (torna a propriedade opcional)
-  details?: string;    // <-- ADICIONE ESTA LINHA (torna a propriedade opcional)
+  durationMs?: number;
+  details?: string;
 }
+
 interface IDiagnosticsReport {
   geral: {
     status: 'ok' | 'error' | 'degraded';
@@ -36,7 +36,6 @@ interface IDiagnosticsReport {
   servicos: {
     database: IDiagnosticCheck;
     auth: IDiagnosticCheck;
-    // Outros serviços podem ser adicionados aqui
   };
 }
 
@@ -79,7 +78,6 @@ export const runDiagnostics = async (_req: Request, res: Response): Promise<void
     if (!secret) {
       throw new Error('A variável de ambiente JWT_SECRET não está definida.');
     }
-    // Simula a criação e verificação de um token
     const testPayload = { id: 'test' };
     const testToken = jwt.sign(testPayload, secret, { expiresIn: '1s' });
     jwt.verify(testToken, secret);
@@ -97,8 +95,8 @@ export const runDiagnostics = async (_req: Request, res: Response): Promise<void
     logger.error({ err: error }, 'Diagnóstico falhou na verificação do JWT.');
   }
 
-  const httpStatus = report.geral.status === 'ok' ? 200 : 503; // 503 Service Unavailable
-  logger.info(`Diagnóstico concluído com status: ${report.geral.status}`  );
+  const httpStatus = report.geral.status === 'ok' ? 200 : 503;
+  logger.info(`Diagnóstico concluído com status: ${report.geral.status}` );
   
-  res.status(httpStatus  ).json(report);
+  res.status(httpStatus ).json(report);
 };

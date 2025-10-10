@@ -1,91 +1,126 @@
+// frontend/src/pages/LancamentoPage.tsx
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
-import { 
-  ICidade, 
-  IEstatisticaAgrupada, 
+import {
+  ICidade,
+  IEstatisticaAgrupada,
   getEstatisticasAgrupadasPorData,
-  limparTodosOsLancamentosDoDia,
+  limparTodosOsDadosDoDia,
   registrarEstatisticasLote,
   IEstatisticaLotePayload,
-  extractErrorMessage
+  extractErrorMessage,
+  IDataApoio,
 } from '../services/api';
-import { 
-  IOcorrenciaDetalhada, 
-  IOcorrenciaDetalhadaPayload, 
-  criarOcorrenciaDetalhada, 
-  getOcorrenciasDetalhadas,
+
+import {
+  criarOcorrenciaDetalhada,
   atualizarOcorrenciaDetalhada,
-  deletarOcorrenciaDetalhada
+  deletarOcorrenciaDetalhada,
+  getOcorrenciasDetalhadas,
+  IOcorrenciaDetalhadaPayload,
+  IOcorrenciaDetalhada,
 } from '../services/ocorrenciaDetalhadaService';
 
 import MainLayout from '../components/MainLayout';
 import LancamentoModal from '../components/LancamentoModal';
-import LancamentoTabela from '../components/LancamentoTabela';
+import LancamentoTabela, { NaturezaTabela } from '../components/LancamentoTabela';
 import Spinner from '../components/Spinner';
 import OcorrenciaDetalhadaModal from '../components/OcorrenciaDetalhadaModal';
 import ViewOcorrenciaDetalhadaModal from '../components/ViewOcorrenciaDetalhadaModal';
 import Icon from '../components/Icon';
 
-const ORDEM_COLUNAS = [
-    { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
-    { subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
-    { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
-    { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
-    { subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
-    { subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
-    { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
-    { subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
-    { subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
-    { subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
-    { subgrupo: 'Atividades Técnicas - Outros', abreviacao: 'AT. OUT' },
-    { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
-    { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
-    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
-    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+// ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
+// 1. LISTA MESTRE: Define a ordem e as abreviações exatas, alinhadas aos nomes do banco (grupo|subgrupo).
+const ORDEM_E_ABREVIACOES_COLUNAS = [
+  { grupo: 'Resgate',              subgrupo: 'Resgate - Salvamento em Emergências', abreviacao: 'RESGATE' },
+  { grupo: 'Incêndio',             subgrupo: 'Vegetação',                            abreviacao: 'INC. VEG' },
+  { grupo: 'Incêndio',             subgrupo: 'Edificações',                          abreviacao: 'INC. EDIF' },
+  { grupo: 'Incêndio',             subgrupo: 'Outros',                               abreviacao: 'INC. OUT.' },
+  { grupo: 'Busca e Salvamento',   subgrupo: 'Cadáver',                              abreviacao: 'B. CADÁVER' },
+  { grupo: 'Busca e Salvamento',   subgrupo: 'Diversos',                             abreviacao: 'B. SALV.' },
+  { grupo: 'Ações Preventivas',    subgrupo: 'Palestras',                            abreviacao: 'AP. PAL' },
+  { grupo: 'Ações Preventivas',    subgrupo: 'Eventos',                              abreviacao: 'AP. EVE' },
+  { grupo: 'Ações Preventivas',    subgrupo: 'Folders/Panfletos',                    abreviacao: 'AP. FOL' },
+  { grupo: 'Ações Preventivas',    subgrupo: 'Outros',                               abreviacao: 'AP. OUT' },
+  { grupo: 'Atividades Técnicas',  subgrupo: 'Inspeções',                            abreviacao: 'AT. INS' },
+  { grupo: 'Atividades Técnicas',  subgrupo: 'Análise de Projetos',                  abreviacao: 'AN. PROJ' },
+  { grupo: 'Produtos Perigosos',   subgrupo: 'Vazamentos',                           abreviacao: 'PPV' },
+  { grupo: 'Produtos Perigosos',   subgrupo: 'Outros / Diversos',                    abreviacao: 'PPO' },
+  { grupo: 'Defesa Civil',         subgrupo: 'Preventiva',                           abreviacao: 'DC PREV.' },
+  { grupo: 'Defesa Civil',         subgrupo: 'De Resposta',                          abreviacao: 'DC RESP.' },
 ];
+// ======================= FIM DA CORREÇÃO PRINCIPAL =======================
+
 
 function LancamentoPage() {
-  const { cidades, naturezas } = useData();
+  const { cidades, naturezas, loading: loadingDataApoio } = useData();
   const { addNotification } = useNotification();
 
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
+  const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
   const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPagina, setLoadingPagina] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
   
   const [isDetalheModalOpen, setIsDetalheModalOpen] = useState(false);
-  const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
-  const [loadingDetalhadas, setLoadingDetalhadas] = useState(true);
-  
   const [ocorrenciaParaEditar, setOcorrenciaParaEditar] = useState<IOcorrenciaDetalhada | null>(null);
   const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
+  // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
+  // 2. MAPEAMENTO: Transforma os dados da API na estrutura que a tabela precisa,
+  //    usando a LISTA MESTRE para garantir a ordem e as abreviações.
+  const naturezasParaTabela: NaturezaTabela[] = useMemo(() => {
+    if (!naturezas || naturezas.length === 0) {
+      return [];
+    }
+
+    // Cria um mapa para busca rápida: chave "grupo|subgrupo" evita ambiguidades como "Outros"
+    const naturezasMap = new Map<string, IDataApoio>();
+    naturezas.forEach(nat => {
+      if (nat.subgrupo && nat.grupo) {
+        naturezasMap.set(`${nat.grupo}|${nat.subgrupo}`, nat);
+      }
+    });
+
+    // Mapeia a lista mestre para criar a lista final de colunas
+    return ORDEM_E_ABREVIACOES_COLUNAS.map(itemMestre => {
+      const dadosApi = naturezasMap.get(`${itemMestre.grupo}|${itemMestre.subgrupo}`);
+      return {
+        codigo: String(dadosApi?.id || `${itemMestre.grupo}|${itemMestre.subgrupo}`),
+        nome: itemMestre.subgrupo,
+        subgrupo: itemMestre.subgrupo,
+        abreviacao: itemMestre.abreviacao,
+        grupo: itemMestre.grupo,
+      } as NaturezaTabela;
+    });
+  }, [naturezas]);
+  // ======================= FIM DA CORREÇÃO PRINCIPAL =======================
+
   const fetchDados = useCallback(async () => {
     if (!dataRegistro) return;
-    setLoading(true);
-    setLoadingDetalhadas(true);
+    setLoadingPagina(true);
     try {
       const [dadosLote, dadosDetalhados] = await Promise.all([
         getEstatisticasAgrupadasPorData(dataRegistro),
         getOcorrenciasDetalhadas(dataRegistro)
       ]);
-      setDadosTabela(dadosLote);
-      setOcorrenciasDetalhadas(dadosDetalhados);
+      setDadosTabela(Array.isArray(dadosLote) ? dadosLote : []);
+      setOcorrenciasDetalhadas(Array.isArray(dadosDetalhados) ? dadosDetalhados : []);
     } catch (error) {
       addNotification('Falha ao carregar os dados da página.', 'error');
     } finally {
-      setLoading(false);
-      setLoadingDetalhadas(false);
+      setLoadingPagina(false);
     }
   }, [dataRegistro, addNotification]);
 
   useEffect(() => {
-    fetchDados();
-  }, [fetchDados]);
+    if (!loadingDataApoio) {
+      fetchDados();
+    }
+  }, [fetchDados, loadingDataApoio]);
 
   const obmsComDados = useMemo(() => {
     const ids = dadosTabela.map(dado => {
@@ -101,6 +136,8 @@ function LancamentoPage() {
       addNotification(response.message, 'success');
       setIsModalOpen(false);
       setItemParaEditar(null);
+      const novaData = payload.data_registro;
+      setDataRegistro(novaData);
       fetchDados();
     } catch (error) {
       addNotification(extractErrorMessage(error), 'error');
@@ -118,6 +155,10 @@ function LancamentoPage() {
       }
       setIsDetalheModalOpen(false);
       setOcorrenciaParaEditar(null);
+      const novaData = (payload as any).data_ocorrencia;
+      if (novaData) {
+        setDataRegistro(novaData);
+      }
       fetchDados();
     } catch (error) {
       addNotification(extractErrorMessage(error), 'error');
@@ -140,22 +181,54 @@ function LancamentoPage() {
     const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do dia ${dataFormatada}?`)) {
       try {
-        setLoading(true);
-        const response = await limparTodosOsLancamentosDoDia(dataRegistro);
+        setLoadingPagina(true);
+        const response = await limparTodosOsDadosDoDia(dataRegistro);
         addNotification(response.message, 'success');
         fetchDados();
       } catch (error) {
         addNotification(extractErrorMessage(error), 'error');
       } finally {
-        setLoading(false);
+        setLoadingPagina(false);
       }
     }
   };
 
-  const handleEdit = (cidade: ICidade, dadosAtuais: Record<string, number>) => {
-    setItemParaEditar({ cidade, dados: dadosAtuais });
+  const handleEdit = (cidade: ICidade, dadosAtuais?: Record<string, number>) => {
+    let dados: Record<string, number> = dadosAtuais || {};
+    if (!dadosAtuais) {
+      const normalize = (s: string) => s
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+      naturezas.forEach(nat => {
+        if (nat.id) {
+          const chaveNatureza = typeof nat.subgrupo === 'string' ? nat.subgrupo : '';
+          const valorAgrupado = dadosTabela.find(
+            d => normalize(d.cidade_nome) === normalize(cidade.cidade_nome)
+              && normalize(d.natureza_nome) === normalize(chaveNatureza)
+              && (!d.natureza_grupo || !nat.grupo || normalize(d.natureza_grupo) === normalize(nat.grupo))
+          )?.quantidade || 0;
+          dados[String(nat.id)] = valorAgrupado;
+        }
+      });
+    }
+
+    setItemParaEditar({ cidade, dados });
     setIsModalOpen(true);
   };
+
+  if (loadingDataApoio) {
+    return (
+      <MainLayout pageTitle="Lançar Ocorrências">
+        <div className="flex justify-center p-10">
+          <Spinner text="Carregando dados de apoio..." />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout pageTitle="Lançar Ocorrências">
@@ -170,7 +243,7 @@ function LancamentoPage() {
               type="date"
               value={dataRegistro}
               onChange={e => setDataRegistro(e.target.value)}
-              className="rounded-md border border-border bg-surface p-3 text-text-strong"
+              className="rounded-md border border-border bg-background p-3 text-text-strong"
             />
           </div>
         </div>
@@ -178,21 +251,24 @@ function LancamentoPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <button
             onClick={handleLimparLancamentos}
-            disabled={loading || (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)}
+            disabled={
+              loadingPagina ||
+              (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)
+            }
             className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Limpar Lançamentos do Dia
           </button>
           <button
             onClick={() => { setOcorrenciaParaEditar(null); setIsDetalheModalOpen(true); }}
-            disabled={loading}
+            disabled={loadingPagina}
             className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Adicionar Ocorrência Detalhada
           </button>
           <button
             onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
-            disabled={loading}
+            disabled={loadingPagina}
             className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Lançamento em Lote
@@ -201,18 +277,25 @@ function LancamentoPage() {
       </div>
 
       <h2 className="text-2xl font-bold text-text-strong mb-4">Lançamentos em Lote (Estatísticas)</h2>
-      <LancamentoTabela
-        dadosApi={dadosTabela}
-        cidades={cidades}
-        naturezas={ORDEM_COLUNAS}
-        loading={loading}
-        onEdit={handleEdit}
-      />
+      
+      {naturezasParaTabela.length > 0 ? (
+        <LancamentoTabela
+          dadosApi={dadosTabela}
+          cidades={cidades}
+          naturezas={naturezasParaTabela}
+          loading={loadingPagina}
+          onEdit={handleEdit}
+        />
+      ) : (
+        <div className="p-4 text-center text-text">
+          {loadingDataApoio ? 'Carregando colunas...' : 'Não foi possível carregar a definição das colunas.'}
+        </div>
+      )}
 
       <div className="mt-12">
         <h2 className="text-2xl font-bold text-text-strong mb-4">Ocorrências Detalhadas do Dia</h2>
         <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
-          {loadingDetalhadas ? (
+          {loadingPagina ? (
             <div className="flex justify-center p-10"><Spinner text="Carregando ocorrências detalhadas..." /></div>
           ) : (
             <table className="min-w-full w-full border-collapse text-sm">
@@ -263,8 +346,10 @@ function LancamentoPage() {
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
           itemParaEditar={itemParaEditar}
           obmsComDados={obmsComDados}
+          dataInicial={dataRegistro}
         />
       )}
+
       {isDetalheModalOpen && (
         <OcorrenciaDetalhadaModal
           onClose={() => { setIsDetalheModalOpen(false); setOcorrenciaParaEditar(null); }}
@@ -272,10 +357,11 @@ function LancamentoPage() {
           ocorrenciaParaEditar={ocorrenciaParaEditar}
         />
       )}
+
       {ocorrenciaParaVisualizar && (
         <ViewOcorrenciaDetalhadaModal
-          ocorrencia={ocorrenciaParaVisualizar}
           onClose={() => setOcorrenciaParaVisualizar(null)}
+          ocorrencia={ocorrenciaParaVisualizar}
         />
       )}
     </MainLayout>

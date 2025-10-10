@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '../contexts/ChatProvider';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 
 interface PrivateChatWindowProps {
   partnerId: number;

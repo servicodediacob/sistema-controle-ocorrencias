@@ -1,31 +1,33 @@
 ﻿// api/src/server.ts
-import '@/config/envLoader'; // <-- CORRIGIDO
-import express, { Request, Response } from 'express';
+
+// Carrega as variáveis de ambiente do arquivo .env o mais cedo possível
+import './config/envLoader';
+
+import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import logger from '@/config/logger'; // <-- CORRIGIDO
-import { onSocketConnection } from '@/services/socketService'; // <-- CORRIGIDO
+import logger from './config/logger';
+import { onSocketConnection } from './services/socketService';
 
 // Importação das rotas
-import authRoutes from '@/routes/authRoutes'; // <-- CORRIGIDO
-import acessoRoutes from '@/routes/acessoRoutes'; // <-- CORRIGIDO
-import plantaoRoutes from '@/routes/plantaoRoutes'; // <-- CORRIGIDO
-import ocorrenciaDetalhadaRoutes from '@/routes/ocorrenciaDetalhadaRoutes'; // <-- CORRIGIDO
-import perfilRoutes from '@/routes/perfilRoutes'; // <-- CORRIGIDO
-import auditoriaRoutes from '@/routes/auditoriaRoutes'; // <-- CORRIGIDO
-import dadosRoutes from '@/routes/dadosRoutes'; // <-- CORRIGIDO
-import { runDiagnostics } from '@/controllers/diagController'; // <-- CORRIGIDO
-import { seedProductionAdmin } from '@/db/seed'; // <-- CORRIGIDO
+import authRoutes from './routes/authRoutes';
+import acessoRoutes from './routes/acessoRoutes';
+import plantaoRoutes from './routes/plantaoRoutes';
+import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
+import perfilRoutes from './routes/perfilRoutes';
+import auditoriaRoutes from './routes/auditoriaRoutes';
+import dadosRoutes from './routes/dadosRoutes';
+import diagRoutes from './routes/diagRoutes';
 
-// --- Configuração de CORS (sem alterações ) ---
+// --- Configuração de CORS ---
 const defaultAllowedOrigins = [
   'http://localhost:5173',
   'https://siscob-iota.vercel.app',
   'https://sistema-ocorrencias-frontend-alpha.vercel.app',
 ];
 const extraAllowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',' ).map((origin) => origin.trim()).filter((origin) => origin.length > 0)
+  ? process.env.CORS_ORIGINS.split(',' ).map((origin) => origin.trim()).filter(Boolean)
   : [];
 const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...extraAllowedOrigins]));
 if (extraAllowedOrigins.length > 0) {
@@ -48,30 +50,10 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- Rotas Públicas ---
-app.get('/api/diag', runDiagnostics);
+// --- Rotas ---
+app.use('/api/diag', diagRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/acesso', acessoRoutes);
-
-// --- ROTA DE SETUP TEMPORÁRIA E SEGURA ---
-app.post('/api/setup/run-seed', async (req: Request, res: Response) => {
-  const { secret } = req.body;
-
-  if (!process.env.SEED_SECRET_KEY || secret !== process.env.SEED_SECRET_KEY) {
-    logger.warn('Tentativa de acesso não autorizado ao endpoint de seed.');
-    return res.status(403).json({ message: 'Acesso negado.' });
-  }
-
-  try {
-    const result = await seedProductionAdmin();
-    return res.status(200).json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro desconhecido durante o seed.';
-    return res.status(500).json({ message });
-  }
-});
-
-// --- Rotas Protegidas ---
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
 app.use('/api/perfil', perfilRoutes);

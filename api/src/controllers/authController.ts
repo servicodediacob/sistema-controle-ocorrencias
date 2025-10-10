@@ -1,60 +1,65 @@
+// api/src/controllers/authController.ts
+
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '@/db';
+import { prisma } from '../lib/prisma'; // Importando o Prisma Client
 import logger from '@/config/logger';
 
-// Interface para o tipo de usuário que vem do banco
-interface IUser {
-  id: number;
-  nome: string;
-  email: string;
-  senha_hash: string;
-  role: 'admin' | 'user';
-  obm_id: number | null;
-}
-
-export const login = async (req: Request, res: Response): Promise<Response> => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, senha } = req.body;
 
   if (!email || !senha) {
-    return res.status(400).json({ message: 'Email e senha são obrigatórios.' });
+    res.status(400).json({ message: 'Email e senha são obrigatórios.' });
+    return;
   }
 
   try {
-    const { rows } = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    const usuario: IUser | undefined = rows[0];
-
-    if (!usuario) {
-      logger.warn({ email }, 'Tentativa de login com email não cadastrado.');
-      return res.status(401).json({ message: 'Credenciais inválidas.' });
-    }
-
-    const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
-
-    if (!senhaValida) {
-      logger.warn({ email: usuario.email, id: usuario.id }, 'Tentativa de login com senha incorreta.');
-      return res.status(401).json({ message: 'Credenciais inválidas.' });
-    }
-
-    const token = jwt.sign(
-      { id: usuario.id, role: usuario.role, obm_id: usuario.obm_id },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '24h' }
-    );
-
-    // Retorna os dados do usuário sem o hash da senha
-    const { senha_hash, ...usuarioSemSenha } = usuario;
-
-    logger.info({ user: { id: usuario.id, nome: usuario.nome } }, 'Usuário logado com sucesso.');
-    return res.status(200).json({
-      message: 'Login bem-sucedido!',
-      usuario: usuarioSemSenha,
-      token,
+    // Busca o usuário e sua OBM associada usando o Prisma
+    const usuario = await prisma.usuario.findUnique({
+      where: { email },
+      include: {
+        obm: true, // Inclui os dados da OBM relacionada
+      },
     });
 
+    if (!usuario) {
+      res.status(401).json({ message: 'Credenciais inválidas.' });
+      return;
+    }
+
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // Adicionado 'await' para esperar o resultado da comparação da senha.
+    const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+    // ======================= FIM DA CORREÇÃO =======================
+
+    if (!senhaValida) {
+      res.status(401).json({ message: 'Credenciais inválidas.' });
+      return;
+    }
+
+    if (!process.env.JWT_SECRET) {
+      logger.error('[AUTH] A variável de ambiente JWT_SECRET não está definida!');
+      res.status(500).json({ message: 'Erro de configuração interna do servidor.' });
+      return;
+    }
+
+    const tokenPayload = {
+      id: usuario.id,
+      nome: usuario.nome,
+      role: usuario.role,
+      perfil: usuario.role, // Mantido para compatibilidade com frontend
+      obm: usuario.obm ? { id: usuario.obm.id, nome: usuario.obm.nome } : null,
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+
+    res.status(200).json({ token });
+
   } catch (error) {
-    logger.error({ err: error }, 'Erro crítico no processo de login.');
-    return res.status(500).json({ message: 'Erro interno do servidor.' });
+    logger.error({ err: error }, `[AUTH] Erro inesperado durante o login para ${email}`);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

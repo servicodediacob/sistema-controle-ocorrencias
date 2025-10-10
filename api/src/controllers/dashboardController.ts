@@ -1,72 +1,96 @@
+// api/src/controllers/dashboardController.ts
 import { Request, Response } from 'express';
-import db from '../db';
-
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A definição da interface que foi removida acidentalmente está de volta.
-interface DashboardStats {
-  totalOcorrencias: number;
-  totalObitos: number;
-  ocorrenciasPorNatureza: { nome: string; total: number }[];
-  ocorrenciasPorCrbm: { nome: string; total: number }[];
-}
-// ======================= FIM DA CORREÇÃO =======================
+import { prisma } from '../lib/prisma';
+import logger from '@/config/logger';
 
 export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const query = `
-      WITH 
-      naturezas_de_obito AS (
-        SELECT id FROM naturezas_ocorrencia WHERE grupo = 'Relatório de Óbitos'
-      ),
-      ocorrencias_unificadas AS (
-        SELECT natureza_id, quantidade, obm_id FROM estatisticas_diarias
-        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
-        
-        UNION ALL
-        
-        SELECT natureza_id, 1 AS quantidade, cidade_id AS obm_id FROM ocorrencias_detalhadas
-        WHERE natureza_id NOT IN (SELECT id FROM naturezas_de_obito)
-      ),
-      total_ocorrencias_unificadas AS (
-        SELECT COALESCE(SUM(quantidade), 0) AS total FROM ocorrencias_unificadas
-      ),
-      ocorrencias_por_natureza AS (
-        SELECT
-          n.subgrupo AS nome,
-          SUM(ou.quantidade)::int AS total
-        FROM ocorrencias_unificadas ou
-        JOIN naturezas_ocorrencia n ON ou.natureza_id = n.id
-        GROUP BY n.subgrupo
-        ORDER BY total DESC
-      ),
-      ocorrencias_por_crbm AS (
-        SELECT
-          cr.nome,
-          SUM(ou.quantidade)::int AS total
-        FROM ocorrencias_unificadas ou
-        JOIN obms ob ON ou.obm_id = ob.id
-        JOIN crbms cr ON ob.crbm_id = cr.id
-        GROUP BY cr.nome
-        ORDER BY total DESC
-      ),
-      total_obitos_registros AS (
-        SELECT COALESCE(SUM(quantidade_vitimas), 0) AS total FROM obitos_registros
-      )
-      SELECT json_build_object(
-        'totalOcorrencias', (SELECT total FROM total_ocorrencias_unificadas),
-        'totalObitos', (SELECT total FROM total_obitos_registros),
-        'ocorrenciasPorNatureza', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_natureza) t), '[]'::json),
-        'ocorrenciasPorCrbm', COALESCE((SELECT json_agg(t) FROM (SELECT * FROM ocorrencias_por_crbm) t), '[]'::json)
-      ) AS stats;
-    `;
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // Define o intervalo de busca para APENAS o dia de hoje, em UTC.
+    const hojeInicio = new Date();
+    hojeInicio.setUTCHours(0, 0, 0, 0);
 
-    const { rows } = await db.query(query);
-    const stats: DashboardStats = rows[0].stats;
-    
-    res.status(200).json(stats);
+    const hojeFim = new Date();
+    hojeFim.setUTCHours(23, 59, 59, 999);
+
+    // Consulta 1: Total de ocorrências em lote (agora com filtro de data)
+    const totalEstatisticas = await prisma.estatisticaDiaria.aggregate({
+      _sum: { quantidade: true },
+      where: {
+        natureza: { grupo: { not: 'Relatório de Óbitos' } },
+        data_registro: { // <-- FILTRO DE DATA ADICIONADO
+          gte: hojeInicio,
+          lte: hojeFim,
+        },
+      },
+    });
+
+    // Consulta 2: Total de ocorrências detalhadas (agora com filtro de data)
+    const totalDetalhadas = await prisma.ocorrenciaDetalhada.count({
+      where: {
+        natureza: { grupo: { not: 'Relatório de Óbitos' } },
+        data_ocorrencia: { // <-- FILTRO DE DATA ADICIONADO
+          gte: hojeInicio,
+          lte: hojeFim,
+        },
+      },
+    });
+
+    const totalLote = totalEstatisticas._sum?.quantidade || 0;
+    const totalOcorrencias = totalLote + totalDetalhadas;
+    // ======================= FIM DA CORREÇÃO =======================
+
+    // Consulta 3: Total de óbitos (geral, sem filtro de data, como esperado)
+    const totalObitos = await prisma.obitoRegistro.aggregate({
+      _sum: { quantidade_vitimas: true },
+    });
+
+    // As consultas de "Ocorrências por Natureza" e "Ocorrências por CRBM"
+    // também devem ser gerais, sem filtro de data, para mostrar o histórico.
+    // Portanto, o restante do código permanece como estava.
+    const ocorrenciasPorNatureza = await prisma.estatisticaDiaria.groupBy({
+      by: ['natureza_id'],
+      _sum: { quantidade: true },
+      where: { natureza: { grupo: { not: 'Relatório de Óbitos' } } },
+      orderBy: { _sum: { quantidade: 'desc' } },
+    });
+    const naturezasInfo = await prisma.naturezaOcorrencia.findMany({
+      where: { id: { in: ocorrenciasPorNatureza.map(n => n.natureza_id) } },
+    });
+    const naturezaMap = new Map(naturezasInfo.map(n => [n.id, n.subgrupo]));
+    const statsPorNatureza = ocorrenciasPorNatureza.map(item => ({
+      nome: naturezaMap.get(item.natureza_id) || 'Desconhecida',
+      total: item._sum?.quantidade || 0,
+    }));
+
+    const ocorrenciasPorCrbm = await prisma.estatisticaDiaria.groupBy({
+      by: ['obm_id'],
+      _sum: { quantidade: true },
+    });
+    const obmsInfo = await prisma.oBM.findMany({
+      where: { id: { in: ocorrenciasPorCrbm.map(o => o.obm_id) } },
+      include: { crbm: true },
+    });
+    const crbmMap = new Map<number, { nome: string, total: number }>();
+    ocorrenciasPorCrbm.forEach(item => {
+      const obm = obmsInfo.find(o => o.id === item.obm_id);
+      if (obm) {
+        const crbm = crbmMap.get(obm.crbm_id) || { nome: obm.crbm.nome, total: 0 };
+        crbm.total += item._sum?.quantidade || 0;
+        crbmMap.set(obm.crbm_id, crbm);
+      }
+    });
+    const statsPorCrbm = Array.from(crbmMap.values()).sort((a, b) => b.total - a.total);
+
+    res.status(200).json({
+      totalOcorrencias,
+      totalObitos: totalObitos._sum?.quantidade_vitimas || 0,
+      ocorrenciasPorNatureza: statsPorNatureza,
+      ocorrenciasPorCrbm: statsPorCrbm,
+    });
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas do dashboard:', error);
+    logger.error({ err: error }, 'Erro ao buscar estatísticas do dashboard.');
     res.status(500).json({ message: 'Erro interno do servidor ao buscar estatísticas.' });
   }
 };

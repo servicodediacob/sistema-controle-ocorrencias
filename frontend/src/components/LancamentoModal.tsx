@@ -1,7 +1,9 @@
+// frontend/src/components/LancamentoModal.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { ICidade, IDataApoio, IEstatisticaLotePayload } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import SearchableSelect from './SearchableSelect';
 
 const ORDEM_GRUPOS = [
@@ -19,8 +21,9 @@ interface LancamentoModalProps {
   naturezas: IDataApoio[];
   onClose: () => void;
   onSave: (formData: IEstatisticaLotePayload) => void;
-  itemParaEditar: any | null;
+  itemParaEditar: { cidade: ICidade; dados: Record<string, number> } | null;
   obmsComDados: Set<number>;
+  dataInicial?: string;
 }
 
 function LancamentoModal({
@@ -30,28 +33,33 @@ function LancamentoModal({
   onSave,
   itemParaEditar,
   obmsComDados,
+  dataInicial,
 }: LancamentoModalProps) {
   const { addNotification } = useNotification();
   const { usuario } = useAuth();
   const isEditing = !!itemParaEditar;
 
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // 1. A função getInitialQuantidades agora mapeia o subgrupo (string) para o ID da natureza (number)
+  //    e armazena a quantidade usando o ID como chave.
   const getInitialQuantidades = () => {
+    const quantidadesIniciais: Record<string, string> = {};
     if (isEditing && itemParaEditar) {
-      const quantidadesIniciais: Record<string, string> = {};
       for (const subgrupo in itemParaEditar.dados) {
-        const natureza = naturezas.find((n: IDataApoio) => n.subgrupo === subgrupo);
+        const natureza = naturezas.find((n) => n.subgrupo === subgrupo);
         if (natureza) {
-          quantidadesIniciais[natureza.id] = itemParaEditar.dados[subgrupo].toString();
+          // A chave do estado agora é o ID da natureza
+          quantidadesIniciais[natureza.id.toString()] = itemParaEditar.dados[subgrupo].toString();
         }
       }
-      return quantidadesIniciais;
     }
-    return {};
+    return quantidadesIniciais;
   };
+  // ======================= FIM DA CORREÇÃO =======================
 
-  const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
+  const [dataRegistro, setDataRegistro] = useState<string>(dataInicial || new Date().toISOString().split('T')[0]);
   
-  const [cidadeId, setCidadeId] = useState<number | ''>(() => {
+  const [obmId, setObmId] = useState<number | ''>(() => {
     if (isEditing) return itemParaEditar.cidade.id;
     if (usuario?.role === 'user' && usuario.obm_id) return usuario.obm_id;
     return '';
@@ -68,41 +76,43 @@ function LancamentoModal({
 
   useEffect(() => {
     if (isEditing) {
-      setCidadeId(itemParaEditar.cidade.id);
+      setObmId(itemParaEditar.cidade.id);
     } else if (usuario?.role === 'user' && usuario.obm_id) {
-      setCidadeId(usuario.obm_id);
+      setObmId(usuario.obm_id);
     } else {
-      setCidadeId('');
+      setObmId('');
     }
     setQuantidades(getInitialQuantidades());
-  }, [itemParaEditar, usuario, isEditing]);
+  }, [itemParaEditar, usuario, isEditing, naturezas]);
 
   const handleQuantidadeChange = (naturezaId: number, valor: string) => {
     const valorLimpo = valor.replace(/[^0-9]/g, '');
-    setQuantidades(prev => ({ ...prev, [naturezaId]: valorLimpo }));
+    setQuantidades(prev => ({ ...prev, [naturezaId.toString()]: valorLimpo }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cidadeId) {
+    if (!obmId) {
       addNotification('Por favor, selecione uma OBM (Cidade).', 'error');
       return;
     }
 
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // 2. A montagem do payload agora itera sobre as chaves do estado 'quantidades' (que são os IDs)
+    //    e cria o array de estatísticas corretamente.
     const estatisticas = Object.entries(quantidades)
-      .map(([natureza_id, quantidadeStr]) => ({
-        natureza_id: Number(natureza_id),
+      .map(([naturezaIdStr, quantidadeStr]) => ({
+        natureza_id: Number(naturezaIdStr),
         quantidade: Number(quantidadeStr) || 0,
       }))
-      .filter(item => item.quantidade > 0);
+      .filter(item => item.quantidade > 0); // Enviamos apenas o que for maior que zero
 
     const payload: IEstatisticaLotePayload = {
-      data_registro: dataOcorrencia,
-      obm_id: cidadeId,
+      data_registro: dataRegistro,
+      obm_id: obmId,
       estatisticas: estatisticas,
     };
-    
-    console.log('[DIAGNÓSTICO FRONTEND] Payload enviado para a API:', JSON.stringify(payload, null, 2));
+    // ======================= FIM DA CORREÇÃO =======================
     
     onSave(payload);
   };
@@ -132,7 +142,7 @@ function LancamentoModal({
       <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-gray-800 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-700 p-6">
             <h2 className="text-xl font-semibold">
-            {isEditing ? `Editando Lançamentos de ${itemParaEditar.cidade.cidade_nome}` : 'Formulário de Lançamento de Ocorrências'}
+            {isEditing ? `Editando Lançamentos de ${itemParaEditar?.cidade.cidade_nome}` : 'Formulário de Lançamento de Ocorrências'}
             </h2>
             <div className="text-right">
                 <span className="text-sm text-gray-400">Total Lançado</span>
@@ -145,18 +155,18 @@ function LancamentoModal({
               <label htmlFor="obm_id" className="text-sm text-gray-400">OBM (Obrigatório)</label>
               <SearchableSelect
                 items={obmsParaSelecao}
-                selectedId={cidadeId}
-                onSelect={(id) => setCidadeId(id)}
+                selectedId={obmId}
+                onSelect={(id) => setObmId(id)}
                 placeholder="Digite para buscar uma OBM"
                 disabled={isEditing || usuario?.role === 'user'}
                 highlightedIds={obmsComDados}
               />
             </div>
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
-              <label htmlFor="data_ocorrencia" className="text-sm text-gray-400">Data da Ocorrência</label>
+              <label htmlFor="data_registro" className="text-sm text-gray-400">Data do Registro</label>
               <input
-                id="data_ocorrencia" name="data_ocorrencia" type="date"
-                value={dataOcorrencia} onChange={e => setDataOcorrencia(e.target.value)} required
+                id="data_registro" name="data_registro" type="date"
+                value={dataRegistro} onChange={e => setDataRegistro(e.target.value)} required
                 className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -175,7 +185,7 @@ function LancamentoModal({
                       <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
                       <input
                         id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
-                        value={quantidades[nat.id] || ''}
+                        value={quantidades[nat.id.toString()] || ''}
                         onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
                         className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                       />

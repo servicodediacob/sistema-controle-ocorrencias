@@ -1,3 +1,5 @@
+// frontend/src/services/ocorrenciaDetalhadaService.ts
+
 import { api, extractErrorMessage } from './api';
 
 export interface IOcorrenciaDetalhadaPayload {
@@ -15,16 +17,18 @@ export interface IOcorrenciaDetalhadaPayload {
 }
 
 // ======================= INÍCIO DA CORREÇÃO =======================
-// A interface agora inclui todos os campos retornados pela API, incluindo os IDs
+// A interface agora reflete 100% a estrutura de dados que a API retorna,
+// incluindo os campos que vêm dos JOINs no banco de dados.
 export interface IOcorrenciaDetalhada {
   id: number;
   numero_ocorrencia?: string;
   natureza_id: number;
-  natureza_nome: string;
+  natureza_grupo: string; // Campo que estava faltando
+  natureza_nome: string;  // Campo que estava faltando
   endereco?: string;
   bairro?: string;
   cidade_id: number;
-  cidade_nome: string;
+  cidade_nome: string;    // Campo que estava faltando
   viaturas?: string;
   veiculos_envolvidos?: string;
   dados_vitimas?: string;
@@ -38,7 +42,8 @@ export interface IOcorrenciaDetalhada {
 export const criarOcorrenciaDetalhada = async (payload: IOcorrenciaDetalhadaPayload): Promise<IOcorrenciaDetalhada> => {
   try {
     const response = await api.post('/ocorrencias-detalhadas', payload);
-    return response.data;
+    // O interceptor do axios já retorna response.data
+    return response as unknown as IOcorrenciaDetalhada;
   } catch (error) {
     throw new Error(extractErrorMessage(error));
   }
@@ -49,7 +54,7 @@ export const getOcorrenciasDetalhadas = async (data: string): Promise<IOcorrenci
     const response = await api.get('/ocorrencias-detalhadas', {
       params: { data_ocorrencia: data }
     });
-    return response.data;
+    return response as unknown as IOcorrenciaDetalhada[];
   } catch (error) {
     throw new Error(extractErrorMessage(error));
   }
@@ -58,19 +63,17 @@ export const getOcorrenciasDetalhadas = async (data: string): Promise<IOcorrenci
 export const atualizarOcorrenciaDetalhada = async (id: number, payload: IOcorrenciaDetalhadaPayload): Promise<IOcorrenciaDetalhada> => {
   try {
     const response = await api.put(`/ocorrencias-detalhadas/${id}`, payload);
-    return response.data;
+    return response as unknown as IOcorrenciaDetalhada;
   } catch (error) {
     throw new Error(extractErrorMessage(error));
   }
 };
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A função de deletar agora espera uma resposta vazia (status 204)
 export const deletarOcorrenciaDetalhada = async (id: number): Promise<void> => {
   try {
+    // A chamada DELETE não retorna corpo, então não precisamos do .then(res => res.data)
     await api.delete(`/ocorrencias-detalhadas/${id}`);
   } catch (error) {
     throw new Error(extractErrorMessage(error));
   }
 };
-// ======================= FIM DA CORREÇÃO =======================

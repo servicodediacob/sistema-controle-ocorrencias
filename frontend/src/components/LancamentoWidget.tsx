@@ -1,30 +1,31 @@
-// Caminho: frontend/src/components/LancamentoWidget.tsx
+// frontend/src/components/LancamentoWidget.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getEstatisticasAgrupadasPorData, ICidade, IEstatisticaAgrupada } from '../services/api';
+// A importação de 'ICidade' foi removida, pois não é usada diretamente aqui.
+import { getEstatisticasAgrupadasPorData, IEstatisticaAgrupada } from '../services/api';
 import { useData } from '../contexts/DataProvider';
 import { useNotification } from '../contexts/NotificationContext';
 import LancamentoTabela from './LancamentoTabela';
 import Spinner from './Spinner';
 
-const ORDEM_COLUNAS: Array<{ subgrupo: string; abreviacao: string }> = [
-    { subgrupo: 'Resgate', abreviacao: 'RESGATE' },
-    { subgrupo: 'Incêndio - Outros', abreviacao: 'INC. OUT.' },
-    { subgrupo: 'Incêndio em Edificação', abreviacao: 'INC. EDIF' },
-    { subgrupo: 'Incêndio em Vegetação', abreviacao: 'INC. VEG' },
-    { subgrupo: 'Busca e Salvamento - Diversos', abreviacao: 'B. SALV.' },
-    { subgrupo: 'Busca de Cadáver', abreviacao: 'B. CADÁVER' },
-    { subgrupo: 'Outros', abreviacao: 'AP. OUT' },
-    { subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
-    { subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
-    { subgrupo: 'Folders / Panfletos', abreviacao: 'AP. FOL' },
-    { subgrupo: 'Atividades Técnicas - Outros', abreviacao: 'AT. OUT' },
-    { subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
-    { subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
-    { subgrupo: 'Vazamentos', abreviacao: 'PPV' },
-    { subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
-    { subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
-    { subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
+// Alinha os nomes das colunas com os subgrupos reais do banco
+const ORDEM_COLUNAS: Array<{ grupo: string; subgrupo: string; abreviacao: string }> = [
+    { grupo: 'Resgate',            subgrupo: 'Resgate - Salvamento em Emergências', abreviacao: 'RESGATE' },
+    { grupo: 'Incêndio',           subgrupo: 'Vegetação',                            abreviacao: 'INC. VEG' },
+    { grupo: 'Incêndio',           subgrupo: 'Edificações',                          abreviacao: 'INC. EDIF' },
+    { grupo: 'Incêndio',           subgrupo: 'Outros',                               abreviacao: 'INC. OUT.' },
+    { grupo: 'Busca e Salvamento', subgrupo: 'Cadáver',                              abreviacao: 'B. CADÁVER' },
+    { grupo: 'Busca e Salvamento', subgrupo: 'Diversos',                             abreviacao: 'B. SALV.' },
+    { grupo: 'Ações Preventivas',  subgrupo: 'Palestras',                            abreviacao: 'AP. PAL' },
+    { grupo: 'Ações Preventivas',  subgrupo: 'Eventos',                              abreviacao: 'AP. EVE' },
+    { grupo: 'Ações Preventivas',  subgrupo: 'Folders/Panfletos',                    abreviacao: 'AP. FOL' },
+    { grupo: 'Ações Preventivas',  subgrupo: 'Outros',                               abreviacao: 'AP. OUT' },
+    { grupo: 'Atividades Técnicas',subgrupo: 'Inspeções',                            abreviacao: 'AT. INS' },
+    { grupo: 'Atividades Técnicas',subgrupo: 'Análise de Projetos',                  abreviacao: 'AN. PROJ' },
+    { grupo: 'Produtos Perigosos', subgrupo: 'Vazamentos',                           abreviacao: 'PPV' }, 
+    { grupo: 'Produtos Perigosos', subgrupo: 'Outros / Diversos',                    abreviacao: 'PPO' }, 
+    { grupo: 'Defesa Civil',       subgrupo: 'Preventiva',                           abreviacao: 'DC PREV.' }, 
+    { grupo: 'Defesa Civil',       subgrupo: 'De Resposta',                          abreviacao: 'DC RESP.' }, 
 ];
 
 function LancamentoWidget() {
@@ -64,6 +65,18 @@ function LancamentoWidget() {
   const handleEditPlaceholder = () => {
     addNotification(`Para editar, acesse a página "Lançar Ocorrências".`, 'info');
   };
+
+  // Converte ORDEM_COLUNAS para o formato esperado por LancamentoTabela
+  const naturezasTabela = useMemo(() =>
+    ORDEM_COLUNAS.map(({ grupo, subgrupo, abreviacao }, idx) => ({
+      codigo: String(idx + 1), // código sintético estável por ordem
+      nome: subgrupo,
+      subgrupo,
+      abreviacao,
+      grupo,
+    })),
+    []
+  );
 
   return (
     <div className="mt-6 w-full rounded-lg bg-surface border border-border p-6 text-text">
@@ -110,7 +123,7 @@ function LancamentoWidget() {
         <LancamentoTabela
           dadosApi={dadosTabela}
           cidades={cidadesFiltradas}
-          naturezas={ORDEM_COLUNAS}
+          naturezas={naturezasTabela}
           loading={false}
           onEdit={handleEditPlaceholder}
           showActions={false}

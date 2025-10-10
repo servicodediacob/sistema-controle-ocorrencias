@@ -4,8 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRelatorioCompleto = void 0;
-const db_1 = __importDefault(require("../db"));
-const logger_1 = __importDefault(require("../config/logger"));
+const prisma_1 = require("../lib/prisma");
+const logger_1 = __importDefault(require("@/config/logger"));
+const date_1 = require("@/utils/date");
 const getRelatorioCompleto = async (req, res) => {
     const { data_inicio, data_fim } = req.query;
     if (!data_inicio || !data_fim) {
@@ -13,69 +14,91 @@ const getRelatorioCompleto = async (req, res) => {
         return;
     }
     try {
-        const estatisticasQuery = `
-      WITH dados_unificados AS (
-        SELECT ed.natureza_id, ed.quantidade, o.nome AS obm_nome, o.crbm_id
-        FROM estatisticas_diarias ed
-        JOIN obms o ON ed.obm_id = o.id
-        WHERE ed.data_registro BETWEEN $1 AND $2
-        UNION ALL
-        SELECT od.natureza_id, 1 AS quantidade, o.nome AS obm_nome, o.crbm_id
-        FROM ocorrencias_detalhadas od
-        JOIN obms o ON od.cidade_id = o.id
-        WHERE od.data_ocorrencia BETWEEN $1 AND $2
-      )
-      SELECT
-        n.grupo, n.subgrupo,
-        COALESCE(SUM(CASE WHEN du.obm_nome = 'Goiânia - Diurno' THEN du.quantidade ELSE 0 END), 0)::int AS diurno,
-        COALESCE(SUM(CASE WHEN du.obm_nome = 'Goiânia - Noturno' THEN du.quantidade ELSE 0 END), 0)::int AS noturno,
-        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS total_capital,
-        COALESCE(SUM(CASE WHEN cr.nome = '1º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "1º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '2º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "2º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '3º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "3º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '4º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "4º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '5º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "5º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '6º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "6º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '7º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "7º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '8º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "8º CRBM",
-        COALESCE(SUM(CASE WHEN cr.nome = '9º CRBM' THEN du.quantidade ELSE 0 END), 0)::int AS "9º CRBM",
-        COALESCE(SUM(du.quantidade), 0)::int AS total_geral
-      FROM naturezas_ocorrencia n
-      LEFT JOIN dados_unificados du ON n.id = du.natureza_id
-      LEFT JOIN crbms cr ON du.crbm_id = cr.id
-      WHERE n.grupo != 'Relatório de Óbitos'
-      GROUP BY n.grupo, n.subgrupo
-      ORDER BY CASE n.grupo WHEN 'Resgate' THEN 1 WHEN 'Incêndio' THEN 2 WHEN 'Busca e Salvamento' THEN 3 WHEN 'Ações Preventivas' THEN 4 WHEN 'Atividades Técnicas' THEN 5 WHEN 'Produtos Perigosos' THEN 6 WHEN 'Defesa Civil' THEN 7 ELSE 8 END, n.subgrupo;
-    `;
-        const obitosQuery = `
-      SELECT obr.id, obr.data_ocorrencia, n.subgrupo as natureza_nome, obr.numero_ocorrencia, o.nome as obm_nome, obr.quantidade_vitimas
-      FROM obitos_registros obr
-      JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
-      LEFT JOIN obms o ON obr.obm_id = o.id
-      WHERE obr.data_ocorrencia BETWEEN $1 AND $2
-      ORDER BY obr.data_ocorrencia DESC, n.subgrupo;
-    `;
-        const destaquesQuery = `
-      SELECT od.id, od.data_ocorrencia, n.subgrupo as natureza_descricao, obm.nome as obm_nome, cr.nome as crbm_nome
-      FROM ocorrencias_detalhadas od
-      JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
-      JOIN obms obm ON od.cidade_id = obm.id
-      JOIN crbms cr ON obm.crbm_id = cr.id
-      WHERE od.data_ocorrencia BETWEEN $1 AND $2
-      ORDER BY od.data_ocorrencia DESC;
-    `;
-        const [estatisticasResult, obitosResult, destaquesResult] = await Promise.all([
-            db_1.default.query(estatisticasQuery, [data_inicio, data_fim]),
-            db_1.default.query(obitosQuery, [data_inicio, data_fim]),
-            db_1.default.query(destaquesQuery, [data_inicio, data_fim])
-        ]);
+        const dataInicioDate = (0, date_1.parseDateParam)(data_inicio, 'data_inicio');
+        const dataFimDate = (0, date_1.parseDateParam)(data_fim, 'data_fim');
+        // 1. Busca de Estatísticas
+        const estatisticas = await prisma_1.prisma.estatisticaDiaria.findMany({
+            where: {
+                data_registro: { gte: dataInicioDate, lte: dataFimDate },
+                natureza: { grupo: { not: 'Relatório de Óbitos' } },
+            },
+            include: {
+                natureza: true,
+                obm: { include: { crbm: true } },
+            },
+        });
+        // 2. Busca de Ocorrências Detalhadas
+        const detalhadas = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
+            where: {
+                data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate },
+                natureza: { grupo: { not: 'Relatório de Óbitos' } },
+            },
+            include: {
+                natureza: true,
+                cidade: { include: { crbm: true } },
+            },
+        });
+        // 3. Busca de Óbitos
+        const obitos = await prisma_1.prisma.obitoRegistro.findMany({
+            where: { data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate } },
+            include: {
+                natureza: { select: { subgrupo: true } },
+                obm: { select: { nome: true } },
+            },
+            orderBy: { data_ocorrencia: 'desc' },
+        });
+        // Processamento e Agregação dos Dados (em memória)
+        const relatorioMap = new Map();
+        const todasNaturezas = await prisma_1.prisma.naturezaOcorrencia.findMany({
+            where: { grupo: { not: 'Relatório de Óbitos' } },
+        });
+        todasNaturezas.forEach(n => {
+            const chave = `${n.grupo}|${n.subgrupo}`;
+            relatorioMap.set(chave, {
+                grupo: n.grupo,
+                subgrupo: n.subgrupo,
+                diurno: 0, noturno: 0, total_capital: 0, total_geral: 0,
+                "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0,
+                "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0,
+            });
+        });
+        const processarItem = (item, quantidade) => {
+            const chave = `${item.natureza.grupo}|${item.natureza.subgrupo}`;
+            const obm = item.obm || item.cidade;
+            if (relatorioMap.has(chave) && obm) {
+                const entrada = relatorioMap.get(chave);
+                entrada.total_geral += quantidade;
+                if (obm.crbm.nome === '1º CRBM') {
+                    entrada.total_capital += quantidade;
+                    if (obm.nome.includes('Diurno'))
+                        entrada.diurno += quantidade;
+                    if (obm.nome.includes('Noturno'))
+                        entrada.noturno += quantidade;
+                }
+                entrada[obm.crbm.nome] += quantidade;
+            }
+        };
+        estatisticas.forEach(item => processarItem(item, item.quantidade));
+        detalhadas.forEach(item => processarItem(item, 1));
+        const estatisticasFinais = Array.from(relatorioMap.values()).sort((a, b) => {
+            const ordemGrupo = ['Resgate', 'Incêndio', 'Busca e Salvamento', 'Ações Preventivas', 'Atividades Técnicas', 'Produtos Perigosos', 'Defesa Civil'];
+            const indexA = ordemGrupo.indexOf(a.grupo);
+            const indexB = ordemGrupo.indexOf(b.grupo);
+            if (indexA !== indexB)
+                return indexA - indexB;
+            return a.subgrupo.localeCompare(b.subgrupo);
+        });
         res.status(200).json({
-            estatisticas: estatisticasResult.rows,
-            obitos: obitosResult.rows,
-            destaques: destaquesResult.rows,
+            estatisticas: estatisticasFinais,
+            obitos: obitos.map(o => ({ ...o, natureza_nome: o.natureza.subgrupo, obm_nome: o.obm?.nome })),
+            destaques: detalhadas.map(d => ({ ...d, natureza_descricao: d.natureza.subgrupo, obm_nome: d.cidade.nome, crbm_nome: d.cidade.crbm.nome })),
         });
     }
     catch (error) {
+        if (error?.name === 'BadRequestError') {
+            res.status(400).json({ message: error.message });
+            return;
+        }
         logger_1.default.error({ err: error, query: req.query }, 'Erro ao gerar relatório completo.');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }

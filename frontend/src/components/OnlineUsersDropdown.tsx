@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useChat } from '../contexts/ChatProvider';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import Icon from './Icon';
 
 // Ícones para o componente

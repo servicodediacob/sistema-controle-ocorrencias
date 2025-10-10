@@ -1,10 +1,16 @@
-// frontend/jest.config.js
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'jest-environment-jsdom',
+// frontend/jest.config.cjs
+
+/** @type {import('jest').Config} */
+const config = {
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  moduleNameMapper: {
-    // Lida com importações de CSS
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest',
   },
+  // A configuração mais importante para os testes de unidade
+  transformIgnorePatterns: [
+    '/node_modules/(?!jose)/',
+  ],
 };
+
+module.exports = config;

@@ -1,6 +1,6 @@
-// Caminho: frontend/src/components/ErrorBoundary.tsx
+// frontend/src/components/ErrorBoundary.tsx
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -19,9 +19,9 @@ class ErrorBoundary extends Component<Props, State> {
     errorInfo: null,
   };
 
-  public static getDerivedStateFromError(_: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     // Atualiza o estado para que a próxima renderização mostre a UI de fallback.
-    return { hasError: true, error: _, errorInfo: null };
+    return { hasError: true, error: error, errorInfo: null };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {

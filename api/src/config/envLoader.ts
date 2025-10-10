@@ -1,21 +1,43 @@
+// api/src/config/envLoader.ts
+import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Determina qual arquivo .env carregar com base no ambiente NODE_ENV
-const envFile = process.env.NODE_ENV === 'test' 
-    ? '.env.test' 
+// Resolve o arquivo .env apropriado de forma resiliente ao diretório atual.
+// Em monorepos é comum iniciar a API a partir do diretório raiz, então
+// tentamos múltiplos caminhos possíveis até encontrar um arquivo existente.
+const envFile =
+  process.env.NODE_ENV === 'test'
+    ? '.env.test'
     : process.env.NODE_ENV === 'production'
     ? '.env.production'
     : '.env.development';
 
-const envPath = path.resolve(process.cwd(), envFile);
+const candidates: string[] = [
+  // 1) Diretório atual do processo (padrão quando roda dentro de api/)
+  path.resolve(process.cwd(), envFile),
+  // 2) Pasta raiz do pacote "api" baseada no local deste arquivo (src/config)
+  path.resolve(__dirname, '../../', envFile),
+  // 3) Caso o processo seja iniciado no monorepo (raiz), procure em "api/"
+  path.resolve(process.cwd(), 'api', envFile),
+];
 
-const result = dotenv.config({ path: envPath });
+const chosenPath = candidates.find((p) => fs.existsSync(p));
 
-if (result.error) {
-    // Não lança erro se o arquivo não existir, mas avisa no console.
-    // Isso é útil para ambientes de produção que injetam as variáveis diretamente.
-    console.warn(`[EnvLoader] Aviso: Não foi possível carregar o arquivo de ambiente: ${envPath}. As variáveis de ambiente do sistema serão usadas.`);
+if (chosenPath) {
+  const result = dotenv.config({ path: chosenPath });
+  if (result.error) {
+    console.warn(
+      `[EnvLoader] Aviso: falha ao carregar ${chosenPath}. Variáveis de ambiente do sistema serão usadas.`
+    );
+  } else {
+    console.log(`[EnvLoader] Variáveis de ambiente carregadas de: ${chosenPath}`);
+  }
 } else {
-    console.log(`[EnvLoader] Variáveis de ambiente carregadas de: ${envPath}`);
+  console.warn(
+    `[EnvLoader] Aviso: nenhum arquivo ${envFile} encontrado nos caminhos esperados: ${candidates.join(
+      ', '
+    )}. Variáveis de ambiente do sistema serão usadas.`
+  );
 }
+

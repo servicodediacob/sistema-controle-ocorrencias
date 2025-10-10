@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { z } from 'zod';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import { useNotification } from '../contexts/NotificationContext';
 import { api, extractErrorMessage } from '../services/api';
 import MainLayout from '../components/MainLayout';

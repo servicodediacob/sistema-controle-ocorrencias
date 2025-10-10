@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onSocketConnection = void 0;
-const logger_1 = __importDefault(require("../config/logger"));
+const logger_1 = __importDefault(require("@/config/logger"));
 // Mapeia userId para um Set de seus socketIds (permite múltiplas abas)
 const userSockets = new Map();
 // Mapeia cada socketId para o objeto do usuário correspondente

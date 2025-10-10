@@ -1,0 +1,62 @@
+
+> sistema-ocorrencias-frontend@0.0.0 test
+> jest --no-watch
+
+FAIL src/components/LancamentoModal.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\ALEXANDRE-JANAINA\Desktop\backup integração sistemas\sistema-ocorrencias\node_modules\jose\dist\webapi\index.js:1
+    ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){export { compactDecrypt } from './jwe/compact/decrypt.js';
+                                                                                      ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+    [0m [90m 2 |[39m
+     [90m 3 |[39m [36mimport[39m [33mReact[39m[33m,[39m { createContext[33m,[39m useState[33m,[39m useEffect[33m,[39m useCallback[33m,[39m [33mReactNode[39m[33m,[39m useContext } [36mfrom[39m [32m'react'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { decodeJwt } [36mfrom[39m [32m'jose'[39m[33m;[39m
+     [90m   |[39m [31m[1m^[22m[39m
+     [90m 5 |[39m [36mimport[39m { api[33m,[39m login [36mas[39m apiLogin[33m,[39m extractErrorMessage[33m,[39m [33mIUser[39m [36mas[39m [33mApiUser[39m } [36mfrom[39m [32m'../services/api'[39m[33m;[39m
+     [90m 6 |[39m
+     [90m 7 |[39m [90m// 1. Tipos compartilhados[39m[0m
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (src/contexts/AuthProvider.tsx:4:1)
+      at Object.<anonymous> (src/components/LancamentoModal.tsx:6:1)
+      at Object.<anonymous> (src/components/LancamentoModal.test.tsx:3:1)
+
+PASS src/components/LancamentoTabela.test.tsx (7.748 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        11.647 s, estimated 15 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\ALEXANDRE-JANAINA\Desktop\backup integração sistemas\sistema-ocorrencias\frontend
+npm error workspace sistema-ocorrencias-frontend@0.0.0
+npm error location C:\Users\ALEXANDRE-JANAINA\Desktop\backup integração sistemas\sistema-ocorrencias\frontend
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest --no-watch

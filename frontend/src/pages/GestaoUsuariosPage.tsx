@@ -1,13 +1,13 @@
-// Caminho: frontend/src/pages/GestaoUsuariosPage.tsx
+// frontend/src/pages/GestaoUsuariosPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
-import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, IUser, getCidades, ICidade } from '../services/api';
+// CORREÇÃO: A interface IUser agora é importada do AuthProvider
+import { getUsuarios, criarUsuario, updateUsuario, deleteUsuario, getCidades, ICidade, IUser } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import UsuarioModal from '../components/UsuarioModal';
 import Spinner from '../components/Spinner';
 
-// --- INÍCIO DA ALTERAÇÃO: Componente de Card para Mobile ---
 const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () => void; }> = ({ usuario, onEdit, onDelete }) => {
   return (
     <div className="rounded-lg border border-border bg-surface p-4 text-text">
@@ -15,9 +15,9 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
         <div>
           <p className="font-bold text-text-strong">{usuario.nome}</p>
           <p className="text-sm">{usuario.email}</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">{(usuario as any).obm_nome || 'Sem OBM'}</p>
+          <p className="text-sm text-gray-400">OBM: {usuario.obm_nome || 'Sem OBM'}</p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200'}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${usuario.role === 'admin' ? 'bg-purple-500 text-white' : 'bg-gray-600 text-gray-200'}`}>
           {usuario.role}
         </span>
       </div>
@@ -32,7 +32,6 @@ const UsuarioCard: React.FC<{ usuario: IUser; onEdit: () => void; onDelete: () =
     </div>
   );
 };
-// --- FIM DA ALTERAÇÃO ---
 
 function GestaoUsuariosPage(): ReactElement {
   const [usuarios, setUsuarios] = useState<IUser[]>([]);
@@ -51,7 +50,7 @@ function GestaoUsuariosPage(): ReactElement {
       ]);
       setUsuarios(usersData);
       setCidades(cidadesData);
-    } catch (err: unknown) {
+    } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao buscar dados.';
       addNotification(message, 'error');
     } finally {
@@ -84,7 +83,7 @@ function GestaoUsuariosPage(): ReactElement {
       }
       handleCloseModal();
       fetchData();
-    } catch (err: unknown) {
+    } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao salvar usuário.';
       addNotification(message, 'error');
     }
@@ -96,7 +95,7 @@ function GestaoUsuariosPage(): ReactElement {
         await deleteUsuario(id);
         addNotification('Usuário excluído com sucesso!', 'success');
         fetchData();
-      } catch (err: unknown) {
+      } catch (err) {
         const message = err instanceof Error ? err.message : 'Falha ao excluir usuário.';
         addNotification(message, 'error');
       }
@@ -104,7 +103,9 @@ function GestaoUsuariosPage(): ReactElement {
   };
 
   return (
-    <MainLayout pageTitle="Gestão de Usuários">
+    <MainLayout>
+      <h1 className="text-3xl font-bold text-text-strong mb-8">Gestão de Usuários</h1>
+      
       <div className="mb-6">
         <button
           onClick={() => handleOpenModal()}
@@ -117,12 +118,10 @@ function GestaoUsuariosPage(): ReactElement {
       {loading ? (
         <div className="flex justify-center p-10"><Spinner text="Carregando usuários..." /></div>
       ) : (
-        // --- INÍCIO DA ALTERAÇÃO: Container para as visualizações ---
         <div className="bg-surface border border-border rounded-lg p-0 md:border-none md:bg-transparent">
-          {/* Tabela para Desktop */}
           <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
             <table className="min-w-full divide-y divide-border">
-              <thead className="bg-gray-200 dark:bg-gray-800">
+              <thead className="bg-gray-800">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Nome</th>
@@ -134,11 +133,11 @@ function GestaoUsuariosPage(): ReactElement {
               </thead>
               <tbody className="divide-y divide-border bg-surface">
                 {usuarios.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                  <tr key={user.id} className="hover:bg-gray-700/50">
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.id}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{user.nome}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{user.email}</td>
-                    <td className="whitespace-nowrap px-6 py-4 text-text">{(user as any).obm_nome || 'N/A'}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text">{user.obm_nome || 'N/A'}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{user.role}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-center">
                       <div className="flex justify-center gap-2">
@@ -152,7 +151,6 @@ function GestaoUsuariosPage(): ReactElement {
             </table>
           </div>
 
-          {/* Cards para Mobile */}
           <div className="space-y-4 md:hidden">
             {usuarios.map(user => (
               <UsuarioCard
@@ -164,7 +162,6 @@ function GestaoUsuariosPage(): ReactElement {
             ))}
           </div>
         </div>
-        // --- FIM DA ALTERAÇÃO ---
       )}
 
       {isModalOpen && (

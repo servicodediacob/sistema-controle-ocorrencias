@@ -1,7 +1,7 @@
 // Caminho: frontend/src/components/LoggedInUsersWidget.tsx
 
 import { useChat } from '../contexts/ChatProvider';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 import { useState, useEffect } from 'react'; // <-- 1. IMPORTAR HOOKS
 
 // 2. FUNÇÃO PARA FORMATAR O TEMPO DECORRIDO

@@ -1,8 +1,11 @@
+// api/src/controllers/ocorrenciaDetalhadaController.ts
 import { Response } from 'express';
 import { RequestWithUser } from '@/middleware/authMiddleware';
-import db from '@/db';
+import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
+import { parseDateParam } from '@/utils/date';
 
+// ... (interface e criarOcorrenciaDetalhada permanecem iguais)
 interface OcorrenciaDetalhadaPayload {
   numero_ocorrencia?: string;
   natureza_id: number;
@@ -20,43 +23,57 @@ interface OcorrenciaDetalhadaPayload {
 export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const payload: OcorrenciaDetalhadaPayload = req.body;
   const usuario_id = req.usuario?.id;
-  
-  const client = await db.pool.connect();
 
   try {
-    await client.query('BEGIN');
+    // Coerção e validação de tipos vindos do frontend (podem chegar como string)
+    const naturezaId = Number((payload as any).natureza_id ?? payload.natureza_id);
+    const cidadeId = Number((payload as any).cidade_id ?? payload.cidade_id);
+    if (!Number.isInteger(naturezaId) || naturezaId <= 0) {
+      return res.status(400).json({ message: 'natureza_id inválido. Deve ser um inteiro.' });
+    }
+    if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
+      return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
+    }
 
-    const queryInsert = `
-      INSERT INTO ocorrencias_detalhadas 
-        (numero_ocorrencia, natureza_id, endereco, bairro, cidade_id, viaturas, veiculos_envolvidos, dados_vitimas, resumo_ocorrencia, data_ocorrencia, horario_ocorrencia, usuario_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING *;
-    `;
-    const values = [
-      payload.numero_ocorrencia, payload.natureza_id, payload.endereco, payload.bairro, payload.cidade_id,
-      payload.viaturas, payload.veiculos_envolvidos, payload.dados_vitimas, payload.resumo_ocorrencia,
-      payload.data_ocorrencia, payload.horario_ocorrencia || null, usuario_id
-    ];
-    
-    const result = await client.query(queryInsert, values);
-    const novaOcorrencia = result.rows[0];
+    const novaOcorrencia = await prisma.$transaction(async (tx) => {
+      const ocorrenciaCriada = await tx.ocorrenciaDetalhada.create({
+        data: {
+          numero_ocorrencia: payload.numero_ocorrencia,
+          natureza_id: naturezaId,
+          endereco: payload.endereco,
+          bairro: payload.bairro,
+          cidade_id: cidadeId,
+          viaturas: payload.viaturas,
+          veiculos_envolvidos: payload.veiculos_envolvidos,
+          dados_vitimas: payload.dados_vitimas,
+          resumo_ocorrencia: payload.resumo_ocorrencia,
+          data_ocorrencia: new Date(payload.data_ocorrencia + 'T00:00:00Z'), // Salva sempre em UTC
+          // Prisma espera um Date para campos @db.Time. Convertemos HH:mm em uma data base 1970-01-01.
+          horario_ocorrencia: payload.horario_ocorrencia
+            ? new Date(`1970-01-01T${payload.horario_ocorrencia}:00Z`)
+            : null,
+          usuario_id: usuario_id,
+        },
+      });
 
-    const queryUpdateDestaque = 'UPDATE ocorrencia_destaque SET ocorrencia_id = $1, definido_em = CURRENT_TIMESTAMP WHERE id = 1';
-    await client.query(queryUpdateDestaque, [novaOcorrencia.id]);
+      await tx.ocorrenciaDestaque.upsert({
+        where: { id: 1 },
+        update: { ocorrencia_id: ocorrenciaCriada.id, definido_em: new Date() },
+        create: { id: 1, ocorrencia_id: ocorrenciaCriada.id, definido_em: new Date() },
+      });
 
-    await client.query('COMMIT');
+      return ocorrenciaCriada;
+    });
     
     logger.info({ ocorrenciaId: novaOcorrencia.id, usuarioId: usuario_id }, 'Ocorrência detalhada criada e definida como destaque.');
     return res.status(201).json(novaOcorrencia);
 
   } catch (error) {
-    await client.query('ROLLBACK');
     logger.error({ err: error, payload }, 'Erro ao criar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
-  } finally {
-    client.release();
   }
 };
+
 
 export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res: Response) => {
   const { data_ocorrencia } = req.query;
@@ -66,52 +83,72 @@ export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res:
   }
 
   try {
-    const query = `
-      SELECT 
-        od.id, od.numero_ocorrencia, od.natureza_id, n.subgrupo as natureza_nome,
-        od.endereco, od.bairro, od.cidade_id, c.nome as cidade_nome, od.viaturas,
-        od.veiculos_envolvidos, od.dados_vitimas, od.resumo_ocorrencia,
-        od.data_ocorrencia, od.horario_ocorrencia, od.usuario_id
-      FROM ocorrencias_detalhadas od
-      JOIN naturezas_ocorrencia n ON od.natureza_id = n.id
-      JOIN obms c ON od.cidade_id = c.id
-      WHERE od.data_ocorrencia = $1
-      ORDER BY od.horario_ocorrencia ASC, od.id ASC;
-    `;
-    
-    const { rows } = await db.query(query, [data_ocorrencia]);
-    return res.status(200).json(rows);
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    const dataInicio = new Date(data_ocorrencia + 'T00:00:00.000Z');
+    const dataFim = new Date(data_ocorrencia + 'T23:59:59.999Z');
+
+    const ocorrencias = await prisma.ocorrenciaDetalhada.findMany({
+      where: {
+        data_ocorrencia: {
+          gte: dataInicio,
+          lte: dataFim,
+        },
+      },
+      include: { natureza: true, cidade: true },
+      orderBy: [{ horario_ocorrencia: 'asc' }, { id: 'asc' }],
+    });
+    // ======================= FIM DA CORREÇÃO =======================
+
+    const resultadoFormatado = ocorrencias.map(od => ({
+      ...od,
+      natureza_grupo: od.natureza.grupo,
+      natureza_nome: od.natureza.subgrupo,
+      cidade_nome: od.cidade.nome,
+    }));
+
+    return res.status(200).json(resultadoFormatado);
   } catch (error) {
     logger.error({ err: error, data: data_ocorrencia }, 'Erro ao buscar ocorrências detalhadas.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
+// ... (resto do arquivo sem alterações)
 export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   const payload: OcorrenciaDetalhadaPayload = req.body;
 
   try {
-    const query = `
-      UPDATE ocorrencias_detalhadas SET
-        numero_ocorrencia = $1, natureza_id = $2, endereco = $3, bairro = $4, cidade_id = $5,
-        viaturas = $6, veiculos_envolvidos = $7, dados_vitimas = $8, resumo_ocorrencia = $9,
-        data_ocorrencia = $10, horario_ocorrencia = $11, usuario_id = $12
-      WHERE id = $13
-      RETURNING *;
-    `;
-    const values = [
-      payload.numero_ocorrencia, payload.natureza_id, payload.endereco, payload.bairro, payload.cidade_id,
-      payload.viaturas, payload.veiculos_envolvidos, payload.dados_vitimas, payload.resumo_ocorrencia,
-      payload.data_ocorrencia, payload.horario_ocorrencia || null, req.usuario?.id, id
-    ];
-
-    const { rows } = await db.query(query, values);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
+    const naturezaId = Number((payload as any).natureza_id ?? payload.natureza_id);
+    const cidadeId = Number((payload as any).cidade_id ?? payload.cidade_id);
+    if (!Number.isInteger(naturezaId) || naturezaId <= 0) {
+      return res.status(400).json({ message: 'natureza_id inválido. Deve ser um inteiro.' });
     }
+    if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
+      return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
+    }
+
+    const ocorrenciaAtualizada = await prisma.ocorrenciaDetalhada.update({
+      where: { id: Number(id) },
+      data: {
+        numero_ocorrencia: payload.numero_ocorrencia,
+        natureza_id: naturezaId,
+        endereco: payload.endereco,
+        bairro: payload.bairro,
+        cidade_id: cidadeId,
+        viaturas: payload.viaturas,
+        veiculos_envolvidos: payload.veiculos_envolvidos,
+        dados_vitimas: payload.dados_vitimas,
+        resumo_ocorrencia: payload.resumo_ocorrencia,
+        data_ocorrencia: new Date(payload.data_ocorrencia + 'T00:00:00Z'),
+        horario_ocorrencia: payload.horario_ocorrencia
+          ? new Date(`1970-01-01T${payload.horario_ocorrencia}:00Z`)
+          : null,
+        usuario_id: req.usuario?.id,
+      },
+    });
     logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada atualizada.');
-    return res.status(200).json(rows[0]);
+    return res.status(200).json(ocorrenciaAtualizada);
   } catch (error) {
     logger.error({ err: error, payload, ocorrenciaId: id }, 'Erro ao atualizar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
@@ -121,12 +158,9 @@ export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Re
 export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   try {
-    const result = await db.query('DELETE FROM ocorrencias_detalhadas WHERE id = $1', [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
-    }
+    await prisma.ocorrenciaDetalhada.delete({ where: { id: Number(id) } });
     logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada deletada.');
-    return res.status(204).send(); // 204 No Content é mais apropriado para delete
+    return res.status(204).send();
   } catch (error) {
     logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });

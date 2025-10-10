@@ -1,46 +1,65 @@
+// api/src/controllers/unidadesController.ts
+
 import { Request, Response } from 'express';
-import db from '@/db';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma'; // Importa a instância singleton do Prisma Client
 import logger from '@/config/logger';
 
+/**
+ * @description Busca todas as unidades (OBMs) e as informações do CRBM associado.
+ */
 export const getUnidades = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const query = `
-      SELECT 
-        obm.id, 
-        obm.nome AS cidade_nome, 
-        cr.nome AS crbm_nome,
-        cr.id AS crbm_id
-      FROM obms obm
-      JOIN crbms cr ON obm.crbm_id = cr.id
-      ORDER BY cr.nome, obm.nome;
-    `;
-    const { rows } = await db.query(query);
-    
-    // --- CORREÇÃO APLICADA AQUI ---
-    // Garante que a resposta seja sempre um JSON com um array,
-    // mesmo que a consulta não retorne nenhuma linha.
-    res.status(200).json(rows || []);
-    // --- FIM DA CORREÇÃO ---
+    const unidades = await prisma.oBM.findMany({
+      // O 'include' funciona como um JOIN, trazendo os dados do CRBM relacionado.
+      include: {
+        crbm: true, // Inclui o objeto CRBM completo
+      },
+      orderBy: [
+        { crbm: { nome: 'asc' } }, // Ordena primeiro pelo nome do CRBM
+        { nome: 'asc' },          // Depois pelo nome da OBM
+      ],
+    });
 
+    // Formata a resposta para corresponder à estrutura anterior, se necessário.
+    const resultadoFormatado = unidades.map(obm => ({
+      id: obm.id,
+      cidade_nome: obm.nome,
+      crbm_nome: obm.crbm.nome,
+      crbm_id: obm.crbm.id,
+    }));
+
+    res.status(200).json(resultadoFormatado);
   } catch (error) {
     logger.error({ err: error }, 'Erro ao buscar unidades (OBMs).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
+/**
+ * @description Cria uma nova unidade (OBM).
+ */
 export const criarUnidade = async (req: Request, res: Response): Promise<void> => {
   const { nome, crbm_id } = req.body;
+
   if (!nome || !crbm_id) {
     res.status(400).json({ message: 'Nome da OBM e ID do CRBM são obrigatórios.' });
     return;
   }
+
   try {
-    const query = 'INSERT INTO obms (nome, crbm_id) VALUES ($1, $2) RETURNING *';
-    const { rows } = await db.query(query, [nome, crbm_id]);
-    logger.info({ unidade: rows[0] }, 'Nova unidade (OBM) criada.');
-    res.status(201).json(rows[0]);
+    const novaUnidade = await prisma.oBM.create({
+      data: {
+        nome: nome,
+        crbm_id: crbm_id,
+      },
+    });
+    logger.info({ unidade: novaUnidade }, 'Nova unidade (OBM) criada.');
+    res.status(201).json(novaUnidade);
   } catch (error) {
-    if ((error as any).code === '23505') {
+    // O Prisma fornece códigos de erro específicos para diferentes violações de constraints.
+    // P2002 é o código para violação de constraint de unicidade (unique).
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       res.status(409).json({ message: `A OBM "${nome}" já existe.` });
       return;
     }
@@ -49,41 +68,60 @@ export const criarUnidade = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+/**
+ * @description Atualiza uma unidade (OBM) existente.
+ */
 export const atualizarUnidade = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { nome, crbm_id } = req.body;
+
   if (!nome || !crbm_id) {
     res.status(400).json({ message: 'Nome da OBM e ID do CRBM são obrigatórios.' });
     return;
   }
+
   try {
-    const query = 'UPDATE obms SET nome = $1, crbm_id = $2 WHERE id = $3 RETURNING *';
-    const { rows } = await db.query(query, [nome, crbm_id, id]);
-    if (rows.length === 0) {
+    const unidadeAtualizada = await prisma.oBM.update({
+      where: { id: Number(id) }, // Prisma espera que o ID seja do tipo correto (neste caso, número)
+      data: {
+        nome: nome,
+        crbm_id: crbm_id,
+      },
+    });
+    logger.info({ unidade: unidadeAtualizada }, 'Unidade (OBM) atualizada.');
+    res.status(200).json(unidadeAtualizada);
+  } catch (error) {
+    // P2025 é o código para "registro não encontrado" em uma operação de update ou delete.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       res.status(404).json({ message: 'OBM não encontrada.' });
       return;
     }
-    logger.info({ unidade: rows[0] }, 'Unidade (OBM) atualizada.');
-    res.status(200).json(rows[0]);
-  } catch (error) {
     logger.error({ err: error, params: req.params, body: req.body }, 'Erro ao atualizar unidade (OBM).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
+/**
+ * @description Exclui uma unidade (OBM).
+ */
 export const excluirUnidade = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+
   try {
-    const result = await db.query('DELETE FROM obms WHERE id = $1', [id]);
-    if (result.rowCount === 0) {
-      res.status(404).json({ message: 'OBM não encontrada.' });
-      return;
-    }
+    await prisma.oBM.delete({
+      where: { id: Number(id) },
+    });
     logger.info({ unidadeId: id }, 'Unidade (OBM) excluída.');
     res.status(204).send();
   } catch (error) {
-    if ((error as any).code === '23503') {
+    // P2003 é o código para violação de constraint de chave estrangeira (foreign key).
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a outros registros.' });
+      return;
+    }
+    // P2025 indica que o registro a ser excluído não foi encontrado.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      res.status(404).json({ message: 'OBM não encontrada.' });
       return;
     }
     logger.error({ err: error, unidadeId: id }, 'Erro ao excluir unidade (OBM).');
@@ -91,10 +129,17 @@ export const excluirUnidade = async (req: Request, res: Response): Promise<void>
   }
 };
 
+/**
+ * @description Busca todos os CRBMs.
+ */
 export const getCrbms = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const { rows } = await db.query('SELECT * FROM crbms ORDER BY nome ASC');
-    res.status(200).json(rows);
+    const crbms = await prisma.cRBM.findMany({
+      orderBy: {
+        nome: 'asc',
+      },
+    });
+    res.status(200).json(crbms);
   } catch (error) {
     logger.error({ err: error }, 'Erro ao buscar CRBMs.');
     res.status(500).json({ message: 'Erro interno do servidor.' });

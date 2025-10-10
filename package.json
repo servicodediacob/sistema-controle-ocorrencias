@@ -2,13 +2,24 @@
   "name": "sistema-ocorrencias-monorepo",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "build": "npm run build --workspace=api",
-    "start": "npm run start --workspace=api",
-    "migrate": "npm run migrate --workspace=api"
-  },
+  "description": "Monorepo para o Sistema de Controle de Ocorrências",
+  "author": "Alexandre",
+  "license": "ISC",
   "workspaces": [
-    "api",
-    "frontend"
-  ]
+    "frontend",
+    "api"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=api",
+    "build:frontend": "npm run build --workspace=frontend",
+    "test:frontend": "npm test --workspace=frontend",
+    "test:e2e": "npm run test:e2e --workspace=frontend"
+  },
+  "overrides": {
+    "vite": "^5.0.0"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^10.0.0"
+  }
 }

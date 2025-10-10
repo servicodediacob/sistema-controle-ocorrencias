@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useAuth } from '../contexts/useAuth';
+import { useAuth } from '../contexts/AuthProvider';
 
 interface SocketContextValue {
   socket: Socket | null;

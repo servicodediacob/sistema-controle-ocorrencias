@@ -1,4 +1,4 @@
-// Caminho: frontend/src/pages/GestaoAcessoPage.tsx
+// frontend/src/pages/GestaoAcessoPage.tsx
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { getSolicitacoes, gerenciarSolicitacao, ISolicitacao } from '../services/api';
@@ -13,7 +13,7 @@ const SolicitacaoCard: React.FC<{ solicitacao: ISolicitacao; onAction: (id: numb
         <div>
           <p className="font-bold text-text-strong">{solicitacao.nome}</p>
           <p className="text-sm">{solicitacao.email}</p>
-          <p className="text-sm text-gray-500">OBM: {solicitacao.obm_nome}</p>
+          <p className="text-sm text-gray-400">OBM: {solicitacao.obm_nome}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasses[solicitacao.status]}`}>
           {solicitacao.status}
@@ -85,8 +85,11 @@ function GestaoAcessoPage(): ReactElement {
   });
 
   return (
-    <MainLayout pageTitle="Gerenciar Solicitações de Acesso">
-      {/* ======================= CORREÇÃO APLICADA ======================= */}
+    // A prop 'pageTitle' foi removida do MainLayout
+    <MainLayout>
+      {/* O título agora é um elemento h1 dentro do conteúdo */}
+      <h1 className="text-3xl font-bold text-text-strong mb-8">Gerenciar Solicitações de Acesso</h1>
+
       <div className="mb-6 flex items-center gap-4 rounded-lg bg-surface border border-border p-4">
         <label htmlFor="status-filter" className="font-semibold text-text-strong">Filtrar por status:</label>
         <select
@@ -106,10 +109,9 @@ function GestaoAcessoPage(): ReactElement {
         <div className="flex justify-center p-10"><Spinner text="Carregando solicitações..." /></div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-0 md:border-none md:bg-transparent">
-          {/* Tabela para Desktop */}
           <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
             <table className="min-w-full divide-y divide-border">
-              <thead className="bg-gray-200 dark:bg-gray-800">
+              <thead className="bg-gray-800">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Nome</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Email</th>
@@ -121,7 +123,7 @@ function GestaoAcessoPage(): ReactElement {
               </thead>
               <tbody className="divide-y divide-border bg-surface">
                 {filteredSolicitacoes.length > 0 ? filteredSolicitacoes.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                  <tr key={s.id} className="hover:bg-gray-700/50">
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{s.nome}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{s.email}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-text">{s.obm_nome}</td>
@@ -147,7 +149,6 @@ function GestaoAcessoPage(): ReactElement {
             </table>
           </div>
 
-          {/* Cards para Mobile */}
           <div className="space-y-4 md:hidden">
             {filteredSolicitacoes.length > 0 ? (
               filteredSolicitacoes.map(s => (

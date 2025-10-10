@@ -3,37 +3,50 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// api/src/db/index.ts
 const pg_1 = require("pg");
-require("../config/envLoader"); // Garante que as variáveis de ambiente sejam carregadas primeiro
 const logger_1 = __importDefault(require("../config/logger"));
-// 1. Validação da Variável de Ambiente
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-    logger_1.default.fatal('ERRO FATAL: A variável de ambiente DATABASE_URL não está definida.');
-    process.exit(1); // Encerra a aplicação se a URL do banco não existir
+// Garante que as variáveis de ambiente sejam carregadas antes do pool
+require("../config/envLoader");
+// Usa explicitamente a connectionString para evitar problemas quando
+// o processo é iniciado fora do diretório api/.
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    logger_1.default.error('[DB] DATABASE_URL não definida. Verifique seu arquivo .env');
 }
-// 2. Determina se estamos em produção de forma mais segura
-const isProduction = process.env.NODE_ENV === 'production';
-// 3. Monta o objeto de configuração da conexão
-const connectionConfig = {
-    connectionString: databaseUrl,
-    // Adiciona configuração SSL apenas em produção
-    ssl: isProduction ? { rejectUnauthorized: false } : false,
+const config = {
+    connectionString,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 };
-// 4. Log de diagnóstico aprimorado
-logger_1.default.info({
-    production_mode: isProduction,
-    ssl_enabled: connectionConfig.ssl !== false,
-    db_host: new URL(databaseUrl).hostname,
-}, '[DB] Configurando pool de conexão.');
-// 5. Cria o pool com a configuração correta
-const pool = new pg_1.Pool(connectionConfig);
-// Adiciona um listener para erros no pool
-pool.on('error', (err) => {
-    logger_1.default.error({ err }, 'Erro inesperado no cliente do pool de banco de dados');
+const pool = new pg_1.Pool(config);
+pool.on('connect', () => {
+    logger_1.default.info('Nova conexão com o banco de dados estabelecida pelo pool.');
 });
-// 6. Exporta o pool e uma função query para uso no restante da aplicação
+pool.on('error', (err) => {
+    logger_1.default.error({ err }, 'Erro inesperado no cliente do pool de banco de dados.');
+});
 exports.default = {
     query: (text, params) => pool.query(text, params),
-    pool: pool,
+    pool,
 };
+// Garante a existência da tabela de auditoria em ambientes de desenvolvimento
+// para evitar erro 42P01 (relation does not exist) quando o banco está limpo.
+(async () => {
+    try {
+        const createSQL = `
+      CREATE TABLE IF NOT EXISTS auditoria_logs (
+        id SERIAL PRIMARY KEY,
+        usuario_id INTEGER,
+        usuario_nome VARCHAR(100),
+        acao VARCHAR(120) NOT NULL,
+        detalhes JSONB DEFAULT '{}'::jsonb,
+        criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
+        await pool.query(createSQL);
+        logger_1.default.info('[DB] auditoria_logs verificada/criada.');
+    }
+    catch (err) {
+        logger_1.default.warn({ err }, '[DB] Falha ao garantir a tabela auditoria_logs.');
+    }
+})();

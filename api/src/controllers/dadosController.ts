@@ -1,18 +1,22 @@
+// api/src/controllers/dadosController.ts
+
 import { Request, Response } from 'express';
-import db from '@/db';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
 
 export const getNaturezas = async (_req: Request, res: Response) => {
   try {
-    const { rows } = await db.query('SELECT id, grupo, subgrupo, abreviacao FROM naturezas_ocorrencia ORDER BY grupo, subgrupo ASC');
-    return res.status(200).json(rows);
+    const naturezas = await prisma.naturezaOcorrencia.findMany({
+      orderBy: [{ grupo: 'asc' }, { subgrupo: 'asc' }],
+    });
+    return res.status(200).json(naturezas);
   } catch (error) {
     logger.error({ err: error }, 'Erro ao buscar naturezas.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-// ======================= INÍCIO DA CORREÇÃO =======================
 export const getNaturezasPorNomes = async (req: Request, res: Response) => {
   const { nomes } = req.body;
 
@@ -21,25 +25,26 @@ export const getNaturezasPorNomes = async (req: Request, res: Response) => {
   }
 
   try {
-    // Consulta SQL corrigida para usar ANY com um array, que é a forma
-    // idiomática e segura de fazer isso no PostgreSQL com o driver 'pg'.
-    const query = `
-      SELECT id, subgrupo 
-      FROM naturezas_ocorrencia 
-      WHERE subgrupo = ANY($1::text[])
-      ORDER BY subgrupo;
-    `;
-    
-    // Passamos o array 'nomes' diretamente como o primeiro (e único) parâmetro.
-    const { rows } = await db.query(query, [nomes]);
-    
-    return res.status(200).json(rows);
+    const naturezas = await prisma.naturezaOcorrencia.findMany({
+      where: {
+        subgrupo: {
+          in: nomes,
+        },
+      },
+      select: {
+        id: true,
+        subgrupo: true,
+      },
+      orderBy: {
+        subgrupo: 'asc',
+      },
+    });
+    return res.status(200).json(naturezas);
   } catch (error) {
     logger.error({ err: error, nomes }, 'Erro ao buscar naturezas por nomes.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
-// ======================= FIM DA CORREÇÃO =======================
 
 export const criarNatureza = async (req: Request, res: Response) => {
   const { grupo, subgrupo, abreviacao } = req.body;
@@ -47,13 +52,18 @@ export const criarNatureza = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Os campos Grupo e Subgrupo são obrigatórios.' });
   }
   try {
-    const query = 'INSERT INTO naturezas_ocorrencia (grupo, subgrupo, abreviacao) VALUES ($1, $2, $3) RETURNING *';
-    const { rows } = await db.query(query, [grupo, subgrupo, abreviacao || null]);
-    logger.info({ natureza: rows[0] }, 'Nova natureza de ocorrência criada.');
-    return res.status(201).json(rows[0]);
+    const novaNatureza = await prisma.naturezaOcorrencia.create({
+      data: {
+        grupo,
+        subgrupo,
+        abreviacao: abreviacao || null,
+      },
+    });
+    logger.info({ natureza: novaNatureza }, 'Nova natureza de ocorrência criada.');
+    return res.status(201).json(novaNatureza);
   } catch (error) {
-    if ((error as any).code === '23505') {
-        return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
     }
     logger.error({ err: error, body: req.body }, 'Erro ao criar natureza.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
@@ -67,16 +77,24 @@ export const atualizarNatureza = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Os campos Grupo e Subgrupo são obrigatórios.' });
   }
   try {
-    const query = 'UPDATE naturezas_ocorrencia SET grupo = $1, subgrupo = $2, abreviacao = $3 WHERE id = $4 RETURNING *';
-    const { rows } = await db.query(query, [grupo, subgrupo, abreviacao || null, id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Natureza não encontrada.' });
-    }
-    logger.info({ natureza: rows[0] }, 'Natureza de ocorrência atualizada.');
-    return res.status(200).json(rows[0]);
+    const naturezaAtualizada = await prisma.naturezaOcorrencia.update({
+      where: { id: Number(id) },
+      data: {
+        grupo,
+        subgrupo,
+        abreviacao: abreviacao || null,
+      },
+    });
+    logger.info({ natureza: naturezaAtualizada }, 'Natureza de ocorrência atualizada.');
+    return res.status(200).json(naturezaAtualizada);
   } catch (error) {
-    if ((error as any).code === '23505') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
         return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
+      }
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Natureza não encontrada.' });
+      }
     }
     logger.error({ err: error, params: req.params, body: req.body }, 'Erro ao atualizar natureza.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
@@ -86,15 +104,19 @@ export const atualizarNatureza = async (req: Request, res: Response) => {
 export const excluirNatureza = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const result = await db.query('DELETE FROM naturezas_ocorrencia WHERE id = $1', [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Natureza não encontrada.' });
-    }
+    await prisma.naturezaOcorrencia.delete({
+      where: { id: Number(id) },
+    });
     logger.info({ naturezaId: id }, 'Natureza de ocorrência excluída.');
     return res.status(204).send();
   } catch (error) {
-    if ((error as any).code === '23503') {
-      return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a registros existentes.' });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2003') {
+        return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a registros existentes.' });
+      }
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Natureza não encontrada.' });
+      }
     }
     logger.error({ err: error, naturezaId: id }, 'Erro ao excluir natureza.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });

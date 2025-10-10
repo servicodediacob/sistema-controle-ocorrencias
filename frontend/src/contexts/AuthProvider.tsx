@@ -1,100 +1,92 @@
-import { createContext, useState, useEffect, ReactNode } from 'react';
-import { login as apiLogin } from '../services/api';
+// frontend/src/contexts/AuthProvider.tsx
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// A interface IUser agora inclui obm_id, resolvendo o erro de tipo em toda a aplicação.
-export interface IUser {
-  id: number;
-  nome: string;
-  email: string;
-  role: 'admin' | 'user';
-  obm_id: number | null; // <-- PROPRIEDADE ADICIONADA
-}
-// ======================= FIM DA CORREÇÃO =======================
+import React, { createContext, useState, useEffect, useCallback, ReactNode, useContext } from 'react';
+import { decodeJwt } from 'jose';
+import { api, login as apiLogin, extractErrorMessage, IUser as ApiUser } from '../services/api';
+
+// 1. Tipos compartilhados
+// Unifica o tipo de usuário com o do serviço de API e permite um alias opcional `role`.
+export type IUser = ApiUser & { role?: 'admin' | 'supervisor' | 'user' };
 
 export interface IAuthContext {
-  isAuthenticated: boolean;
+  user: IUser | null;
+  // Alias para compatibilidade com componentes antigos
   usuario: IUser | null;
   token: string | null;
-  login: (email: string, senha: string) => Promise<void>;
-  logout: () => void;
+  loading: boolean;
+  login(credentials: { email: string; senha: string }): Promise<void>;
+  logout(): void;
 }
 
-export const AuthContext = createContext<IAuthContext | null>(null);
+// 2. CRIAÇÃO DO CONTEXTO
+export const AuthContext = createContext<IAuthContext>({} as IAuthContext);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+// 3. FUNÇÃO AUXILIAR (sem alterações)
+const setUserFromToken = (token: string, setUser: (user: IUser) => void, setToken: (token: string) => void) => {
+  const decoded = decodeJwt<IUser>(token);
+  // Normaliza: se o token tiver apenas `perfil`, cria um alias `role` equivalente
+  if (!decoded.role && decoded.perfil) {
+    decoded.role = decoded.perfil as IUser['role'];
+  }
+  setUser(decoded);
+  setToken(token);
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+};
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [usuario, setUsuario] = useState<IUser | null>(null);
+// 4. COMPONENTE PROVIDER (sem alterações na lógica interna)
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<IUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('usuario');
-      const storedToken = localStorage.getItem('token');
-      
-      if (storedUser && storedToken) {
-        const user = JSON.parse(storedUser) as IUser;
-        setUsuario(user);
-        setToken(storedToken);
-        console.log('[AuthProvider] Sessão restaurada do localStorage para:', user.nome);
+    const storedToken = localStorage.getItem('@siscob:token');
+    if (storedToken) {
+      try {
+        setUserFromToken(storedToken, setUser, setToken);
+      } catch (error) {
+        console.error("Falha ao processar token salvo. Limpando.", error);
+        localStorage.removeItem('@siscob:token');
       }
+    }
+    setLoading(false);
+  }, []);
+
+  const login = useCallback(async (credentials: { email: string; senha: string }) => {
+    setLoading(true);
+    try {
+      const { token: newToken } = await apiLogin(credentials);
+      if (!newToken) throw new Error('O servidor não retornou um token.');
+      localStorage.setItem('@siscob:token', newToken);
+      setUserFromToken(newToken, setUser, setToken);
     } catch (error) {
-      console.error("[AuthProvider] Falha ao carregar dados de autenticação do localStorage.", error);
-      localStorage.clear();
+      console.error('Falha no processo de login:', error);
+      throw new Error(extractErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const login = async (email: string, senha: string): Promise<void> => {
-    try {
-      const data = await apiLogin(email, senha);
-      if (data && data.usuario && data.token) {
-        setUsuario(data.usuario);
-        setToken(data.token);
-        localStorage.setItem('usuario', JSON.stringify(data.usuario));
-        localStorage.setItem('token', data.token);
-        console.log('[AuthProvider] Login bem-sucedido para:', data.usuario.nome);
-      } else {
-        throw new Error('Resposta de login inválida do servidor.');
-      }
-    } catch (error) {
-      console.error("[AuthProvider] Erro durante o login:", error);
-      throw error;
-    }
-  };
-
-  const logout = (): void => {
-    console.log('[AuthProvider] Realizando logout.');
-    setUsuario(null);
+  const logout = useCallback(() => {
+    localStorage.removeItem('@siscob:token');
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
     setToken(null);
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('token');
-  };
-
-  const value = { 
-    usuario, 
-    token, 
-    login, 
-    logout, 
-    isAuthenticated: !!usuario,
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a202c', color: 'white' }}>
-        Verificando autenticação...
-      </div>
-    );
-  }
+    window.location.href = '/login';
+  }, []);
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
+    <AuthContext.Provider value={{ user, usuario: user, token, loading, login, logout }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
+};
+
+// 5. HOOK useAuth EXPORTADO DO MESMO ARQUIVO
+export const useAuth = (): IAuthContext => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };

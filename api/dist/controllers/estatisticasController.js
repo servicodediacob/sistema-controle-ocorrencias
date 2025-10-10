@@ -4,8 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
-const db_1 = __importDefault(require("../db"));
-const logger_1 = __importDefault(require("../config/logger"));
+const prisma_1 = require("../lib/prisma");
+const logger_1 = __importDefault(require("@/config/logger"));
+const date_1 = require("@/utils/date");
 const registrarEstatisticasLote = async (req, res) => {
     const { data_registro, obm_id, estatisticas } = req.body;
     const usuario = req.usuario;
@@ -18,38 +19,41 @@ const registrarEstatisticasLote = async (req, res) => {
     if (!data_registro || !obm_id || !estatisticas) {
         return res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
     }
-    const client = await db_1.default.pool.connect();
     try {
-        await client.query('BEGIN');
-        await client.query(`DELETE FROM estatisticas_diarias WHERE data_registro = $1 AND obm_id = $2`, [data_registro, obm_id]);
-        const query = `
-      INSERT INTO estatisticas_diarias (data_registro, obm_id, natureza_id, quantidade, usuario_id)
-      VALUES ($1, $2, $3, $4, $5);
-    `;
-        let totalRegistrosCriados = 0;
-        for (const stat of estatisticas) {
-            const quantidade = Number(stat.quantidade);
-            if (!quantidade || quantidade <= 0)
-                continue;
-            const values = [data_registro, obm_id, stat.natureza_id, quantidade, usuario.id];
-            await client.query(query, values);
-            totalRegistrosCriados++;
-        }
-        await client.query('COMMIT');
-        if (totalRegistrosCriados === 0) {
+        const dataParsed = (0, date_1.parseDateParam)(data_registro, 'data_registro');
+        await prisma_1.prisma.$transaction(async (tx) => {
+            await tx.estatisticaDiaria.deleteMany({
+                where: {
+                    data_registro: dataParsed,
+                    obm_id: obm_id,
+                },
+            });
+            const dadosParaCriar = estatisticas
+                .filter(stat => stat.quantidade > 0)
+                .map(stat => ({
+                data_registro: dataParsed,
+                obm_id: obm_id,
+                natureza_id: stat.natureza_id,
+                quantidade: stat.quantidade,
+                usuario_id: usuario.id,
+            }));
+            if (dadosParaCriar.length > 0) {
+                await tx.estatisticaDiaria.createMany({
+                    data: dadosParaCriar,
+                });
+            }
+        });
+        const totalRegistros = estatisticas.filter(s => s.quantidade > 0).length;
+        if (totalRegistros === 0) {
             logger_1.default.info({ data: data_registro, obm_id }, 'Registros de estatísticas limpos (nenhum dado novo para inserir).');
-            return res.status(200).json({ message: 'Nenhuma estatística para registrar (quantidades zeradas). Registros anteriores para o dia e OBM foram limpos.' });
+            return res.status(200).json({ message: 'Nenhuma estatística para registrar. Registros anteriores para o dia e OBM foram limpos.' });
         }
-        logger_1.default.info({ data: data_registro, obm_id, count: totalRegistrosCriados }, 'Estatísticas em lote registradas com sucesso.');
-        return res.status(201).json({ message: `${totalRegistrosCriados} tipo(s) de estatística registrados com sucesso para a OBM!` });
+        logger_1.default.info({ data: data_registro, obm_id, count: totalRegistros }, 'Estatísticas em lote registradas com sucesso.');
+        return res.status(201).json({ message: `${totalRegistros} tipo(s) de estatística registrados com sucesso para a OBM!` });
     }
     catch (error) {
-        await client.query('ROLLBACK');
         logger_1.default.error({ err: error, body: req.body }, 'Erro ao registrar estatísticas em lote.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-    finally {
-        client.release();
     }
 };
 exports.registrarEstatisticasLote = registrarEstatisticasLote;
@@ -59,36 +63,54 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
         return res.status(400).json({ message: 'A data é obrigatória.' });
     }
     try {
-        const query = `
-      WITH dados_unificados AS (
-        SELECT ed.natureza_id, ed.quantidade, o.nome AS cidade_nome, cr.nome AS crbm_nome
-        FROM estatisticas_diarias ed
-        JOIN obms o ON ed.obm_id = o.id
-        JOIN crbms cr ON o.crbm_id = cr.id
-        WHERE ed.data_registro = $1
-        
-        UNION ALL
-        
-        SELECT od.natureza_id, 1 AS quantidade, o.nome AS cidade_nome, cr.nome AS crbm_nome
-        FROM ocorrencias_detalhadas od
-        JOIN obms o ON od.cidade_id = o.id
-        JOIN crbms cr ON o.crbm_id = cr.id
-        WHERE od.data_ocorrencia = $1
-      )
-      SELECT
-        du.cidade_nome,
-        n.subgrupo as natureza_nome,
-        n.abreviacao as natureza_abreviacao,
-        du.crbm_nome,
-        SUM(du.quantidade)::integer as quantidade
-      FROM dados_unificados du
-      JOIN naturezas_ocorrencia n ON du.natureza_id = n.id
-      WHERE n.grupo != 'Relatório de Óbitos'
-      GROUP BY du.cidade_nome, n.subgrupo, n.abreviacao, du.crbm_nome
-      ORDER BY du.crbm_nome, du.cidade_nome, n.subgrupo;
-    `;
-        const { rows } = await db_1.default.query(query, [data]);
-        return res.status(200).json(rows);
+        // ======================= INÍCIO DA CORREÇÃO =======================
+        // Usa parseDateParam para evitar problemas de fuso/UTC e garante o dia completo no horário local
+        const base = (0, date_1.parseDateParam)(data, 'data');
+        const dataInicio = new Date(base);
+        dataInicio.setHours(0, 0, 0, 0);
+        const dataFim = new Date(base);
+        dataFim.setHours(23, 59, 59, 999);
+        const estatisticas = await prisma_1.prisma.estatisticaDiaria.findMany({
+            where: { data_registro: { gte: dataInicio, lte: dataFim } },
+            include: {
+                obm: { include: { crbm: true } },
+                natureza: true,
+            },
+        });
+        const detalhadas = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
+            where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } },
+            include: {
+                cidade: { include: { crbm: true } },
+                natureza: true,
+            },
+        });
+        // ======================= FIM DA CORREÇÃO =======================
+        const dadosAgrupados = {};
+        const processarItem = (item, quantidade) => {
+            const cidadeNome = item.cidade?.nome || item.obm?.nome;
+            const crbmNome = item.cidade?.crbm?.nome || item.obm?.crbm?.nome;
+            const naturezaNome = item.natureza?.subgrupo;
+            const naturezaAbreviacao = item.natureza?.abreviacao;
+            if (cidadeNome && naturezaNome && crbmNome) {
+                const chave = `${cidadeNome}-${naturezaNome}`;
+                if (!dadosAgrupados[chave]) {
+                    dadosAgrupados[chave] = {
+                        cidade_nome: cidadeNome,
+                        crbm_nome: crbmNome,
+                        natureza_id: item.natureza?.id,
+                        natureza_grupo: item.natureza?.grupo,
+                        natureza_nome: naturezaNome,
+                        natureza_abreviacao: naturezaAbreviacao || null,
+                        quantidade: 0,
+                    };
+                }
+                dadosAgrupados[chave].quantidade += quantidade;
+            }
+        };
+        estatisticas.forEach(item => processarItem(item, item.quantidade));
+        detalhadas.forEach(item => processarItem(item, 1));
+        const resultadoFinal = Object.values(dadosAgrupados).sort((a, b) => a.cidade_nome.localeCompare(b.cidade_nome));
+        return res.status(200).json(resultadoFinal);
     }
     catch (error) {
         logger_1.default.error({ err: error, query: req.query }, 'Erro ao buscar estatísticas unificadas por data.');
@@ -96,6 +118,7 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
     }
 };
 exports.getEstatisticasAgrupadasPorData = getEstatisticasAgrupadasPorData;
+// ... (resto do arquivo sem alterações)
 const limparTodosOsDadosDoDia = async (req, res) => {
     const { data } = req.query;
     const usuario = req.usuario;
@@ -105,24 +128,20 @@ const limparTodosOsDadosDoDia = async (req, res) => {
     if (!data || typeof data !== 'string') {
         return res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
     }
-    const client = await db_1.default.pool.connect();
+    const dataInicio = new Date(data + 'T00:00:00.000Z');
+    const dataFim = new Date(data + 'T23:59:59.999Z');
     try {
-        await client.query('BEGIN');
-        const loteResult = await client.query(`DELETE FROM estatisticas_diarias WHERE data_registro = $1`, [data]);
-        const detalhadasResult = await client.query(`DELETE FROM ocorrencias_detalhadas WHERE data_ocorrencia = $1`, [data]);
-        await client.query(`UPDATE ocorrencia_destaque SET ocorrencia_id = NULL WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM ocorrencias_detalhadas WHERE id = ocorrencia_destaque.ocorrencia_id)`);
-        await client.query('COMMIT');
-        const totalLimpado = (loteResult.rowCount ?? 0) + (detalhadasResult.rowCount ?? 0);
+        const [loteResult, detalhadasResult] = await prisma_1.prisma.$transaction([
+            prisma_1.prisma.estatisticaDiaria.deleteMany({ where: { data_registro: { gte: dataInicio, lte: dataFim } } }),
+            prisma_1.prisma.ocorrenciaDetalhada.deleteMany({ where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } } }),
+        ]);
+        const totalLimpado = loteResult.count + detalhadasResult.count;
         logger_1.default.info({ data, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
         return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });
     }
     catch (error) {
-        await client.query('ROLLBACK');
         logger_1.default.error({ err: error, query: req.query }, 'Erro ao limpar todos os dados do dia.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-    finally {
-        client.release();
     }
 };
 exports.limparTodosOsDadosDoDia = limparTodosOsDadosDoDia;

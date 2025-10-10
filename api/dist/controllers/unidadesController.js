@@ -1,25 +1,36 @@
 "use strict";
+// api/src/controllers/unidadesController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCrbms = exports.excluirUnidade = exports.atualizarUnidade = exports.criarUnidade = exports.getUnidades = void 0;
-const db_1 = __importDefault(require("../db"));
-const logger_1 = __importDefault(require("../config/logger"));
+const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma"); // Importa a instância singleton do Prisma Client
+const logger_1 = __importDefault(require("@/config/logger"));
+/**
+ * @description Busca todas as unidades (OBMs) e as informações do CRBM associado.
+ */
 const getUnidades = async (_req, res) => {
     try {
-        const query = `
-      SELECT 
-        obm.id, 
-        obm.nome AS cidade_nome, 
-        cr.nome AS crbm_nome,
-        cr.id AS crbm_id
-      FROM obms obm
-      JOIN crbms cr ON obm.crbm_id = cr.id
-      ORDER BY cr.nome, obm.nome;
-    `;
-        const { rows } = await db_1.default.query(query);
-        res.status(200).json(rows);
+        const unidades = await prisma_1.prisma.oBM.findMany({
+            // O 'include' funciona como um JOIN, trazendo os dados do CRBM relacionado.
+            include: {
+                crbm: true, // Inclui o objeto CRBM completo
+            },
+            orderBy: [
+                { crbm: { nome: 'asc' } }, // Ordena primeiro pelo nome do CRBM
+                { nome: 'asc' }, // Depois pelo nome da OBM
+            ],
+        });
+        // Formata a resposta para corresponder à estrutura anterior, se necessário.
+        const resultadoFormatado = unidades.map(obm => ({
+            id: obm.id,
+            cidade_nome: obm.nome,
+            crbm_nome: obm.crbm.nome,
+            crbm_id: obm.crbm.id,
+        }));
+        res.status(200).json(resultadoFormatado);
     }
     catch (error) {
         logger_1.default.error({ err: error }, 'Erro ao buscar unidades (OBMs).');
@@ -27,6 +38,9 @@ const getUnidades = async (_req, res) => {
     }
 };
 exports.getUnidades = getUnidades;
+/**
+ * @description Cria uma nova unidade (OBM).
+ */
 const criarUnidade = async (req, res) => {
     const { nome, crbm_id } = req.body;
     if (!nome || !crbm_id) {
@@ -34,13 +48,19 @@ const criarUnidade = async (req, res) => {
         return;
     }
     try {
-        const query = 'INSERT INTO obms (nome, crbm_id) VALUES ($1, $2) RETURNING *';
-        const { rows } = await db_1.default.query(query, [nome, crbm_id]);
-        logger_1.default.info({ unidade: rows[0] }, 'Nova unidade (OBM) criada.');
-        res.status(201).json(rows[0]);
+        const novaUnidade = await prisma_1.prisma.oBM.create({
+            data: {
+                nome: nome,
+                crbm_id: crbm_id,
+            },
+        });
+        logger_1.default.info({ unidade: novaUnidade }, 'Nova unidade (OBM) criada.');
+        res.status(201).json(novaUnidade);
     }
     catch (error) {
-        if (error.code === '23505') {
+        // O Prisma fornece códigos de erro específicos para diferentes violações de constraints.
+        // P2002 é o código para violação de constraint de unicidade (unique).
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             res.status(409).json({ message: `A OBM "${nome}" já existe.` });
             return;
         }
@@ -49,6 +69,9 @@ const criarUnidade = async (req, res) => {
     }
 };
 exports.criarUnidade = criarUnidade;
+/**
+ * @description Atualiza uma unidade (OBM) existente.
+ */
 const atualizarUnidade = async (req, res) => {
     const { id } = req.params;
     const { nome, crbm_id } = req.body;
@@ -57,35 +80,48 @@ const atualizarUnidade = async (req, res) => {
         return;
     }
     try {
-        const query = 'UPDATE obms SET nome = $1, crbm_id = $2 WHERE id = $3 RETURNING *';
-        const { rows } = await db_1.default.query(query, [nome, crbm_id, id]);
-        if (rows.length === 0) {
+        const unidadeAtualizada = await prisma_1.prisma.oBM.update({
+            where: { id: Number(id) }, // Prisma espera que o ID seja do tipo correto (neste caso, número)
+            data: {
+                nome: nome,
+                crbm_id: crbm_id,
+            },
+        });
+        logger_1.default.info({ unidade: unidadeAtualizada }, 'Unidade (OBM) atualizada.');
+        res.status(200).json(unidadeAtualizada);
+    }
+    catch (error) {
+        // P2025 é o código para "registro não encontrado" em uma operação de update ou delete.
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             res.status(404).json({ message: 'OBM não encontrada.' });
             return;
         }
-        logger_1.default.info({ unidade: rows[0] }, 'Unidade (OBM) atualizada.');
-        res.status(200).json(rows[0]);
-    }
-    catch (error) {
         logger_1.default.error({ err: error, params: req.params, body: req.body }, 'Erro ao atualizar unidade (OBM).');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
 exports.atualizarUnidade = atualizarUnidade;
+/**
+ * @description Exclui uma unidade (OBM).
+ */
 const excluirUnidade = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await db_1.default.query('DELETE FROM obms WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            res.status(404).json({ message: 'OBM não encontrada.' });
-            return;
-        }
+        await prisma_1.prisma.oBM.delete({
+            where: { id: Number(id) },
+        });
         logger_1.default.info({ unidadeId: id }, 'Unidade (OBM) excluída.');
         res.status(204).send();
     }
     catch (error) {
-        if (error.code === '23503') {
+        // P2003 é o código para violação de constraint de chave estrangeira (foreign key).
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
             res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a outros registros.' });
+            return;
+        }
+        // P2025 indica que o registro a ser excluído não foi encontrado.
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            res.status(404).json({ message: 'OBM não encontrada.' });
             return;
         }
         logger_1.default.error({ err: error, unidadeId: id }, 'Erro ao excluir unidade (OBM).');
@@ -93,10 +129,17 @@ const excluirUnidade = async (req, res) => {
     }
 };
 exports.excluirUnidade = excluirUnidade;
+/**
+ * @description Busca todos os CRBMs.
+ */
 const getCrbms = async (_req, res) => {
     try {
-        const { rows } = await db_1.default.query('SELECT * FROM crbms ORDER BY nome ASC');
-        res.status(200).json(rows);
+        const crbms = await prisma_1.prisma.cRBM.findMany({
+            orderBy: {
+                nome: 'asc',
+            },
+        });
+        res.status(200).json(crbms);
     }
     catch (error) {
         logger_1.default.error({ err: error }, 'Erro ao buscar CRBMs.');
