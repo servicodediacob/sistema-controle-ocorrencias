@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "npx ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
-    "build": "tsc && npx tsconfig-paths -p tsconfig.json -s ./src -o ./dist",
+    "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
     "migrate": "prisma migrate deploy"
