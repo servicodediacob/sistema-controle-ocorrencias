@@ -27,7 +27,6 @@
     "@types/jsonwebtoken": "^9.x.x",
     "@types/pg": "^8.x.x",
     "@types/cors": "^2.x.x",
-    "@types/socket.io": "^4.x.x",
     "prisma": "^5.x.x",
     "typescript": "^5.x.x"
   }
