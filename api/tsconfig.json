@@ -6,13 +6,12 @@
     "rootDir": "./src",
     "strict": true,
     "noImplicitAny": false,
-    "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": "./src",
+    "baseUrl": ".", // Manter como '.' para o compilador
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["./dist/*"] // ALTERADO AQUI: Aponta para o diretório de saída
     },
     "resolveJsonModule": true,
     "types": ["node"]

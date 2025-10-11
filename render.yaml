@@ -3,9 +3,9 @@ services:
     name: api-siscob
     env: node
     plan: free
-    rootDirectory: api # ESSA LINHA É CRÍTICA PARA MONOREPOS
+    rootDirectory: api # ESSA LINHA É CRÍTICA E DEVE ESTAR PRESENTE
     buildCommand: "npm install --production=false && npm run build && npm run migrate"
-    startCommand: "npm start" # Agora este comando será executado DENTRO do diretório 'api/'
+    startCommand: "npm start" # Ou "node -r tsconfig-paths/register dist/server.js" se preferir explicitar
     healthCheckPath: /api/diag
     envVars:
       - key: NODE_ENV
