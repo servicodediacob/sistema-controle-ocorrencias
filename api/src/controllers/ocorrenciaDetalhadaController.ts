@@ -104,6 +104,9 @@ export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res:
       natureza_grupo: od.natureza.grupo,
       natureza_nome: od.natureza.subgrupo,
       cidade_nome: od.cidade.nome,
+      horario_ocorrencia: od.horario_ocorrencia
+        ? new Date((od.horario_ocorrencia as unknown as string)).toISOString().substring(11, 16)
+        : null,
     }));
 
     return res.status(200).json(resultadoFormatado);
