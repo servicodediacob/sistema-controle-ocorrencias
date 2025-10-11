@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "test": "jest",
     "migrate": "prisma migrate deploy"
-  },
+  },  
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },

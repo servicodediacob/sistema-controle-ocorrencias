@@ -1,9 +1,10 @@
 // api/src/controllers/dadosController.ts
 
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
+// Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
+const isPrismaKnownError = (e: unknown): e is { code: string } => !!e && typeof (e as any).code === 'string';
 
 export const getNaturezas = async (_req: Request, res: Response) => {
   try {
@@ -62,7 +63,7 @@ export const criarNatureza = async (req: Request, res: Response) => {
     logger.info({ natureza: novaNatureza }, 'Nova natureza de ocorrência criada.');
     return res.status(201).json(novaNatureza);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (isPrismaKnownError(error) && error.code === 'P2002') {
       return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
     }
     logger.error({ err: error, body: req.body }, 'Erro ao criar natureza.');
@@ -88,7 +89,7 @@ export const atualizarNatureza = async (req: Request, res: Response) => {
     logger.info({ natureza: naturezaAtualizada }, 'Natureza de ocorrência atualizada.');
     return res.status(200).json(naturezaAtualizada);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (isPrismaKnownError(error)) {
       if (error.code === 'P2002') {
         return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
       }
@@ -110,7 +111,7 @@ export const excluirNatureza = async (req: Request, res: Response) => {
     logger.info({ naturezaId: id }, 'Natureza de ocorrência excluída.');
     return res.status(204).send();
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (isPrismaKnownError(error)) {
       if (error.code === 'P2003') {
         return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a registros existentes.' });
       }
