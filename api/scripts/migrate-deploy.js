@@ -8,7 +8,7 @@
 */
 
 const { spawnSync } = require('node:child_process');
-const { existsSync } = require('node:fs');
+const { existsSync, readdirSync } = require('node:fs');
 const { join } = require('node:path');
 
 const prisma = (...args) => spawnSync('npx', ['prisma', ...args], { encoding: 'utf8' });
@@ -18,7 +18,17 @@ function migrationsPath(name) {
 }
 
 function hasMigration(name) {
-  return existsSync(migrationsPath(name));
+  return existsSync(join(migrationsPath(name), 'migration.sql'));
+}
+
+function listMigrationNames() {
+  const base = join(__dirname, '..', 'prisma', 'migrations');
+  if (!existsSync(base)) return [];
+  return readdirSync(base, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .filter((name) => existsSync(join(base, name, 'migration.sql')))
+    .sort();
 }
 
 function resolveApplied(name) {
@@ -50,14 +60,28 @@ if (!out.includes('P3005')) {
 
 console.log('[migrate] Detected P3005 (database not empty). Applying baseline adoption...');
 
-// 1) Try to mark a no-op baseline if present
-resolveApplied('00000000000000_baseline');
+const migrations = listMigrationNames();
+console.log('[migrate] Local migrations detected:', migrations.join(', ') || '(none)');
+if (migrations.length === 0) {
+  console.log('[migrate] No migrations found locally; cannot baseline.');
+  process.exit(first.status || 1);
+}
 
-// 2) If the DB already has the tables from the first migration, mark it as applied too
-//    Adjust the name here if your first migration folder name changes.
-resolveApplied('20251007110636_initial_schema');
+// 1) Try to mark a no-op baseline if present (only if folder contains migration.sql)
+if (hasMigration('00000000000000_baseline')) {
+  resolveApplied('00000000000000_baseline');
+} else {
+  console.log('[migrate] Baseline folder not present or missing migration.sql; skipping baseline.');
+}
+
+// 2) Mark the earliest real migration as applied (first after baseline)
+const firstReal = migrations.find((m) => m !== '00000000000000_baseline');
+if (firstReal) {
+  resolveApplied(firstReal);
+} else {
+  console.log('[migrate] No non-baseline migrations to apply as resolved.');
+}
 
 // 3) Try deploy again
 const second = deploy();
 process.exit(second.status || 0);
-
