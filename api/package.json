@@ -11,11 +11,23 @@
   "dependencies": {
     "@prisma/client": "^5.x.x",
     "express": "^4.x.x",
-    "dotenv": "^16.x.x"
+    "dotenv": "^16.x.x",
+    "pino": "^8.x.x",
+    "bcryptjs": "^2.x.x",
+    "jsonwebtoken": "^9.x.x",
+    "pg": "^8.x.x",
+    "cors": "^2.x.x",
+    "socket.io": "^4.x.x"
   },
   "devDependencies": {
     "@types/express": "^4.x.x",
     "@types/node": "^20.x.x",
+    "@types/pino": "^7.x.x",
+    "@types/bcryptjs": "^2.x.x",
+    "@types/jsonwebtoken": "^9.x.x",
+    "@types/pg": "^8.x.x",
+    "@types/cors": "^2.x.x",
+    "@types/socket.io": "^4.x.x",
     "prisma": "^5.x.x",
     "typescript": "^5.x.x"
   }
