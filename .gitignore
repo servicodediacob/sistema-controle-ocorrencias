@@ -11,6 +11,7 @@
 # Arquivos de ambiente
 .env*
 !/.env.example
+cypress.env.json
 
 # Logs
 npm-debug.log*

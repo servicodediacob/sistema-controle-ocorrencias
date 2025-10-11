@@ -13,8 +13,9 @@ export default defineConfig({
     retries: 1,
   },
   env: {
-    apiBase: 'http://localhost:3001/api',
-    adminEmail: 'timbo.correa@gmail.com',
-    adminSenha: '22091975',
+    // Use variáveis de ambiente no CI/Prod; mantém fallback local para apiBase
+    apiBase: process.env.CYPRESS_API_BASE || 'http://localhost:3001/api',
+    adminEmail: process.env.CYPRESS_ADMIN_EMAIL,
+    adminSenha: process.env.CYPRESS_ADMIN_SENHA,
   },
 });
