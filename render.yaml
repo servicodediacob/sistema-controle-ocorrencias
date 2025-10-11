@@ -1,25 +1,11 @@
-# render.yaml
-
 services:
   - type: web
     name: api-siscob
     env: node
     plan: free
-    # ======================= INÍCIO DA CORREÇÃO =======================
-    # Define o diretório raiz do serviço como a pasta 'api'.
-    # O Render irá operar dentro deste diretório.
-    rootDir: api
-    
-    # Comandos de build executados no diretório 'api'.
-    # 1. npm install: Instala dependências de produção e desenvolvimento.
-    # 2. npm run build: Compila o TypeScript para JavaScript.
-    # 3. npm run db:migrate up: Aplica migrações pendentes no banco de dados de produção.
-    buildCommand: "npm install && npm run build && npm run db:migrate up"
-    
-    # Comando para iniciar o servidor após o build.
-    # Não precisa mais de 'cd api', pois já estamos no diretório correto.
-    startCommand: "npm start"
-    # ======================= FIM DA CORREÇÃO =======================
+    rootDirectory: api # Adicionado aqui para apontar para o diretório do backend
+    buildCommand: "npm install --production=false && npm run build && npm run migrate"
+    startCommand: "node -r tsconfig-paths/register dist/server.js"
     healthCheckPath: /api/diag
     envVars:
       - key: NODE_ENV
@@ -28,13 +14,7 @@ services:
         value: info
       - key: JWT_SECRET
         sync: false
-      - key: ADMIN_EMAIL
-        sync: false
-      - key: ADMIN_PASSWORD
-        sync: false
+      - key: ALLOW_SCHEMA_RESET
+        value: false
       - key: DATABASE_URL
-        fromDatabase:
-          # Certifique-se de que o nome do banco de dados no Render
-          # corresponde a este valor.
-          name: sistema_ocorrencias_db 
-          property: connectionString
+        sync: false

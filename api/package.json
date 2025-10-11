@@ -1,11 +1,11 @@
 {
   "name": "sistema-ocorrencias-api",
   "version": "1.0.0",
-  "description": "API for Sistema de Ocorrências",
+  "description": "API para Sistema de Ocorrências",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node -r tsconfig-paths/register dist/server.js",
     "migrate": "prisma migrate deploy || prisma db push --accept-data-loss --schema prisma/schema.prisma --skip-generate"
   },
   "dependencies": {
@@ -17,7 +17,8 @@
     "jsonwebtoken": "^9.x.x",
     "pg": "^8.x.x",
     "cors": "^2.x.x",
-    "socket.io": "^4.x.x"
+    "socket.io": "^4.x.x",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@types/express": "^4.x.x",
