@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
-    "migrate": "prisma migrate deploy || (prisma migrate resolve --applied 00000000000000_baseline && prisma migrate deploy)"
+    "migrate": "prisma migrate deploy || (prisma migrate resolve --schema prisma/schema.prisma --applied 00000000000000_baseline && prisma migrate deploy)"
   },  
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
