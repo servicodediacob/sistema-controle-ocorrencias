@@ -6,7 +6,7 @@
   "scripts": {
     "build": "prisma generate && tsc",
     "start": "node -r tsconfig-paths/register dist/server.js",
-    "migrate": "prisma migrate deploy",
+    "migrate": "node scripts/migrate-deploy.js",
     "dev": "nodemon",
     "test": "jest"
   },
