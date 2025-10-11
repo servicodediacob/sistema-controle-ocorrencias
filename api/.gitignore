@@ -18,5 +18,7 @@ Thumbs.db
 sync_db.sh
 
 # Arquivos de backup do banco de dados
+# Em geral ignore .sql, MAS não ignore migrations do Prisma
 *.sql
+!prisma/migrations/**/migration.sql
 *.dump
