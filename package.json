@@ -5,6 +5,9 @@
   "description": "Monorepo para o Sistema de Controle de Ocorrências",
   "author": "Alexandre",
   "license": "ISC",
+  "engines": {
+    "node": "20.x"
+  },
   "workspaces": [
     "frontend",
     "api"
