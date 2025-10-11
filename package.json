@@ -23,6 +23,8 @@
     "vite": "^5.0.0"
   },
   "devDependencies": {
-    "dotenv-cli": "^10.0.0"
+    "dotenv-cli": "^10.0.0",
+    "execa": "^7.2.0",
+    "signal-exit": "^4.1.0"
   }
 }
