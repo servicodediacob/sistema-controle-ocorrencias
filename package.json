@@ -17,7 +17,8 @@
     "dev:backend": "npm run dev --workspace=api",
     "build:frontend": "npm run build --workspace=frontend",
     "test:frontend": "npm test --workspace=frontend",
-    "test:e2e": "npm run test:e2e --workspace=frontend"
+    "test:e2e": "npm run test:e2e --workspace=frontend",
+    "e2e": "start-server-and-test \"npm:dev:backend\" http://localhost:3001 \"npm run test:e2e --workspace=frontend\""
   },
   "overrides": {
     "vite": "^5.0.0"
@@ -25,6 +26,6 @@
   "devDependencies": {
     "dotenv-cli": "^10.0.0",
     "execa": "^7.2.0",
-    "signal-exit": "^4.1.0"
+    "start-server-and-test": "^2.0.5"
   }
 }

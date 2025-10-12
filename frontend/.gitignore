@@ -29,3 +29,7 @@ sync_db.sh
 # Arquivos de backup do banco de dados
 *.sql
 *.dump
+
+# Arquivos de ambiente
+# Ignora todos os arquivos que começam com .env
+.env*

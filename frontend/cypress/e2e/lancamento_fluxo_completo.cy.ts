@@ -3,7 +3,9 @@
 describe('Fluxo Completo de Lançamento de Dados', () => {
   beforeEach(() => {
     cy.clearAuth();
-    cy.loginByApi(Cypress.env('adminEmail'), Cypress.env('adminSenha'));
+    const email = Cypress.env('adminEmail');
+    const senha = Cypress.env('adminSenha');
+    cy.loginByApi(email, senha);
   });
 
   it('deve lançar dados em lote e refletir na tabela', () => {

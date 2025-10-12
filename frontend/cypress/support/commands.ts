@@ -20,9 +20,32 @@ Cypress.Commands.add('clearAuth', () => {
 
 // Login via API e injeta o token no localStorage
 Cypress.Commands.add('loginByApi', (email: string, senha: string) => {
+  const missing: string[] = [];
+  if (!email) missing.push('adminEmail');
+  if (!senha) missing.push('adminSenha');
+  if (missing.length) {
+    throw new Error(
+      `[E2E] Variáveis de ambiente ausentes: ${missing.join(', ')}. ` +
+        `Defina-as via cypress.env.json ou CLI (--env adminEmail=...,adminSenha=...).`
+    );
+  }
+
   const apiBase = Cypress.env('apiBase') || 'http://localhost:3001/api';
-  cy.request('POST', `${apiBase}/auth/login`, { email, senha }).then((resp) => {
-    expect(resp.status).to.be.oneOf([200]);
+
+  cy.request({
+    method: 'POST',
+    url: `${apiBase}/auth/login`,
+    body: { email, senha },
+    failOnStatusCode: false, // para fornecer mensagem de erro mais clara
+  }).then((resp) => {
+    if (resp.status !== 200) {
+      throw new Error(
+        `[E2E] Falha no login via API (${resp.status}). ` +
+          `URL: ${apiBase}/auth/login. ` +
+          `Verifique se o backend está rodando e se as credenciais estão corretas.`
+      );
+    }
+
     const token = (resp.body && (resp.body.token || resp.body?.data?.token)) as string;
     expect(token, 'token recebido').to.be.a('string').and.not.be.empty;
     cy.window().then((win) => {
