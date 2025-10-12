@@ -103,32 +103,34 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
         natureza: true,
       },
     });
-
-    const detalhadas = await prisma.ocorrenciaDetalhada.findMany({
-      where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } },
-      include: {
-        cidade: { include: { crbm: true } },
-        natureza: true,
-      },
-    });
     // ======================= FIM DA CORREÇÃO =======================
 
     const dadosAgrupados: Record<string, IEstatisticaAgrupada> = {};
 
+    // Importante: usamos a combinação Cidade x Natureza (por ID) para evitar
+    // colisões de subgrupos com o mesmo nome, por exemplo “Outros” em
+    // diferentes grupos (Incêndio vs. Ações Preventivas).
     const processarItem = (item: any, quantidade: number) => {
-      const cidadeNome = item.cidade?.nome || item.obm?.nome;
-      const crbmNome = item.cidade?.crbm?.nome || item.obm?.crbm?.nome;
+      const cidadeNome = item.obm?.nome;
+      const crbmNome = item.obm?.crbm?.nome;
       const naturezaNome = item.natureza?.subgrupo;
       const naturezaAbreviacao = item.natureza?.abreviacao;
+      const naturezaId = item.natureza?.id ?? null;
+      const naturezaGrupo = item.natureza?.grupo;
 
       if (cidadeNome && naturezaNome && crbmNome) {
-        const chave = `${cidadeNome}-${naturezaNome}`;
+        // Chave única e estável: Cidade|naturezaId (ou, como fallback, grupo|subgrupo)
+        const naturezaChave = naturezaId !== null
+          ? String(naturezaId)
+          : `${naturezaGrupo}|${naturezaNome}`;
+        const chave = `${cidadeNome}|${naturezaChave}`;
+
         if (!dadosAgrupados[chave]) {
           dadosAgrupados[chave] = {
             cidade_nome: cidadeNome,
             crbm_nome: crbmNome,
-            natureza_id: item.natureza?.id,
-            natureza_grupo: item.natureza?.grupo,
+            natureza_id: naturezaId ?? undefined,
+            natureza_grupo: naturezaGrupo,
             natureza_nome: naturezaNome,
             natureza_abreviacao: naturezaAbreviacao || null,
             quantidade: 0,
@@ -139,7 +141,6 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
     };
 
     estatisticas.forEach(item => processarItem(item, item.quantidade));
-    detalhadas.forEach(item => processarItem(item, 1));
 
     const resultadoFinal = Object.values(dadosAgrupados).sort((a, b) => a.cidade_nome.localeCompare(b.cidade_nome));
 

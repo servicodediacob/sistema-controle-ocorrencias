@@ -1,4 +1,4 @@
-// frontend/src/pages/LancamentoPage.tsx
+﻿// frontend/src/pages/LancamentoPage.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
@@ -43,7 +43,7 @@ const ORDEM_E_ABREVIACOES_COLUNAS = [
   { grupo: 'Ações Preventivas',    subgrupo: 'Palestras',                            abreviacao: 'AP. PAL' },
   { grupo: 'Ações Preventivas',    subgrupo: 'Eventos',                              abreviacao: 'AP. EVE' },
   { grupo: 'Ações Preventivas',    subgrupo: 'Folders/Panfletos',                    abreviacao: 'AP. FOL' },
-  { grupo: 'Ações Preventivas',    subgrupo: 'Outros',                               abreviacao: 'AP. OUT' },
+  { grupo: 'Ações Preventivas',    subgrupo: 'Outros',                               abreviacao: 'AP. OUT.' },
   { grupo: 'Atividades Técnicas',  subgrupo: 'Inspeções',                            abreviacao: 'AT. INS' },
   { grupo: 'Atividades Técnicas',  subgrupo: 'Análise de Projetos',                  abreviacao: 'AN. PROJ' },
   { grupo: 'Produtos Perigosos',   subgrupo: 'Vazamentos',                           abreviacao: 'PPV' },
@@ -369,3 +369,4 @@ function LancamentoPage() {
 }
 
 export default LancamentoPage;
+

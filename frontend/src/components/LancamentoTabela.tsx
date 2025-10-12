@@ -202,10 +202,17 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
-      const nomeChave = normalize(item.natureza_nome);
-      const abrevChave = item.natureza_abreviacao ? normalize(item.natureza_abreviacao) : '';
-      const grupoSubChave = item.natureza_grupo ? `${normalize(item.natureza_grupo)}|${nomeChave}` : '';
-      const codigo = naturezaNomeParaCodigo[grupoSubChave] || naturezaNomeParaCodigo[nomeChave] || (abrevChave ? naturezaAbrevParaCodigo[abrevChave] : undefined);
+      // Preferimos o ID da natureza para evitar ambiguidades (ex.: "Outros").
+      const codigoFromId = item.natureza_id ? String(item.natureza_id) : undefined;
+      let codigo: string | undefined = codigoFromId;
+
+      if (!codigo) {
+        const nomeChave = normalize(item.natureza_nome);
+        const abrevChave = item.natureza_abreviacao ? normalize(item.natureza_abreviacao) : '';
+        const grupoSubChave = item.natureza_grupo ? `${normalize(item.natureza_grupo)}|${nomeChave}` : '';
+        codigo = naturezaNomeParaCodigo[grupoSubChave] || naturezaNomeParaCodigo[nomeChave] || (abrevChave ? naturezaAbrevParaCodigo[abrevChave] : undefined);
+      }
+
       if (codigo) {
         const key = keyFor(item.cidade_nome, codigo);
         acc[key] = (acc[key] || 0) + item.quantidade;

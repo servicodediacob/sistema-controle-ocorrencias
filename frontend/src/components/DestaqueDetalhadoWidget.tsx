@@ -1,6 +1,6 @@
-// Caminho: frontend/src/components/DestaqueDetalhadoWidget.tsx
+﻿// Caminho: frontend/src/components/DestaqueDetalhadoWidget.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { IPlantao } from '../services/api';
 import Icon from './Icon';
 
@@ -17,9 +17,10 @@ const DetailRow: React.FC<{ label: string; value: string | number | null | undef
 
 const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ destaques }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<'next' | 'prev' | 'none'>('none');
   const [isAnimating, setIsAnimating] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const touchStartRef = useRef<number | null>(null);
   const touchEndRef = useRef<number | null>(null);
@@ -27,8 +28,11 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current);
+      }
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
       }
     };
   }, []);
@@ -37,30 +41,57 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
     setCurrentIndex(0);
   }, [destaques]);
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // 1. A função de navegação agora pode pular para um índice específico.
-  const navigate = (dirOrIndex: 'next' | 'prev' | number) => {
-    if (isAnimating) return;
+  const fadeDuration = 300;
 
-    const newIndex = typeof dirOrIndex === 'number'
+  const navigate = useCallback((dirOrIndex: 'next' | 'prev' | number) => {
+    if (!destaques || destaques.length === 0 || isAnimating) return;
+
+    const targetIndex = typeof dirOrIndex === 'number'
       ? dirOrIndex
       : (dirOrIndex === 'next'
         ? (currentIndex === destaques.length - 1 ? 0 : currentIndex + 1)
         : (currentIndex === 0 ? destaques.length - 1 : currentIndex - 1));
 
-    // Determina a direção da animação para o efeito de slide
-    const animationDirection = newIndex > currentIndex ? 'next' : 'prev';
+    if (targetIndex === currentIndex) return;
 
-    setDirection(animationDirection);
     setIsAnimating(true);
-    setCurrentIndex(newIndex);
+    setIsVisible(false);
 
-    timeoutRef.current = setTimeout(() => {
-      setIsAnimating(false);
-      setDirection('none');
-    }, 300);
-  };
-  // ======================= FIM DA CORREÇÃO =======================
+    if (fadeTimeoutRef.current) {
+      clearTimeout(fadeTimeoutRef.current);
+    }
+
+    fadeTimeoutRef.current = setTimeout(() => {
+      setCurrentIndex(targetIndex);
+      setIsVisible(true);
+
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+
+      animationTimeoutRef.current = setTimeout(() => {
+        setIsAnimating(false);
+        animationTimeoutRef.current = null;
+      }, fadeDuration);
+
+      fadeTimeoutRef.current = null;
+    }, fadeDuration);
+  }, [currentIndex, destaques, fadeDuration, isAnimating]);
+
+  useEffect(() => {
+    if (!destaques || destaques.length <= 1) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigate('prev');
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigate('next');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [destaques, navigate]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null;
@@ -95,10 +126,27 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
   }
 
   const destaqueAtual = destaques[currentIndex];
+  const hasMultiple = destaques.length > 1;
+  const formatarHorario = (valor?: string | null) => {
+    if (!valor) return '--:--';
 
-  const animationClass = isAnimating 
-    ? (direction === 'next' ? '-translate-x-full' : 'translate-x-full')
-    : 'translate-x-0';
+    const parsedDate = new Date(valor);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+
+    const matchHorario = valor.match(/(\d{2}):(\d{2})/);
+    if (matchHorario) {
+      return `${matchHorario[1]}:${matchHorario[2]}`;
+    }
+
+    return valor.slice(0, 5);
+  };
+  const fadeClass = isVisible ? 'opacity-100' : 'opacity-0';
 
   return (
     <div 
@@ -108,37 +156,40 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
       onTouchEnd={onTouchEnd}
     >
       <div className="relative w-full overflow-hidden">
-        <div className={`w-full transform transition-transform duration-300 ease-in-out ${animationClass}`}>
+        <div className={`w-full transition-opacity duration-300 ease-in-out ${fadeClass}`}>
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>
                 <th colSpan={3} className="relative bg-red-600 p-2 text-center font-bold uppercase text-white">
-                  <div className="flex items-center justify-between">
-                    <button 
-                      onClick={() => navigate('prev')} 
-                      className={`rounded-full p-1 text-white/70 hover:bg-white/20 hover:text-white ${destaques.length <= 1 ? 'invisible' : ''}`}
+                  <div className="flex items-center justify-between gap-4">
+                    <button
+                      onClick={() => navigate('prev')}
+                      className={`rounded-full border border-white/40 bg-white/15 p-2 text-white shadow-md transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/60 ${hasMultiple ? '' : 'pointer-events-none opacity-0'}`}
                       aria-label="Ocorrência anterior"
                     >
-                      <Icon path="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" size={24} />
+                      <Icon path="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" size={18} />
                     </button>
-                    
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center justify-center gap-1">
                       <span>Ocorrências Detalhadas do Dia</span>
-                      {destaques.length > 1 && (
+                      {hasMultiple && (
                         <span className="text-xs font-normal">
                           ({currentIndex + 1}/{destaques.length})
                         </span>
                       )}
                     </div>
-
-                    <button 
-                      onClick={() => navigate('next')} 
-                      className={`rounded-full p-1 text-white/70 hover:bg-white/20 hover:text-white ${destaques.length <= 1 ? 'invisible' : ''}`}
-                      aria-label="Próxima ocorrência"
+                    <button
+                      onClick={() => navigate('next')}
+                      className={`rounded-full border border-white/40 bg-white/15 p-2 text-white shadow-md transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/60 ${hasMultiple ? '' : 'pointer-events-none opacity-0'}`}
+                      aria-label="Próxima Ocorrência"
                     >
-                      <Icon path="M8.59 8.59L13.17 13l-4.58 4.59L10 19l6-6-6-6z" size={24} />
+                      <Icon path="M8.59 8.59L13.17 13l-4.58 4.59L10 19l6-6-6-6z" size={18} />
                     </button>
                   </div>
+                  {hasMultiple && (
+                    <div className="mt-1 text-xs font-medium text-white/80">
+                      Use as setas ou deslize para navegar
+                    </div>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -150,7 +201,7 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
                     <span className="col-span-1 sm:col-span-1">{destaqueAtual.numero_ocorrencia || 'Não informado'}</span>
                     <div className="col-span-1 flex items-center gap-2 border-t border-gray-700 pt-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0">
                       <span className="bg-gray-700 p-1 text-xs font-bold">HORÁRIO:</span>
-                      <span>{destaqueAtual.horario_ocorrencia?.substring(0, 5) || '--:--'}</span>
+                      <span>{formatarHorario(destaqueAtual.horario_ocorrencia)}</span>
                     </div>
                     <div className="col-span-1 flex items-center gap-2 border-t border-gray-700 pt-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0">
                       <span className="bg-gray-700 p-1 text-xs font-bold">DATA:</span>
@@ -196,3 +247,8 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
 };
 
 export default DestaqueDetalhadoWidget;
+
+
+
+
+

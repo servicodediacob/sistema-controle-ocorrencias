@@ -82,8 +82,9 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
       }
     };
 
+    // Somamos apenas os registros consolidados de estatística em lote.
+    // As ocorrências detalhadas são exibidas em "destaques", mas não devem alterar os totais.
     estatisticas.forEach(item => processarItem(item, item.quantidade));
-    detalhadas.forEach(item => processarItem(item, 1));
 
     const estatisticasFinais = Array.from(relatorioMap.values()).sort((a, b) => {
       const ordemGrupo = ['Resgate', 'Incêndio', 'Busca e Salvamento', 'Ações Preventivas', 'Atividades Técnicas', 'Produtos Perigosos', 'Defesa Civil'];
