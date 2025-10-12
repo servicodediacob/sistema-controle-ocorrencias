@@ -81,11 +81,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     (recipientId: number, text: string) => {
       if (!socket) {
         console.error('[ChatProvider] Tentativa de enviar mensagem sem socket.');
+        addNotification('Não foi possível enviar: sem conexão.', 'error');
         return;
       }
-      socket.emit('send-private-message', { recipientId, text });
+      socket.emit(
+        'send-private-message',
+        { recipientId, text },
+        (result?: { ok: boolean; error?: string }) => {
+          if (!result?.ok) {
+            const msg =
+              result?.error === 'not_authenticated'
+                ? 'Sessão expirada. Faça login novamente.'
+                : result?.error === 'invalid_payload'
+                ? 'Mensagem inválida.'
+                : result?.error === 'internal_error'
+                ? 'Erro interno ao enviar a mensagem.'
+                : 'Falha ao enviar a mensagem.';
+            addNotification(msg, 'error');
+          }
+        },
+      );
     },
-    [socket],
+    [socket, addNotification],
   );
 
   useEffect(() => {

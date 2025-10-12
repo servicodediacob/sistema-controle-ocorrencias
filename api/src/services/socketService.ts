@@ -64,6 +64,58 @@ export const onSocketConnection = (io: Server) => {
       socket.emit('update-logged-in-users', getUniqueLoggedInUsers());
     });
 
+    // Envio de mensagens privadas (somente remetente e destinatário recebem)
+    socket.on(
+      'send-private-message',
+      (
+        payload: { recipientId: number; text: string },
+        ack?: (result: { ok: boolean; error?: string }) => void,
+      ) => {
+        try {
+          const sender = socketToUser.get(socket.id);
+          if (!sender) {
+            ack?.({ ok: false, error: 'not_authenticated' });
+            return;
+          }
+
+          const { recipientId, text } = payload || ({} as any);
+          if (!recipientId || typeof text !== 'string' || text.trim().length === 0) {
+            ack?.({ ok: false, error: 'invalid_payload' });
+            return;
+          }
+
+          const timestamp = new Date().toISOString();
+          const message = {
+            senderId: sender.id,
+            senderName: sender.nome,
+            recipientId,
+            text: text.trim(),
+            timestamp,
+          };
+
+          // Entrega ao(s) socket(s) do destinatário, se online
+          const recipientSockets = userSockets.get(recipientId);
+          if (recipientSockets && recipientSockets.size > 0) {
+            recipientSockets.forEach((sid) => io.to(sid).emit('new-private-message', message));
+          }
+
+          // Ecoa ao(s) socket(s) do remetente para aparecer imediatamente na própria janela
+          const senderSockets = userSockets.get(sender.id);
+          if (senderSockets && senderSockets.size > 0) {
+            senderSockets.forEach((sid) => io.to(sid).emit('new-private-message', message));
+          } else {
+            // fallback: usa o socket atual
+            socket.emit('new-private-message', message);
+          }
+
+          ack?.({ ok: true });
+        } catch (err) {
+          logger.error({ err }, '[Socket.IO] Erro em send-private-message');
+          ack?.({ ok: false, error: 'internal_error' });
+        }
+      },
+    );
+
     socket.on('disconnect', () => {
       const user = socketToUser.get(socket.id);
       if (!user) {
