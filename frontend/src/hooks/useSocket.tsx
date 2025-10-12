@@ -38,7 +38,17 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       newSocket.on('connect', () => {
         console.log(`[Socket.IO] Conectado com sucesso. ID: ${newSocket.id}`);
-        newSocket.emit('user-login', usuario);
+        if (usuario) {
+          const payload = {
+            id: usuario.id,
+            nome: usuario.nome,
+            email: usuario.email,
+            role: (usuario.role ?? usuario.perfil ?? 'user') as 'admin' | 'user' | 'supervisor',
+          };
+          newSocket.emit('user-login', payload, () => {
+            newSocket.emit('request-logged-in-users');
+          });
+        }
       });
 
       newSocket.on('disconnect', (reason: string) => {
@@ -64,6 +74,20 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (socketRef.current && usuario) {
+      const payload = {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        role: (usuario.role ?? usuario.perfil ?? 'user') as 'admin' | 'user' | 'supervisor',
+      };
+      socketRef.current.emit('user-login', payload, () => {
+        socketRef.current?.emit('request-logged-in-users');
+      });
+    }
+  }, [usuario]);
 
   const logoutWithSocket = useCallback(() => {
     if (socketRef.current) {

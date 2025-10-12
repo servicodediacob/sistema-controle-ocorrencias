@@ -1,11 +1,15 @@
-// Caminho: frontend/src/contexts/ChatProvider.tsx
-
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+} from 'react';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthProvider';
 import { useSocket } from '../hooks/useSocket';
 
-// --- Interfaces ---
 interface ChatMessage {
   senderId: number;
   senderName: string;
@@ -16,15 +20,13 @@ interface ChatMessage {
 
 type Conversations = Record<number, ChatMessage[]>;
 
-// --- INÍCIO DA ALTERAÇÃO ---
 interface LoggedInUser {
   id: number;
   nome: string;
   email: string;
   role: string;
-  loginTime: string; // <-- ADICIONE ESTA LINHA
+  loginTime: string;
 }
-// --- FIM DA ALTERAÇÃO ---
 
 interface IChatContext {
   conversations: Conversations;
@@ -37,87 +39,105 @@ interface IChatContext {
 
 const ChatContext = createContext<IChatContext | null>(null);
 
-export const useChat = () => {
+export const useChat = (): IChatContext => {
   const context = useContext(ChatContext);
-  if (!context) throw new Error('useChat deve ser usado dentro de um ChatProvider');
+  if (!context) {
+    throw new Error('useChat deve ser usado dentro de um ChatProvider');
+  }
   return context;
+};
+
+const dedupeUsers = (users: LoggedInUser[]): LoggedInUser[] => {
+  const byId = new Map<number, LoggedInUser>();
+  users.forEach((user) => {
+    if (!byId.has(user.id)) {
+      byId.set(user.id, user);
+    }
+  });
+  return Array.from(byId.values());
 };
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { usuario } = useAuth();
   const { socket } = useSocket();
   const { addNotification } = useNotification();
-  
+
   const [conversations, setConversations] = useState<Conversations>({});
   const [openChats, setOpenChats] = useState<number[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<LoggedInUser[]>([]);
 
-  const openChatWith = useCallback((userId: number) => {
-    if (!openChats.includes(userId)) {
-      setOpenChats(prev => [...prev, userId]);
-    }
-  }, [openChats]);
+  const openChatWith = useCallback(
+    (userId: number) => {
+      setOpenChats((prev) => (prev.includes(userId) ? prev : [...prev, userId]));
+    },
+    [],
+  );
 
   const closeChat = useCallback((userId: number) => {
-    setOpenChats(prev => prev.filter(id => id !== userId));
+    setOpenChats((prev) => prev.filter((id) => id !== userId));
   }, []);
 
-  const sendMessage = useCallback((recipientId: number, text: string) => {
-    if (socket) {
-      console.log(`[ChatProvider] Enviando mensagem para ${recipientId}`);
+  const sendMessage = useCallback(
+    (recipientId: number, text: string) => {
+      if (!socket) {
+        console.error('[ChatProvider] Tentativa de enviar mensagem sem socket.');
+        return;
+      }
       socket.emit('send-private-message', { recipientId, text });
-    } else {
-      console.error('[ChatProvider] Tentativa de enviar mensagem sem socket.');
-    }
-  }, [socket]);
+    },
+    [socket],
+  );
 
   useEffect(() => {
-    console.log('[ChatProvider Effect] Socket:', socket ? 'Ativo' : 'Inativo', '| Usuário:', usuario ? usuario.nome : 'Nenhum');
-
-    if (socket && usuario) {
-      console.log('[ChatProvider] Socket e usuário OK. Configurando listeners...');
-
-      const handleUpdateUsers = (users: LoggedInUser[]) => {
-        console.log('[ChatProvider] Evento \'update-logged-in-users\' recebido. Usuários:', users);
-        setOnlineUsers(users);
-      };
-
-      const handleNewMessage = (message: ChatMessage) => {
-        console.log('[ChatProvider] Evento \'new-private-message\' recebido:', message);
-        const partnerId = message.senderId === usuario.id ? message.recipientId : message.senderId;
-
-        setConversations(prev => ({
-          ...prev,
-          [partnerId]: [...(prev[partnerId] || []), message],
-        }));
-        
-        openChatWith(partnerId);
-
-        if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
-          addNotification(`Nova mensagem de ${message.senderName}`, 'info');
-          const audio = new Audio('/sounds/notification.mp3');
-          audio.play().catch(e => console.warn('Não foi possível tocar o som de notificação:', e));
-        }
-      };
-
-      socket.on('update-logged-in-users', handleUpdateUsers);
-      socket.on('new-private-message', handleNewMessage);
-
-      console.log('[ChatProvider] Emitindo \'request-logged-in-users\'...');
-      socket.emit('request-logged-in-users');
-
-      return () => {
-        console.log('[ChatProvider] Limpando listeners de chat.');
-        socket.off('update-logged-in-users', handleUpdateUsers);
-        socket.off('new-private-message', handleNewMessage);
-      };
+    if (!socket || !usuario) {
+      return;
     }
+
+    const handleUpdateUsers = (users: LoggedInUser[]) => {
+      const sanitized = dedupeUsers(users);
+      setOnlineUsers(sanitized);
+    };
+
+    const handleNewMessage = (message: ChatMessage) => {
+      const partnerId = message.senderId === usuario.id ? message.recipientId : message.senderId;
+
+      setConversations((prev) => ({
+        ...prev,
+        [partnerId]: [...(prev[partnerId] || []), message],
+      }));
+
+      openChatWith(partnerId);
+
+      if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
+        addNotification(`Nova mensagem de ${message.senderName}`, 'info');
+        void new Audio('/sounds/notification.mp3')
+          .play()
+          .catch((error) => console.warn('Não foi possível tocar o som de notificação:', error));
+      }
+    };
+
+    socket.on('update-logged-in-users', handleUpdateUsers);
+    socket.on('new-private-message', handleNewMessage);
+
+    socket.emit('request-logged-in-users');
+
+    return () => {
+      socket.off('update-logged-in-users', handleUpdateUsers);
+      socket.off('new-private-message', handleNewMessage);
+    };
   }, [socket, usuario, addNotification, openChatWith]);
 
-  console.log('[ChatProvider Render] Usuários Online Atuais:', onlineUsers);
-
   return (
-    <ChatContext.Provider value={{ conversations, openChats, onlineUsers, openChatWith, closeChat, sendMessage }}>
+    <ChatContext.Provider
+      value={{
+        conversations,
+        openChats,
+        onlineUsers,
+        openChatWith,
+        closeChat,
+        sendMessage,
+      }}
+    >
       {children}
     </ChatContext.Provider>
   );

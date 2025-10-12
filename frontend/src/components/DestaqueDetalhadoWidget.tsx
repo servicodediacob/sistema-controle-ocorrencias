@@ -1,5 +1,3 @@
-﻿// Caminho: frontend/src/components/DestaqueDetalhadoWidget.tsx
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { IPlantao } from '../services/api';
 import Icon from './Icon';
@@ -8,10 +6,15 @@ interface DestaqueDetalhadoWidgetProps {
   destaques: IPlantao['ocorrenciasDestaque'];
 }
 
-const DetailRow: React.FC<{ label: string; value: string | number | null | undefined }> = ({ label, value }) => (
+const DetailRow: React.FC<{ label: string; value: string | number | null | undefined }> = ({
+  label,
+  value,
+}) => (
   <tr>
     <td className="w-1/3 border border-gray-600 bg-blue-900/30 p-2 font-semibold">{label}</td>
-    <td className="border border-gray-600 p-2" colSpan={2}>{value || 'Não informado'}</td>
+    <td className="border border-gray-600 p-2" colSpan={2}>
+      {value || 'Não informado'}
+    </td>
   </tr>
 );
 
@@ -43,40 +46,44 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
 
   const fadeDuration = 300;
 
-  const navigate = useCallback((dirOrIndex: 'next' | 'prev' | number) => {
-    if (!destaques || destaques.length === 0 || isAnimating) return;
+  const navigate = useCallback(
+    (dirOrIndex: 'next' | 'prev' | number) => {
+      if (!destaques || destaques.length === 0 || isAnimating) return;
 
-    const targetIndex = typeof dirOrIndex === 'number'
-      ? dirOrIndex
-      : (dirOrIndex === 'next'
-        ? (currentIndex === destaques.length - 1 ? 0 : currentIndex + 1)
-        : (currentIndex === 0 ? destaques.length - 1 : currentIndex - 1));
+      const targetIndex = typeof dirOrIndex === 'number'
+        ? dirOrIndex
+        : dirOrIndex === 'next'
+          ? currentIndex === destaques.length - 1
+            ? 0
+            : currentIndex + 1
+          : currentIndex === 0
+            ? destaques.length - 1
+            : currentIndex - 1;
 
-    if (targetIndex === currentIndex) return;
+      if (targetIndex === currentIndex) return;
 
-    setIsAnimating(true);
-    setIsVisible(false);
+      setIsAnimating(true);
+      setIsVisible(false);
 
-    if (fadeTimeoutRef.current) {
-      clearTimeout(fadeTimeoutRef.current);
-    }
-
-    fadeTimeoutRef.current = setTimeout(() => {
-      setCurrentIndex(targetIndex);
-      setIsVisible(true);
-
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current);
       }
 
-      animationTimeoutRef.current = setTimeout(() => {
-        setIsAnimating(false);
-        animationTimeoutRef.current = null;
-      }, fadeDuration);
+      fadeTimeoutRef.current = setTimeout(() => {
+        setCurrentIndex(targetIndex);
+        setIsVisible(true);
 
-      fadeTimeoutRef.current = null;
-    }, fadeDuration);
-  }, [currentIndex, destaques, fadeDuration, isAnimating]);
+        if (animationTimeoutRef.current) {
+          clearTimeout(animationTimeoutRef.current);
+        }
+
+        animationTimeoutRef.current = setTimeout(() => {
+          setIsAnimating(false);
+        }, fadeDuration);
+      }, fadeDuration);
+    },
+    [currentIndex, destaques, isAnimating, fadeDuration],
+  );
 
   useEffect(() => {
     if (!destaques || destaques.length <= 1) return;
@@ -89,23 +96,24 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
         navigate('next');
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [destaques, navigate]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = (event: React.TouchEvent) => {
     touchEndRef.current = null;
-    touchStartRef.current = e.targetTouches[0].clientX;
+    touchStartRef.current = event.targetTouches[0].clientX;
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    touchEndRef.current = e.targetTouches[0].clientX;
+  const onTouchMove = (event: React.TouchEvent) => {
+    touchEndRef.current = event.targetTouches[0].clientX;
   };
 
   const onTouchEnd = () => {
     if (!touchStartRef.current || !touchEndRef.current) return;
     const distance = touchStartRef.current - touchEndRef.current;
-    
+
     if (distance > minSwipeDistance) {
       navigate('next');
     } else if (distance < -minSwipeDistance) {
@@ -127,29 +135,31 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
 
   const destaqueAtual = destaques[currentIndex];
   const hasMultiple = destaques.length > 1;
+
   const formatarHorario = (valor?: string | null) => {
     if (!valor) return '--:--';
 
-    const parsedDate = new Date(valor);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleTimeString('pt-BR', {
+    const parsed = new Date(valor);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
       });
     }
 
-    const matchHorario = valor.match(/(\d{2}):(\d{2})/);
-    if (matchHorario) {
-      return `${matchHorario[1]}:${matchHorario[2]}`;
+    const match = valor.match(/(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
     }
 
     return valor.slice(0, 5);
   };
+
   const fadeClass = isVisible ? 'opacity-100' : 'opacity-0';
 
   return (
-    <div 
+    <div
       className="mt-6 overflow-hidden rounded-lg border border-red-500 bg-surface text-text-strong"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -180,7 +190,7 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
                     <button
                       onClick={() => navigate('next')}
                       className={`rounded-full border border-white/40 bg-white/15 p-2 text-white shadow-md transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/60 ${hasMultiple ? '' : 'pointer-events-none opacity-0'}`}
-                      aria-label="Próxima Ocorrência"
+                      aria-label="Próxima ocorrência"
                     >
                       <Icon path="M8.59 8.59L13.17 13l-4.58 4.59L10 19l6-6-6-6z" size={18} />
                     </button>
@@ -198,7 +208,9 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
                 <td className="w-1/3 border border-gray-600 bg-blue-900/30 p-2 font-semibold">NÚMERO DA OCORRÊNCIA</td>
                 <td className="border border-gray-600 p-2" colSpan={2}>
                   <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-3">
-                    <span className="col-span-1 sm:col-span-1">{destaqueAtual.numero_ocorrencia || 'Não informado'}</span>
+                    <span className="col-span-1 sm:col-span-1">
+                      {destaqueAtual.numero_ocorrencia || 'Não informado'}
+                    </span>
                     <div className="col-span-1 flex items-center gap-2 border-t border-gray-700 pt-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0">
                       <span className="bg-gray-700 p-1 text-xs font-bold">HORÁRIO:</span>
                       <span>{formatarHorario(destaqueAtual.horario_ocorrencia)}</span>
@@ -210,7 +222,6 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
                   </div>
                 </td>
               </tr>
-              
               <DetailRow label="GRUPO DA NATUREZA" value={destaqueAtual.natureza_grupo} />
               <DetailRow label="NATUREZA" value={destaqueAtual.natureza_nome} />
               <DetailRow label="ENDEREÇO" value={destaqueAtual.endereco} />
@@ -225,10 +236,8 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
         </div>
       </div>
 
-      {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-      {/* 2. Renderiza os indicadores de navegação se houver mais de uma ocorrência */}
-      {destaques.length > 1 && (
-        <div className="flex justify-center items-center gap-2 py-3 bg-surface">
+      {hasMultiple && (
+        <div className="flex items-center justify-center gap-2 bg-surface py-3">
           {destaques.map((_, index) => (
             <button
               key={index}
@@ -241,14 +250,8 @@ const DestaqueDetalhadoWidget: React.FC<DestaqueDetalhadoWidgetProps> = ({ desta
           ))}
         </div>
       )}
-      {/* ======================= FIM DA CORREÇÃO ======================= */}
     </div>
   );
 };
 
 export default DestaqueDetalhadoWidget;
-
-
-
-
-
