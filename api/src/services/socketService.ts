@@ -11,6 +11,7 @@ interface LoggedInUser {
 
 const userSockets = new Map<number, Set<string>>();
 const socketToUser = new Map<string, LoggedInUser>();
+let currentIo: Server | null = null;
 
 const getUniqueLoggedInUsers = (): LoggedInUser[] => {
   const uniqueUsers = new Map<number, LoggedInUser>();
@@ -29,6 +30,7 @@ const broadcastLoggedInUsers = (io: Server) => {
 };
 
 export const onSocketConnection = (io: Server) => {
+  currentIo = io;
   io.on('connection', (socket: Socket) => {
     logger.info(`[Socket.IO] Cliente conectado: ${socket.id}`);
 
@@ -167,4 +169,14 @@ export const onSocketConnection = (io: Server) => {
       broadcastLoggedInUsers(io);
     });
   });
+};
+
+// Emite um evento para todos os administradores logados atualmente
+export const notifyAdmins = (event: string, payload: any) => {
+  if (!currentIo) return;
+  for (const [socketId, user] of socketToUser.entries()) {
+    if (user.role === 'admin') {
+      currentIo.to(socketId).emit(event, payload);
+    }
+  }
 };

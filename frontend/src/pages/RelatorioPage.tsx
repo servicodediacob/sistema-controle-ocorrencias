@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // ======================= INÍCIO DA CORREÇÃO =======================
 // 1. Importar as interfaces e a função correta do serviço de relatório
-import { IRelatorioRow, IObitoRegistro, IOcorrencia } from '../services/api';
+import { IRelatorioRow, IObitoRegistro, IDestaqueRelatorio, IDataApoio, getNaturezas } from '../services/api';
 import { getRelatorioCompleto } from '../services/relatorioService';
 // 2. Importar os novos componentes de tabela
 import RelatorioObitosTable from '../components/RelatorioObitosTable';
@@ -14,6 +14,7 @@ import MainLayout from '../components/MainLayout';
 import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
 import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
+import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
 
 function RelatorioPage() {
   const today = new Date().toISOString().split('T')[0];
@@ -26,19 +27,34 @@ function RelatorioPage() {
   // 3. Estados para armazenar os novos dados
   const [estatisticas, setEstatisticas] = useState<IRelatorioRow[]>([]);
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
-  const [destaques, setDestaques] = useState<IOcorrencia[]>([]);
+  const [destaques, setDestaques] = useState<IDestaqueRelatorio[]>([]);
   // ======================= FIM DA CORREÇÃO =======================
 
   const handleGenerateReport = useCallback(async () => {
     try {
       setLoading(true);
-      // 4. Chamar a nova função que busca tudo
-      const data = await getRelatorioCompleto(dataInicio, dataFim);
-      setEstatisticas(data.estatisticas);
-      setObitos(data.obitos);
-      setDestaques(data.destaques);
+      const [relatorioData, naturezasData] = await Promise.all([
+        getRelatorioCompleto(dataInicio, dataFim),
+        getNaturezas().catch((error): IDataApoio[] => {
+          console.error('[RelatorioPage] Falha ao buscar naturezas:', error);
+          return [];
+        }),
+      ]);
 
-      if (data.estatisticas.length === 0 && data.obitos.length === 0 && data.destaques.length === 0) {
+      const estatisticasCompletas = mergeEstatisticasWithNaturezas(
+        relatorioData.estatisticas,
+        naturezasData,
+      );
+
+      setEstatisticas(estatisticasCompletas);
+      setObitos(relatorioData.obitos);
+      setDestaques(relatorioData.destaques);
+
+      if (
+        estatisticasCompletas.length === 0 &&
+        relatorioData.obitos.length === 0 &&
+        relatorioData.destaques.length === 0
+      ) {
         addNotification('Nenhum dado encontrado para o período selecionado.', 'info');
       }
     } catch (error) {
@@ -71,21 +87,50 @@ function RelatorioPage() {
     return acc;
   }, {} as Record<string, IRelatorioRow[]>);
 
-  const crbmHeaders = ["1º CRBM", "2º CRBM", "3º CRBM", "4º CRBM", "5º CRBM", "6º CRBM", "7º CRBM", "8º CRBM", "9º CRBM"];
+  type Totais = Record<'diurno' | 'noturno' | 'total_capital' | 'total_geral', number> &
+    Record<typeof CRBM_HEADERS[number], number>;
+
+  const criarTotaisIniciais = (): Totais => {
+    const base: Record<string, number> = {
+      diurno: 0,
+      noturno: 0,
+      total_capital: 0,
+      total_geral: 0,
+    };
+
+    CRBM_HEADERS.forEach((header) => {
+      base[header] = 0;
+    });
+
+    return base as Totais;
+  };
 
   const totals = estatisticas.reduce((acc, row) => {
-    (Object.keys(acc) as Array<keyof typeof acc>).forEach(key => {
-      acc[key] += Number(row[key as keyof IRelatorioRow]) || 0;
+    acc.diurno += Number(row.diurno) || 0;
+    acc.noturno += Number(row.noturno) || 0;
+    acc.total_capital += Number(row.total_capital) || 0;
+    acc.total_geral += Number(row.total_geral) || 0;
+
+    CRBM_HEADERS.forEach((header) => {
+      acc[header] += Number(row[header]) || 0;
     });
+
     return acc;
-  }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
+  }, criarTotaisIniciais());
+
+  const totalCrbmValues = CRBM_HEADERS.reduce((acc, header) => {
+    acc[header] = String(totals[header]);
+    return acc;
+  }, {} as Record<typeof CRBM_HEADERS[number], string>);
 
   const totalGeralRow: IRelatorioRow = {
-    grupo: 'TOTAL GERAL', subgrupo: 'TOTAL GERAL',
-    diurno: String(totals.diurno), noturno: String(totals.noturno), total_capital: String(totals.total_capital), total_geral: String(totals.total_geral),
-    "1º CRBM": String(totals["1º CRBM"]), "2º CRBM": String(totals["2º CRBM"]), "3º CRBM": String(totals["3º CRBM"]),
-    "4º CRBM": String(totals["4º CRBM"]), "5º CRBM": String(totals["5º CRBM"]), "6º CRBM": String(totals["6º CRBM"]),
-    "7º CRBM": String(totals["7º CRBM"]), "8º CRBM": String(totals["8º CRBM"]), "9º CRBM": String(totals["9º CRBM"]),
+    grupo: 'TOTAL GERAL',
+    subgrupo: 'TOTAL GERAL',
+    diurno: String(totals.diurno),
+    noturno: String(totals.noturno),
+    total_capital: String(totals.total_capital),
+    total_geral: String(totals.total_geral),
+    ...totalCrbmValues,
   };
 
   return (
@@ -122,7 +167,7 @@ function RelatorioPage() {
                       <th className="hidden lg:table-cell p-2">DIURNO</th>
                       <th className="hidden lg:table-cell p-2">NOTURNO</th>
                       <th className="p-2">TOTAL CAPITAL</th>
-                      {crbmHeaders.map(h => <th key={h} className="hidden lg:table-cell p-2">{h}</th>)}
+                      {CRBM_HEADERS.map(h => <th key={h} className="hidden lg:table-cell p-2">{h}</th>)}
                       <th className="p-2 lg:hidden">TOTAL INTERIOR</th>
                       <th className="p-2">TOTAL GERAL</th>
                     </tr>
@@ -130,32 +175,45 @@ function RelatorioPage() {
                   <tbody>
                     {Object.entries(groupedData).map(([grupo, subgrupos]) => {
                       const subtotalGrupo = subgrupos.reduce((acc, row) => {
-                        (Object.keys(acc) as Array<keyof typeof acc>).forEach(key => {
-                          acc[key] += Number(row[key as keyof IRelatorioRow]) || 0;
+                        acc.diurno += Number(row.diurno) || 0;
+                        acc.noturno += Number(row.noturno) || 0;
+                        acc.total_capital += Number(row.total_capital) || 0;
+                        acc.total_geral += Number(row.total_geral) || 0;
+
+                        CRBM_HEADERS.forEach((header) => {
+                          acc[header] += Number(row[header]) || 0;
                         });
+
                         return acc;
-                      }, { diurno: 0, noturno: 0, total_capital: 0, total_geral: 0, "1º CRBM": 0, "2º CRBM": 0, "3º CRBM": 0, "4º CRBM": 0, "5º CRBM": 0, "6º CRBM": 0, "7º CRBM": 0, "8º CRBM": 0, "9º CRBM": 0 });
+                      }, criarTotaisIniciais());
+
+                      const subtotalCrbmValues = CRBM_HEADERS.reduce((acc, header) => {
+                        acc[header] = String(subtotalGrupo[header]);
+                        return acc;
+                      }, {} as Record<typeof CRBM_HEADERS[number], string>);
 
                       const subtotalRow: IRelatorioRow = {
-                        grupo: grupo, subgrupo: 'SUB TOTAL',
-                        diurno: String(subtotalGrupo.diurno), noturno: String(subtotalGrupo.noturno), total_capital: String(subtotalGrupo.total_capital), total_geral: String(subtotalGrupo.total_geral),
-                        "1º CRBM": String(subtotalGrupo["1º CRBM"]), "2º CRBM": String(subtotalGrupo["2º CRBM"]), "3º CRBM": String(subtotalGrupo["3º CRBM"]),
-                        "4º CRBM": String(subtotalGrupo["4º CRBM"]), "5º CRBM": String(subtotalGrupo["5º CRBM"]), "6º CRBM": String(subtotalGrupo["6º CRBM"]),
-                        "7º CRBM": String(subtotalGrupo["7º CRBM"]), "8º CRBM": String(subtotalGrupo["8º CRBM"]), "9º CRBM": String(subtotalGrupo["9º CRBM"]),
+                        grupo: grupo,
+                        subgrupo: 'SUB TOTAL',
+                        diurno: String(subtotalGrupo.diurno),
+                        noturno: String(subtotalGrupo.noturno),
+                        total_capital: String(subtotalGrupo.total_capital),
+                        total_geral: String(subtotalGrupo.total_geral),
+                        ...subtotalCrbmValues,
                       };
 
                       return (
                         <React.Fragment key={grupo}>
                           {subgrupos.map((row, index) => (
-                            <ReportRow key={row.subgrupo} row={row} crbmHeaders={crbmHeaders} isFirstInGroup={index === 0} groupSize={subgrupos.length} />
+                            <ReportRow key={row.subgrupo} row={row} crbmHeaders={CRBM_HEADERS} isFirstInGroup={index === 0} groupSize={subgrupos.length} />
                           ))}
-                          <ReportRow row={subtotalRow} crbmHeaders={crbmHeaders} isSubtotal />
+                          <ReportRow row={subtotalRow} crbmHeaders={CRBM_HEADERS} isSubtotal />
                         </React.Fragment>
                       )
                     })}
                   </tbody>
                   <tfoot>
-                    <ReportRow row={totalGeralRow} crbmHeaders={crbmHeaders} isTotalGeral />
+                    <ReportRow row={totalGeralRow} crbmHeaders={CRBM_HEADERS} isTotalGeral />
                   </tfoot>
                 </table>
               </div>
@@ -172,3 +230,7 @@ function RelatorioPage() {
 }
 
 export default RelatorioPage;
+
+
+
+

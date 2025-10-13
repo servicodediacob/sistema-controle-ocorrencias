@@ -2,17 +2,16 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // ======================= INÍCIO DA CORREÇÃO =======================
-import { IRelatorioRow } from '../services/api';
+import { IRelatorioRow, IDataApoio, getNaturezas } from '../services/api';
 // A função de busca agora vem do seu próprio serviço
 import { getRelatorioCompleto } from '../services/relatorioService';
 // ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
 import Spinner from './Spinner';
 import Icon from './Icon';
+import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
 
 // ... (Componentes SubgrupoRow e ReportCard permanecem os mesmos)
-const crbmHeaders: (keyof IRelatorioRow)[] = ["1º CRBM", "2º CRBM", "3º CRBM", "4º CRBM", "5º CRBM", "6º CRBM", "7º CRBM", "8º CRBM", "9º CRBM"];
-
 interface SubgrupoRowProps {
   row: IRelatorioRow;
 }
@@ -53,11 +52,11 @@ const SubgrupoRow: React.FC<SubgrupoRowProps> = ({ row }) => {
                 <span className="font-bold text-text-strong">Capital (Noturno):</span>
                 <span className="font-mono">{row.noturno}</span>
             </div>
-            {crbmHeaders.map(crbm => {
-              const value = Number(row[crbm as keyof IRelatorioRow]);
+            {CRBM_HEADERS.map(crbm => {
+              const value = Number(row[crbm]);
               if (value === 0) return null;
               return (
-                <div key={crbm as string} className="flex justify-between">
+                <div key={crbm} className="flex justify-between">
                   <span className="text-gray-400">{crbm}:</span>
                   <span className="font-mono">{value}</span>
                 </div>
@@ -124,11 +123,21 @@ function RelatorioWidget() {
     if (reportData.length === 0) setLoading(true);
     try {
       // ======================= INÍCIO DA CORREÇÃO =======================
-      const today = new Date().toISOString().split('T')[0];
-      // Usamos a nova função que busca todos os dados
-      const data = await getRelatorioCompleto(today, today);
-      // Pegamos apenas os dados de estatísticas para este widget
-      setReportData(data.estatisticas);
+      const hojeIso = new Date().toISOString().split('T')[0];
+      const [relatorioData, naturezasData] = await Promise.all([
+        getRelatorioCompleto(hojeIso, hojeIso),
+        getNaturezas().catch((error): IDataApoio[] => {
+          console.error('[RelatorioWidget] Falha ao buscar naturezas:', error);
+          return [];
+        }),
+      ]);
+
+      const estatisticasCompletas = mergeEstatisticasWithNaturezas(
+        relatorioData.estatisticas,
+        naturezasData,
+      );
+
+      setReportData(estatisticasCompletas);
       // ======================= FIM DA CORREÇÃO =======================
     } catch (error) {
       addNotification('Falha ao carregar relatório diário.', 'error');
@@ -188,7 +197,7 @@ function RelatorioWidget() {
                   <th className="p-2 text-center">DIURNO</th>
                   <th className="p-2 text-center">NOTURNO</th>
                   <th className="p-2 text-center">TOTAL CAPITAL</th>
-                  {crbmHeaders.map(h => <th key={h as string} className="p-2 text-center">{h}</th>)}
+                  {CRBM_HEADERS.map(h => <th key={h} className="p-2 text-center">{h}</th>)}
                   <th className="p-2 text-center">TOTAL GERAL</th>
                 </tr>
               </thead>
@@ -206,7 +215,7 @@ function RelatorioWidget() {
                         <td>{row.diurno}</td>
                         <td>{row.noturno}</td>
                         <td className="font-semibold">{row.total_capital}</td>
-                        {crbmHeaders.map(h => <td key={h as string}>{row[h as keyof IRelatorioRow]}</td>)}
+                        {CRBM_HEADERS.map(h => <td key={h}>{row[h]}</td>)}
                         <td className="font-bold bg-blue-900/30">{row.total_geral}</td>
                       </tr>
                     ))}
@@ -224,3 +233,8 @@ function RelatorioWidget() {
 }
 
 export default RelatorioWidget;
+
+
+
+
+

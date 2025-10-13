@@ -2,10 +2,10 @@
 
 // ======================= INÍCIO DA CORREÇÃO =======================
 // O tipo correto para um destaque é a própria ocorrência
-import { IOcorrencia } from '../services/api';
+import { IDestaqueRelatorio } from '../services/api';
 
 interface Props {
-  destaques: IOcorrencia[];
+  destaques: IDestaqueRelatorio[];
 }
 // ======================= FIM DA CORREÇÃO =======================
 

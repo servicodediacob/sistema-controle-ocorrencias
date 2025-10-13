@@ -4,6 +4,8 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma'; // Importando o Prisma Client
+import { OAuth2Client } from 'google-auth-library';
+import { notifyAdmins } from '@/services/socketService';
 import logger from '@/config/logger';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
@@ -61,5 +63,62 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ err: error }, `[AUTH] Erro inesperado durante o login para ${email}`);
     res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+  const { id_token } = req.body as { id_token?: string };
+  if (!id_token) {
+    res.status(400).json({ message: 'id_token é obrigatório.' });
+    return;
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    logger.error('[AUTH] GOOGLE_CLIENT_ID não definido no ambiente');
+    res.status(500).json({ message: 'Configuração OAuth ausente.' });
+    return;
+  }
+
+  try {
+    const oauthClient = new OAuth2Client(clientId);
+    const ticket = await oauthClient.verifyIdToken({ idToken: id_token, audience: clientId });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(401).json({ message: 'Token inválido.' });
+      return;
+    }
+
+    const email = payload.email;
+    const nome = payload.name || email.split('@')[0];
+
+    // Usuário já existe? Faz login normal
+    const usuario = await prisma.usuario.findUnique({ where: { email }, include: { obm: true } });
+    if (usuario) {
+      if (!process.env.JWT_SECRET) { res.status(500).json({ message: 'JWT_SECRET ausente.' }); return; }
+      const tokenPayload = {
+        id: usuario.id,
+        nome: usuario.nome,
+        role: usuario.role,
+        perfil: usuario.role,
+        obm: usuario.obm ? { id: usuario.obm.id, nome: usuario.obm.nome } : null,
+      };
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '7d' });
+      res.status(200).json({ token });
+      return;
+    }
+
+    // Não existe: sinaliza necessidade de aprovação
+    // Opcional: notificar admins que houve tentativa de acesso Google ainda não cadastrada
+    try {
+      notifyAdmins('acesso:google-primeiro-login', { nome, email, quando: new Date().toISOString() });
+    } catch (e) {
+      logger.warn({ err: e }, '[AUTH] Falha ao notificar admins sobre first-login Google');
+    }
+
+    res.status(200).json({ needsApproval: true, profile: { nome, email } });
+  } catch (error) {
+    logger.error({ err: error }, '[AUTH] Erro ao verificar token Google');
+    res.status(401).json({ message: 'Falha na autenticação Google.' });
   }
 };

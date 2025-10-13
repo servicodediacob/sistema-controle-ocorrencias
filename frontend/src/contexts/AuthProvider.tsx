@@ -15,6 +15,7 @@ export interface IAuthContext {
   token: string | null;
   loading: boolean;
   login(credentials: { email: string; senha: string }): Promise<void>;
+  loginWithJwt(token: string): void;
   logout(): void;
 }
 
@@ -75,8 +76,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     window.location.href = '/login';
   }, []);
 
+  const loginWithJwt = useCallback((newToken: string) => {
+    localStorage.setItem('@siscob:token', newToken);
+    setUserFromToken(newToken, setUser, setToken);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, usuario: user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, usuario: user, token, loading, login, loginWithJwt, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -134,6 +134,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     socket.on('update-logged-in-users', handleUpdateUsers);
+    // Notificações administrativas
+    const handleNewAccess = (payload: any) => {
+      if (usuario.role === 'admin') {
+        addNotification(`Nova solicitação de acesso: ${payload?.nome || ''}`, 'info');
+      }
+    };
+    const handleFirstGoogle = (payload: any) => {
+      if (usuario.role === 'admin') {
+        addNotification(`Primeiro login Google: ${payload?.email || ''}`, 'warning');
+      }
+    };
+    socket.on('acesso:solicitacao-nova', handleNewAccess);
+    socket.on('acesso:google-primeiro-login', handleFirstGoogle);
     socket.on('new-private-message', handleNewMessage);
 
     socket.emit('request-logged-in-users');
@@ -141,6 +154,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       socket.off('update-logged-in-users', handleUpdateUsers);
       socket.off('new-private-message', handleNewMessage);
+      socket.off('acesso:solicitacao-nova', handleNewAccess);
+      socket.off('acesso:google-primeiro-login', handleFirstGoogle);
     };
   }, [socket, usuario, addNotification, openChatWith]);
 

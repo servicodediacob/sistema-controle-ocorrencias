@@ -3,6 +3,8 @@
 import { useState, useEffect, ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
+import { authGoogle, solicitarAcessoGoogle, getCidades, ICidade } from '../services/api';
+import { useNotification } from '../contexts/NotificationContext';
 import { z } from 'zod';
 
 // Esquema de validação com Zod (sem alterações)
@@ -23,6 +25,8 @@ const Spinner = (): ReactElement => (
   />
 );
 
+declare global { interface Window { google?: any } }
+
 function LoginPage(): ReactElement {
   const [formData, setFormData] = useState({
     email: '',
@@ -34,7 +38,19 @@ function LoginPage(): ReactElement {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login } = useAuth();
+  const { login, loginWithJwt } = useAuth();
+  const { addNotification } = useNotification();
+  const [obms, setObms] = useState<ICidade[]>([]);
+  const [selectedObm, setSelectedObm] = useState<string>('');
+  const [pendingGoogleProfile, setPendingGoogleProfile] = useState<{ nome: string; email: string } | null>(null);
+  // Carrega OBMs apenas quando o modal for aberto (evita 401 na tela pública)
+  useEffect(() => {
+    if (pendingGoogleProfile && obms.length === 0) {
+      getCidades().then(setObms).catch(() => {
+        addNotification('Falha ao carregar OBMs. Tente novamente.', 'error');
+      });
+    }
+  }, [pendingGoogleProfile]);
 
   const validateForm = () => {
     const result = loginSchema.safeParse(formData);
@@ -86,6 +102,48 @@ function LoginPage(): ReactElement {
   };
 
   const isFormInvalid = Object.keys(errors).length > 0;
+
+  const handleGoogleSignIn = async () => {
+    try {
+      // Carrega script do Google Identity Services se necessário
+      if (!window.google) {
+        await new Promise<void>((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://accounts.google.com/gsi/client';
+          s.async = true; s.defer = true;
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error('Falha ao carregar Google Identity'));
+          document.head.appendChild(s);
+        });
+      }
+
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+      if (!clientId) { addNotification('GOOGLE_CLIENT_ID não configurado.', 'error'); return; }
+
+      await new Promise<void>((resolve, reject) => {
+        try {
+          window.google.accounts.id.initialize({ client_id: clientId, callback: async (resp: any) => {
+            try {
+              const result = await authGoogle(resp.credential);
+              if (result.token) {
+                loginWithJwt(result.token);
+              } else if (result.needsApproval && result.profile) {
+                setPendingGoogleProfile(result.profile);
+              } else {
+                addNotification('Falha no login com Google.', 'error');
+              }
+            } catch (e) {
+              addNotification('Falha na verificação do Google.', 'error');
+            }
+          }});
+          window.google.accounts.id.prompt();
+          resolve();
+        } catch (e) { reject(e); }
+      });
+    } catch (e) {
+      addNotification('Erro ao iniciar Google Sign-In.', 'error');
+    }
+  };
 
   // --- O SEU LAYOUT JSX PERMANECE 100% IDÊNTICO ---
   return (
@@ -144,6 +202,16 @@ function LoginPage(): ReactElement {
           <hr className="flex-grow border-t border-gray-600" />
         </div>
 
+        {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+          <button onClick={handleGoogleSignIn} className="mb-4 w-full rounded-md bg-white p-3 font-semibold text-gray-900 transition hover:bg-gray-100">
+            Continuar com Google
+          </button>
+        ) : (
+          <div className="mb-4 w-full rounded-md bg-gray-700 p-3 text-center text-sm text-gray-300">
+            Login com Google indisponível (GOOGLE_CLIENT_ID não configurado)
+          </div>
+        )}
+
         <Link
           to="/solicitar-acesso"
           className="block w-full text-center rounded-md bg-gray-600 p-3 font-semibold text-white transition hover:bg-gray-500"
@@ -151,6 +219,30 @@ function LoginPage(): ReactElement {
           Solicitar Acesso
         </Link>
       </div>
+
+      {pendingGoogleProfile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-lg bg-gray-800 p-6">
+            <h3 className="mb-4 text-lg font-semibold text-white">Selecionar OBM para solicitação</h3>
+            <p className="mb-4 text-sm text-gray-300">{pendingGoogleProfile.nome} ({pendingGoogleProfile.email})</p>
+            <select value={selectedObm} onChange={e=>setSelectedObm(e.target.value)} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white">
+              <option value="">Selecione sua OBM</option>
+              {obms.map(o => <option key={o.id} value={o.id}>{o.cidade_nome}</option>)}
+            </select>
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={()=>setPendingGoogleProfile(null)} className="rounded-md bg-gray-600 px-4 py-2 text-white">Cancelar</button>
+              <button onClick={async ()=>{
+                if(!selectedObm){ addNotification('Selecione sua OBM.', 'warning'); return; }
+                try{
+                  await solicitarAcessoGoogle({ nome: pendingGoogleProfile.nome, email: pendingGoogleProfile.email, obm_id: parseInt(selectedObm) });
+                  addNotification('Solicitação enviada! Aguarde aprovação.', 'success');
+                  setPendingGoogleProfile(null);
+                }catch(e){ addNotification('Falha ao enviar solicitação.', 'error'); }
+              }} className="rounded-md bg-teal-600 px-4 py-2 text-white">Enviar Solicitação</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
+import { notifyAdmins } from '@/services/socketService';
+import nodemailer from 'nodemailer';
 import logger from '@/config/logger';
 import { RequestWithUser } from '@/middleware/authMiddleware';
 
@@ -72,6 +74,38 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
     res.status(200).json(resultadoFormatado);
   } catch (error) {
     logger.error({ err: error }, 'Erro ao listar solicitações de acesso.');
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// Solicitação de acesso via Google (gera senha aleatória para cumprir o schema atual)
+export const solicitarAcessoGoogle = async (req: Request, res: Response): Promise<void> => {
+  const { nome, email, obm_id } = req.body as { nome?: string; email?: string; obm_id?: number };
+  if (!nome || !email || !obm_id) {
+    res.status(400).json({ message: 'Campos obrigatórios: nome, email, obm_id.' });
+    return;
+  }
+  try {
+    const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
+    const solicitacaoExistente = await prisma.solicitacaoAcesso.findUnique({ where: { email } });
+    if (usuarioExistente || solicitacaoExistente) {
+      res.status(409).json({ message: 'Já existe usuário ou solicitação pendente para este email.' });
+      return;
+    }
+    const senhaRandom = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const salt = await bcrypt.genSalt(10);
+    const senha_hash = await bcrypt.hash(senhaRandom, salt);
+
+    const novaSolicitacao = await prisma.solicitacaoAcesso.create({
+      data: { nome, email, senha_hash, obm_id: Number(obm_id), status: 'pendente' },
+      select: { id: true, nome: true, email: true, data_solicitacao: true },
+    });
+
+    try { notifyAdmins('acesso:solicitacao-nova', { id: novaSolicitacao.id, nome, email }); } catch {}
+
+    res.status(201).json({ message: 'Solicitação enviada! Aguarde aprovação de um administrador.', solicitacao: novaSolicitacao });
+  } catch (error) {
+    logger.error({ err: error }, 'Erro ao criar solicitação de acesso (google).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

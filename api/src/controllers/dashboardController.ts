@@ -40,9 +40,15 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
     const totalOcorrencias = totalLote + totalDetalhadas;
     // ======================= FIM DA CORREÇÃO =======================
 
-    // Consulta 3: Total de óbitos (geral, sem filtro de data, como esperado)
+    // Consulta 3: Total de óbitos DO DIA (alinha com a página de Lançamento de Óbitos)
     const totalObitos = await prisma.obitoRegistro.aggregate({
       _sum: { quantidade_vitimas: true },
+      where: {
+        data_ocorrencia: {
+          gte: hojeInicio,
+          lte: hojeFim,
+        },
+      },
     });
 
     // As consultas de "Ocorrências por Natureza" e "Ocorrências por CRBM"

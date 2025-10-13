@@ -13,10 +13,19 @@ export interface IOcorrencia { id: number; data_ocorrencia: string; quantidade_o
 export interface IPaginatedOcorrencias { ocorrencias: IOcorrencia[]; pagination: { page: number; limit: number; total: number; totalPages: number; }; }
 export interface IDashboardStats { totalOcorrencias: number; totalObitos: number; ocorrenciasPorNatureza: { nome: string; total: number }[]; ocorrenciasPorCrbm: { nome: string; total: number }[]; }
 export interface IOcorrenciaDetalhada { id: number; numero_ocorrencia?: string; natureza_id: number; natureza_grupo: string; natureza_nome: string; endereco?: string; bairro?: string; cidade_id: number; cidade_nome: string; viaturas?: string; veiculos_envolvidos?: string; dados_vitimas?: string; resumo_ocorrencia: string; data_ocorrencia: string; horario_ocorrencia?: string; usuario_id: number; }
+
+// Ocorrência de destaque retornada pelo endpoint de relatório completo.
+// Inclui os campos detalhados e alguns auxiliares que a API adiciona (ex.: crbm_nome).
+export interface IDestaqueRelatorio extends IOcorrenciaDetalhada {
+  natureza_descricao?: string;
+  obm_nome?: string;
+  crbm_nome?: string;
+  natureza?: { grupo: string; subgrupo: string };
+}
 export interface IPlantao { ocorrenciasDestaque: IOcorrenciaDetalhada[]; supervisorPlantao: { usuario_id: number | null; supervisor_nome: string | null; } | null; }
 export interface ISupervisor { id: number; nome: string; }
 export interface IRelatorioRow { grupo: string; subgrupo: string; diurno: string; noturno: string; total_capital: string; "1º CRBM": string; "2º CRBM": string; "3º CRBM": string; "4º CRBM": string; "5º CRBM": string; "6º CRBM": string; "7º CRBM": string; "8º CRBM": string; "9º CRBM": string; total_geral: string; }
-export interface IRelatorioCompleto { estatisticas: IRelatorioRow[]; obitos: IObitoRegistro[]; destaques: IOcorrencia[]; }
+export interface IRelatorioCompleto { estatisticas: IRelatorioRow[]; obitos: IObitoRegistro[]; destaques: IDestaqueRelatorio[]; }
 export interface IEstatisticaLotePayload { data_registro: string; obm_id: number; estatisticas: { natureza_id: number; quantidade: number; }[]; }
 export interface IEstatisticaAgrupada { crbm_nome: string; cidade_nome: string; natureza_id?: number; natureza_grupo?: string; natureza_nome: string; natureza_abreviacao: string | null; quantidade: number; }
 export interface IObitoRegistroPayload { data_ocorrencia: string; natureza_id: number; numero_ocorrencia: string; obm_id: number; quantidade_vitimas: number; }
@@ -37,11 +46,14 @@ export const extractErrorMessage = (error: unknown): string => { if (axios.isAxi
 // --- Serviços da API ---
 const apiService = {
   login: (credentials: { email: string; senha: string }): Promise<{ token: string }> => api.post('/auth/login', credentials),
+  authGoogle: (id_token: string): Promise<{ token?: string; needsApproval?: boolean; profile?: { nome: string; email: string } }> => api.post('/auth/google', { id_token }),
   solicitarAcesso: (payload: ISolicitacaoAcessoPayload): Promise<{ message: string }> => api.post('/acesso/solicitar', payload),
+  solicitarAcessoGoogle: (payload: { nome: string; email: string; obm_id: number }): Promise<{ message: string }> => api.post('/acesso/solicitar-google', payload),
   getSolicitacoes: (): Promise<ISolicitacao[]> => api.get('/acesso'),
   gerenciarSolicitacao: (id: number, acao: 'aprovar' | 'recusar'): Promise<{ message: string }> => api.put(`/acesso/${id}/gerenciar`, { acao }),
   getCrbms: (): Promise<ICrbm[]> => api.get('/crbms'),
-  getCidades: (): Promise<ICidade[]> => api.get('/unidades'),
+  // Para telas públicas use a rota pública; após login, pode-se usar '/unidades'
+  getCidades: (): Promise<ICidade[]> => api.get('/acesso/obms-public'),
   getNaturezas: (): Promise<IDataApoio[]> => api.get('/naturezas'),
   getNaturezasPorNomes: (nomes: string[]): Promise<IDataApoio[]> => api.post('/naturezas/por-nomes', { nomes }),
   criarOcorrencia: (payload: IOcorrenciaPayload): Promise<{ message: string; ocorrenciaId: number }> => api.post('/ocorrencias', payload),
@@ -84,6 +96,7 @@ const apiService = {
 // Adicionando a função à exportação desestruturada
 export const {
   login, solicitarAcesso, getSolicitacoes, gerenciarSolicitacao,
+  authGoogle, solicitarAcessoGoogle,
   getCrbms, getCidades, getNaturezas, getNaturezasPorNomes,
   criarOcorrencia, getOcorrencias, updateOcorrencia, deleteOcorrencia, setOcorrenciaDestaque,
   getDashboardStats, getPlantao, getSupervisores, setSupervisorPlantao,
