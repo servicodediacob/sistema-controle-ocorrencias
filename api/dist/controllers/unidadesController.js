@@ -5,9 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCrbms = exports.excluirUnidade = exports.atualizarUnidade = exports.criarUnidade = exports.getUnidades = void 0;
-const client_1 = require("@prisma/client");
 const prisma_1 = require("../lib/prisma"); // Importa a instância singleton do Prisma Client
 const logger_1 = __importDefault(require("@/config/logger"));
+// Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
+const isPrismaKnownError = (e) => !!e && typeof e.code === 'string';
 /**
  * @description Busca todas as unidades (OBMs) e as informações do CRBM associado.
  */
@@ -60,7 +61,7 @@ const criarUnidade = async (req, res) => {
     catch (error) {
         // O Prisma fornece códigos de erro específicos para diferentes violações de constraints.
         // P2002 é o código para violação de constraint de unicidade (unique).
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (isPrismaKnownError(error) && error.code === 'P2002') {
             res.status(409).json({ message: `A OBM "${nome}" já existe.` });
             return;
         }
@@ -92,7 +93,7 @@ const atualizarUnidade = async (req, res) => {
     }
     catch (error) {
         // P2025 é o código para "registro não encontrado" em uma operação de update ou delete.
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        if (isPrismaKnownError(error) && error.code === 'P2025') {
             res.status(404).json({ message: 'OBM não encontrada.' });
             return;
         }
@@ -115,12 +116,12 @@ const excluirUnidade = async (req, res) => {
     }
     catch (error) {
         // P2003 é o código para violação de constraint de chave estrangeira (foreign key).
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        if (isPrismaKnownError(error) && error.code === 'P2003') {
             res.status(400).json({ message: 'Não é possível excluir esta OBM, pois ela está associada a outros registros.' });
             return;
         }
         // P2025 indica que o registro a ser excluído não foi encontrado.
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        if (isPrismaKnownError(error) && error.code === 'P2025') {
             res.status(404).json({ message: 'OBM não encontrada.' });
             return;
         }

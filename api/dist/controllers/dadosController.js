@@ -5,9 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.excluirNatureza = exports.atualizarNatureza = exports.criarNatureza = exports.getNaturezasPorNomes = exports.getNaturezas = void 0;
-const client_1 = require("@prisma/client");
 const prisma_1 = require("../lib/prisma");
 const logger_1 = __importDefault(require("@/config/logger"));
+// Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
+const isPrismaKnownError = (e) => !!e && typeof e.code === 'string';
 const getNaturezas = async (_req, res) => {
     try {
         const naturezas = await prisma_1.prisma.naturezaOcorrencia.findMany({
@@ -66,7 +67,7 @@ const criarNatureza = async (req, res) => {
         return res.status(201).json(novaNatureza);
     }
     catch (error) {
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (isPrismaKnownError(error) && error.code === 'P2002') {
             return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
         }
         logger_1.default.error({ err: error, body: req.body }, 'Erro ao criar natureza.');
@@ -93,7 +94,7 @@ const atualizarNatureza = async (req, res) => {
         return res.status(200).json(naturezaAtualizada);
     }
     catch (error) {
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+        if (isPrismaKnownError(error)) {
             if (error.code === 'P2002') {
                 return res.status(409).json({ message: `A combinação de Grupo "${grupo}" e Subgrupo "${subgrupo}" já existe.` });
             }
@@ -116,7 +117,7 @@ const excluirNatureza = async (req, res) => {
         return res.status(204).send();
     }
     catch (error) {
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+        if (isPrismaKnownError(error)) {
             if (error.code === 'P2003') {
                 return res.status(400).json({ message: 'Não é possível excluir esta natureza, pois ela está associada a registros existentes.' });
             }

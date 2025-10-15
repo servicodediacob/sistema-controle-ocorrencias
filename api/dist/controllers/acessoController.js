@@ -4,9 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.gerenciarSolicitacao = exports.listarSolicitacoes = exports.solicitarAcesso = void 0;
+exports.gerenciarSolicitacao = exports.solicitarAcessoGoogle = exports.listarSolicitacoes = exports.solicitarAcesso = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma_1 = require("../lib/prisma");
+const socketService_1 = require("@/services/socketService");
 const logger_1 = __importDefault(require("@/config/logger"));
 const solicitarAcesso = async (req, res) => {
     const { nome, email, senha, obm_id } = req.body;
@@ -70,6 +71,39 @@ const listarSolicitacoes = async (_req, res) => {
     }
 };
 exports.listarSolicitacoes = listarSolicitacoes;
+// Solicitação de acesso via Google (gera senha aleatória para cumprir o schema atual)
+const solicitarAcessoGoogle = async (req, res) => {
+    const { nome, email, obm_id } = req.body;
+    if (!nome || !email || !obm_id) {
+        res.status(400).json({ message: 'Campos obrigatórios: nome, email, obm_id.' });
+        return;
+    }
+    try {
+        const usuarioExistente = await prisma_1.prisma.usuario.findUnique({ where: { email } });
+        const solicitacaoExistente = await prisma_1.prisma.solicitacaoAcesso.findUnique({ where: { email } });
+        if (usuarioExistente || solicitacaoExistente) {
+            res.status(409).json({ message: 'Já existe usuário ou solicitação pendente para este email.' });
+            return;
+        }
+        const senhaRandom = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        const salt = await bcryptjs_1.default.genSalt(10);
+        const senha_hash = await bcryptjs_1.default.hash(senhaRandom, salt);
+        const novaSolicitacao = await prisma_1.prisma.solicitacaoAcesso.create({
+            data: { nome, email, senha_hash, obm_id: Number(obm_id), status: 'pendente' },
+            select: { id: true, nome: true, email: true, data_solicitacao: true },
+        });
+        try {
+            (0, socketService_1.notifyAdmins)('acesso:solicitacao-nova', { id: novaSolicitacao.id, nome, email });
+        }
+        catch { }
+        res.status(201).json({ message: 'Solicitação enviada! Aguarde aprovação de um administrador.', solicitacao: novaSolicitacao });
+    }
+    catch (error) {
+        logger_1.default.error({ err: error }, 'Erro ao criar solicitação de acesso (google).');
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+};
+exports.solicitarAcessoGoogle = solicitarAcessoGoogle;
 const gerenciarSolicitacao = async (req, res) => {
     const { id } = req.params;
     const { acao } = req.body;

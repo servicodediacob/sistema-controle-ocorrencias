@@ -10,20 +10,32 @@ const criarOcorrenciaDetalhada = async (req, res) => {
     const payload = req.body;
     const usuario_id = req.usuario?.id;
     try {
+        // Coerção e validação de tipos vindos do frontend (podem chegar como string)
+        const naturezaId = Number(payload.natureza_id ?? payload.natureza_id);
+        const cidadeId = Number(payload.cidade_id ?? payload.cidade_id);
+        if (!Number.isInteger(naturezaId) || naturezaId <= 0) {
+            return res.status(400).json({ message: 'natureza_id inválido. Deve ser um inteiro.' });
+        }
+        if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
+            return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
+        }
         const novaOcorrencia = await prisma_1.prisma.$transaction(async (tx) => {
             const ocorrenciaCriada = await tx.ocorrenciaDetalhada.create({
                 data: {
                     numero_ocorrencia: payload.numero_ocorrencia,
-                    natureza_id: payload.natureza_id,
+                    natureza_id: naturezaId,
                     endereco: payload.endereco,
                     bairro: payload.bairro,
-                    cidade_id: payload.cidade_id,
+                    cidade_id: cidadeId,
                     viaturas: payload.viaturas,
                     veiculos_envolvidos: payload.veiculos_envolvidos,
                     dados_vitimas: payload.dados_vitimas,
                     resumo_ocorrencia: payload.resumo_ocorrencia,
                     data_ocorrencia: new Date(payload.data_ocorrencia + 'T00:00:00Z'), // Salva sempre em UTC
-                    horario_ocorrencia: payload.horario_ocorrencia ? `${payload.horario_ocorrencia}:00` : null,
+                    // Prisma espera um Date para campos @db.Time. Convertemos HH:mm em uma data base 1970-01-01.
+                    horario_ocorrencia: payload.horario_ocorrencia
+                        ? new Date(`1970-01-01T${payload.horario_ocorrencia}:00Z`)
+                        : null,
                     usuario_id: usuario_id,
                 },
             });
@@ -68,6 +80,9 @@ const getOcorrenciasDetalhadasPorData = async (req, res) => {
             natureza_grupo: od.natureza.grupo,
             natureza_nome: od.natureza.subgrupo,
             cidade_nome: od.cidade.nome,
+            horario_ocorrencia: od.horario_ocorrencia
+                ? new Date(od.horario_ocorrencia).toISOString().substring(11, 16)
+                : null,
         }));
         return res.status(200).json(resultadoFormatado);
     }
@@ -82,20 +97,30 @@ const atualizarOcorrenciaDetalhada = async (req, res) => {
     const { id } = req.params;
     const payload = req.body;
     try {
+        const naturezaId = Number(payload.natureza_id ?? payload.natureza_id);
+        const cidadeId = Number(payload.cidade_id ?? payload.cidade_id);
+        if (!Number.isInteger(naturezaId) || naturezaId <= 0) {
+            return res.status(400).json({ message: 'natureza_id inválido. Deve ser um inteiro.' });
+        }
+        if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
+            return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
+        }
         const ocorrenciaAtualizada = await prisma_1.prisma.ocorrenciaDetalhada.update({
             where: { id: Number(id) },
             data: {
                 numero_ocorrencia: payload.numero_ocorrencia,
-                natureza_id: payload.natureza_id,
+                natureza_id: naturezaId,
                 endereco: payload.endereco,
                 bairro: payload.bairro,
-                cidade_id: payload.cidade_id,
+                cidade_id: cidadeId,
                 viaturas: payload.viaturas,
                 veiculos_envolvidos: payload.veiculos_envolvidos,
                 dados_vitimas: payload.dados_vitimas,
                 resumo_ocorrencia: payload.resumo_ocorrencia,
                 data_ocorrencia: new Date(payload.data_ocorrencia + 'T00:00:00Z'),
-                horario_ocorrencia: payload.horario_ocorrencia ? `${payload.horario_ocorrencia}:00` : null,
+                horario_ocorrencia: payload.horario_ocorrencia
+                    ? new Date(`1970-01-01T${payload.horario_ocorrencia}:00Z`)
+                    : null,
                 usuario_id: req.usuario?.id,
             },
         });

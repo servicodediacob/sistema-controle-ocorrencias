@@ -1,12 +1,19 @@
 "use strict";
+// api/src/controllers/estatisticasController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
-const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
-const date_1 = require("@/utils/date");
+exports.getSisgpoDashboard = exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
+const prisma_1 = require("../lib/prisma"); // Corrigido para caminho relativo
+const logger_1 = __importDefault(require("../config/logger")); // Corrigido para caminho relativo
+const date_1 = require("../utils/date"); // Corrigido para caminho relativo
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const axios_1 = __importDefault(require("axios"));
+// Segredos para a integração (use variáveis de ambiente em produção)
+const SHARED_SECRET = process.env.SSO_SHARED_SECRET || 'seu-segredo-compartilhado';
+const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
+// --- SUAS FUNÇÕES EXISTENTES (Sem alterações na lógica interna) ---
 const registrarEstatisticasLote = async (req, res) => {
     const { data_registro, obm_id, estatisticas } = req.body;
     const usuario = req.usuario;
@@ -63,8 +70,6 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
         return res.status(400).json({ message: 'A data é obrigatória.' });
     }
     try {
-        // ======================= INÍCIO DA CORREÇÃO =======================
-        // Usa parseDateParam para evitar problemas de fuso/UTC e garante o dia completo no horário local
         const base = (0, date_1.parseDateParam)(data, 'data');
         const dataInicio = new Date(base);
         dataInicio.setHours(0, 0, 0, 0);
@@ -77,28 +82,25 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
                 natureza: true,
             },
         });
-        const detalhadas = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
-            where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } },
-            include: {
-                cidade: { include: { crbm: true } },
-                natureza: true,
-            },
-        });
-        // ======================= FIM DA CORREÇÃO =======================
         const dadosAgrupados = {};
         const processarItem = (item, quantidade) => {
-            const cidadeNome = item.cidade?.nome || item.obm?.nome;
-            const crbmNome = item.cidade?.crbm?.nome || item.obm?.crbm?.nome;
+            const cidadeNome = item.obm?.nome;
+            const crbmNome = item.obm?.crbm?.nome;
             const naturezaNome = item.natureza?.subgrupo;
             const naturezaAbreviacao = item.natureza?.abreviacao;
+            const naturezaId = item.natureza?.id ?? null;
+            const naturezaGrupo = item.natureza?.grupo;
             if (cidadeNome && naturezaNome && crbmNome) {
-                const chave = `${cidadeNome}-${naturezaNome}`;
+                const naturezaChave = naturezaId !== null
+                    ? String(naturezaId)
+                    : `${naturezaGrupo}|${naturezaNome}`;
+                const chave = `${cidadeNome}|${naturezaChave}`;
                 if (!dadosAgrupados[chave]) {
                     dadosAgrupados[chave] = {
                         cidade_nome: cidadeNome,
                         crbm_nome: crbmNome,
-                        natureza_id: item.natureza?.id,
-                        natureza_grupo: item.natureza?.grupo,
+                        natureza_id: naturezaId ?? undefined,
+                        natureza_grupo: naturezaGrupo,
                         natureza_nome: naturezaNome,
                         natureza_abreviacao: naturezaAbreviacao || null,
                         quantidade: 0,
@@ -108,7 +110,6 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
             }
         };
         estatisticas.forEach(item => processarItem(item, item.quantidade));
-        detalhadas.forEach(item => processarItem(item, 1));
         const resultadoFinal = Object.values(dadosAgrupados).sort((a, b) => a.cidade_nome.localeCompare(b.cidade_nome));
         return res.status(200).json(resultadoFinal);
     }
@@ -118,7 +119,6 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
     }
 };
 exports.getEstatisticasAgrupadasPorData = getEstatisticasAgrupadasPorData;
-// ... (resto do arquivo sem alterações)
 const limparTodosOsDadosDoDia = async (req, res) => {
     const { data } = req.query;
     const usuario = req.usuario;
@@ -145,3 +145,20 @@ const limparTodosOsDadosDoDia = async (req, res) => {
     }
 };
 exports.limparTodosOsDadosDoDia = limparTodosOsDadosDoDia;
+// --- NOVA FUNÇÃO PARA A INTEGRAÇÃO ---
+const getSisgpoDashboard = async (req, res) => {
+    try {
+        const token = jsonwebtoken_1.default.sign({}, SHARED_SECRET, { expiresIn: '1m' });
+        const response = await axios_1.default.get(`${SISGPO_API_URL}/api/external/dashboard`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        res.json(response.data);
+    }
+    catch (error) {
+        console.error('Erro ao buscar dados do dashboard do sisgpo:', error);
+        res.status(500).json({ message: 'Falha ao obter dados externos.' });
+    }
+};
+exports.getSisgpoDashboard = getSisgpoDashboard;

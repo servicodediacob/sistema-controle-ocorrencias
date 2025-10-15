@@ -5,4 +5,5 @@ const authController_1 = require("../controllers/authController");
 const router = (0, express_1.Router)();
 // Rota de Login: POST /api/auth/login
 router.post('/login', authController_1.login);
+router.post('/google', authController_1.googleLogin);
 exports.default = router;

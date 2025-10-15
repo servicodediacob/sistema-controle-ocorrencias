@@ -1,71 +1,57 @@
 "use strict";
-// api/src/server.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// Carrega as variáveis de ambiente do arquivo .env o mais cedo possível
-require("./config/envLoader");
+exports.io = void 0;
+require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
-const logger_1 = __importDefault(require("./config/logger"));
-const socketService_1 = require("./services/socketService");
-// Importação das rotas
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const usuarioRoutes_1 = __importDefault(require("./routes/usuarioRoutes"));
 const acessoRoutes_1 = __importDefault(require("./routes/acessoRoutes"));
+const perfilRoutes_1 = __importDefault(require("./routes/perfilRoutes"));
+const unidadesRoutes_1 = __importDefault(require("./routes/unidadesRoutes"));
+const dadosRoutes_1 = __importDefault(require("./routes/dadosRoutes"));
 const plantaoRoutes_1 = __importDefault(require("./routes/plantaoRoutes"));
 const ocorrenciaDetalhadaRoutes_1 = __importDefault(require("./routes/ocorrenciaDetalhadaRoutes"));
-const perfilRoutes_1 = __importDefault(require("./routes/perfilRoutes"));
+const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
+// import relatorioRoutes from './routes/relatorioRoutes'; // CORREÇÃO: Removido
 const auditoriaRoutes_1 = __importDefault(require("./routes/auditoriaRoutes"));
-const dadosRoutes_1 = __importDefault(require("./routes/dadosRoutes"));
-const diagRoutes_1 = __importDefault(require("./routes/diagRoutes"));
-// --- Configuração de CORS ---
-const defaultAllowedOrigins = [
-    'http://localhost:5173',
-    'https://siscob-iota.vercel.app',
-    'https://sistema-ocorrencias-frontend-alpha.vercel.app',
-];
-const extraAllowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
-    : [];
-const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...extraAllowedOrigins]));
-if (extraAllowedOrigins.length > 0) {
-    logger_1.default.info({ allowedOrigins }, '[CORS] Origem(s) adicionais carregadas de CORS_ORIGINS.');
-}
-const corsOptions = {
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        }
-        else {
-            logger_1.default.warn({ origin }, 'Origem bloqueada pelo CORS');
-            callback(new Error('Nao permitido pelo CORS'));
-        }
-    },
-    credentials: true,
-};
-// --- Inicialização da Aplicação ---
+const estatisticasRoutes_1 = __importDefault(require("./routes/estatisticasRoutes"));
+const externalRoutes_1 = __importDefault(require("./routes/externalRoutes")); // CORREÇÃO: Garantindo que a importação existe
+const authMiddleware_1 = require("./middleware/authMiddleware");
+const socketService_1 = require("./services/socketService"); // CORREÇÃO: Usando import nomeado
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)(corsOptions));
-app.use(express_1.default.json());
-// --- Rotas ---
-app.use('/api/diag', diagRoutes_1.default);
-app.use('/api/auth', authRoutes_1.default);
-app.use('/api/acesso', acessoRoutes_1.default);
-app.use('/api/plantao', plantaoRoutes_1.default);
-app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes_1.default);
-app.use('/api/perfil', perfilRoutes_1.default);
-app.use('/api/auditoria', auditoriaRoutes_1.default);
-app.use('/api', dadosRoutes_1.default);
-// --- Configuração do Servidor HTTP e Socket.IO ---
-const httpServer = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(httpServer, { cors: corsOptions });
-(0, socketService_1.onSocketConnection)(io);
-// --- Inicialização do Servidor ---
-const PORT = process.env.PORT || 3001;
-const server = httpServer.listen(PORT, () => {
-    logger_1.default.info(`Servidor rodando na porta ${PORT} em modo ${process.env.NODE_ENV || 'development'}`);
+const server = (0, http_1.createServer)(app);
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: '*',
+    },
 });
-exports.default = server;
+exports.io = io;
+(0, socketService_1.initializeSocket)(io);
+const PORT = process.env.PORT || 3001;
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+// Rotas públicas
+app.use('/api/auth', authRoutes_1.default);
+// Rota externa para integração
+app.use('/api', externalRoutes_1.default);
+// Rotas protegidas
+app.use('/api', authMiddleware_1.proteger, usuarioRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, acessoRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, perfilRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, unidadesRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, dadosRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, plantaoRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, ocorrenciaDetalhadaRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, dashboardRoutes_1.default);
+// app.use('/api', proteger, relatorioRoutes); // Removido
+app.use('/api', authMiddleware_1.proteger, auditoriaRoutes_1.default);
+app.use('/api', authMiddleware_1.proteger, estatisticasRoutes_1.default);
+server.listen(PORT, () => {
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
+});

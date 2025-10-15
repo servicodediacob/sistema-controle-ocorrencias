@@ -1,12 +1,8 @@
-﻿// api/src/server.ts
-
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-
-// --- ROTAS ---
 import authRoutes from './routes/authRoutes';
 import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
@@ -16,15 +12,12 @@ import dadosRoutes from './routes/dadosRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+// import relatorioRoutes from './routes/relatorioRoutes'; // CORREÇÃO: Removido
 import auditoriaRoutes from './routes/auditoriaRoutes';
 import estatisticasRoutes from './routes/estatisticasRoutes';
-import diagRoutes from './routes/diagRoutes';
-// A rota 'relatorioRoutes' não foi encontrada, mantendo comentada
-// import relatorioRoutes from './routes/relatorioRoutes';
-
-// --- MIDDLEWARES E SERVIÇOS (CORRIGIDO) ---
-import { proteger } from './middleware/authMiddleware'; // Usando o nome de exportação correto
-const { onSocketConnection } = require('./services/socketService'); // Usando 'require' para garantir a importação
+import externalRoutes from './routes/externalRoutes'; // CORREÇÃO: Garantindo que a importação existe
+import { proteger } from './middleware/authMiddleware';
+import { initializeSocket } from './services/socketService'; // CORREÇÃO: Usando import nomeado
 
 const app = express();
 const server = createServer(app);
@@ -34,8 +27,7 @@ const io = new Server(server, {
   },
 });
 
-// Inicializa o Socket.IO
-onSocketConnection(io);
+initializeSocket(io);
 
 const PORT = process.env.PORT || 3001;
 
@@ -44,20 +36,22 @@ app.use(express.json());
 
 // Rotas públicas
 app.use('/api/auth', authRoutes);
-app.use('/api/acesso', acessoRoutes); // possui públicas e protegidas dentro do arquivo
-app.use('/api/diag', diagRoutes); // diagnóstico público
 
-// Rotas protegidas (cada router aplica seu próprio middleware quando necessário)
-app.use('/api/usuarios', usuarioRoutes);
-app.use('/api/perfil', perfilRoutes);
-app.use('/api/unidades', unidadesRoutes);
-app.use('/api', dadosRoutes); // agrega /naturezas, /usuarios, /unidades, etc
-app.use('/api/plantao', plantaoRoutes);
-app.use('/api/ocorrencias', ocorrenciaDetalhadaRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/auditoria', auditoriaRoutes);
-app.use('/api', estatisticasRoutes); // mantém endpoints /estatisticas/*
-// app.use('/api', proteger, relatorioRoutes);
+// Rota externa para integração
+app.use('/api', externalRoutes);
+
+// Rotas protegidas
+app.use('/api', proteger, usuarioRoutes);
+app.use('/api', proteger, acessoRoutes);
+app.use('/api', proteger, perfilRoutes);
+app.use('/api', proteger, unidadesRoutes);
+app.use('/api', proteger, dadosRoutes);
+app.use('/api', proteger, plantaoRoutes);
+app.use('/api', proteger, ocorrenciaDetalhadaRoutes);
+app.use('/api', proteger, dashboardRoutes);
+// app.use('/api', proteger, relatorioRoutes); // Removido
+app.use('/api', proteger, auditoriaRoutes);
+app.use('/api', proteger, estatisticasRoutes);
 
 server.listen(PORT, () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);

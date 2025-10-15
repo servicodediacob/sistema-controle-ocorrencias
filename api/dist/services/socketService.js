@@ -3,81 +3,136 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onSocketConnection = void 0;
+exports.initializeSocket = exports.notifyAdmins = exports.onSocketConnection = void 0;
 const logger_1 = __importDefault(require("@/config/logger"));
-// Mapeia userId para um Set de seus socketIds (permite múltiplas abas)
 const userSockets = new Map();
-// Mapeia cada socketId para o objeto do usuário correspondente
 const socketToUser = new Map();
-// Função para transmitir a lista atualizada de usuários online para todos
-const broadcastLoggedInUsers = (io) => {
+let currentIo = null;
+const getUniqueLoggedInUsers = () => {
     const uniqueUsers = new Map();
-    // Garante que cada usuário apareça apenas uma vez na lista
     for (const user of socketToUser.values()) {
         if (!uniqueUsers.has(user.id)) {
             uniqueUsers.set(user.id, user);
         }
     }
-    const usersArray = Array.from(uniqueUsers.values());
-    io.emit('update-logged-in-users', usersArray);
+    return Array.from(uniqueUsers.values());
 };
-// Função principal que configura os listeners de eventos do Socket.IO
+const broadcastLoggedInUsers = (io) => {
+    io.emit('update-logged-in-users', getUniqueLoggedInUsers());
+};
 const onSocketConnection = (io) => {
+    currentIo = io;
     io.on('connection', (socket) => {
         logger_1.default.info(`[Socket.IO] Cliente conectado: ${socket.id}`);
-        // Evento disparado pelo frontend quando um usuário faz login
-        socket.on('user-login', (user) => {
-            const userWithLoginTime = {
+        socket.on('user-login', (user, ack) => {
+            const sanitizedUser = {
                 ...user,
                 loginTime: new Date().toISOString(),
             };
-            if (!userSockets.has(userWithLoginTime.id)) {
-                userSockets.set(userWithLoginTime.id, new Set());
+            if (!userSockets.has(sanitizedUser.id)) {
+                userSockets.set(sanitizedUser.id, new Set());
             }
-            userSockets.get(userWithLoginTime.id).add(socket.id);
-            socketToUser.set(socket.id, userWithLoginTime);
-            logger_1.default.info({ user: { id: user.id, nome: user.nome }, socketId: socket.id }, `[Socket.IO] Usuário logado e associado.`);
+            userSockets.get(sanitizedUser.id).add(socket.id);
+            socketToUser.set(socket.id, sanitizedUser);
+            logger_1.default.info({ user: { id: sanitizedUser.id, nome: sanitizedUser.nome }, socketId: socket.id }, '[Socket.IO] Usuário logado e associado.');
             broadcastLoggedInUsers(io);
+            if (typeof ack === 'function') {
+                ack(getUniqueLoggedInUsers());
+            }
         });
-        // Evento para um cliente pedir a lista de usuários atual
         socket.on('request-logged-in-users', () => {
-            socket.emit('update-logged-in-users', Array.from(socketToUser.values()));
+            socket.emit('update-logged-in-users', getUniqueLoggedInUsers());
         });
-        // Evento de desconexão
+        // Envio de mensagens privadas (somente remetente e destinatário recebem)
+        socket.on('send-private-message', (payload, ack) => {
+            try {
+                const sender = socketToUser.get(socket.id);
+                if (!sender) {
+                    ack?.({ ok: false, error: 'not_authenticated' });
+                    return;
+                }
+                const { recipientId, text } = payload || {};
+                if (!recipientId || typeof text !== 'string' || text.trim().length === 0) {
+                    ack?.({ ok: false, error: 'invalid_payload' });
+                    return;
+                }
+                const timestamp = new Date().toISOString();
+                const message = {
+                    senderId: sender.id,
+                    senderName: sender.nome,
+                    recipientId,
+                    text: text.trim(),
+                    timestamp,
+                };
+                // Entrega ao(s) socket(s) do destinatário, se online
+                const recipientSockets = userSockets.get(recipientId);
+                if (recipientSockets && recipientSockets.size > 0) {
+                    recipientSockets.forEach((sid) => io.to(sid).emit('new-private-message', message));
+                }
+                // Ecoa ao(s) socket(s) do remetente para aparecer imediatamente na própria janela
+                const senderSockets = userSockets.get(sender.id);
+                if (senderSockets && senderSockets.size > 0) {
+                    senderSockets.forEach((sid) => io.to(sid).emit('new-private-message', message));
+                }
+                else {
+                    // fallback: usa o socket atual
+                    socket.emit('new-private-message', message);
+                }
+                ack?.({ ok: true });
+            }
+            catch (err) {
+                logger_1.default.error({ err }, '[Socket.IO] Erro em send-private-message');
+                ack?.({ ok: false, error: 'internal_error' });
+            }
+        });
         socket.on('disconnect', () => {
             const user = socketToUser.get(socket.id);
-            if (user) {
-                const userSocketSet = userSockets.get(user.id);
-                if (userSocketSet) {
-                    userSocketSet.delete(socket.id);
-                    if (userSocketSet.size === 0) {
-                        userSockets.delete(user.id);
-                    }
-                }
-                socketToUser.delete(socket.id);
-                logger_1.default.info({ user: { id: user.id, nome: user.nome }, socketId: socket.id }, `[Socket.IO] Cliente desconectado.`);
-                broadcastLoggedInUsers(io);
+            if (!user) {
+                return;
             }
-        });
-        // Evento de logout explícito
-        socket.on('user-logout', () => {
-            const user = socketToUser.get(socket.id);
-            if (user) {
-                const userSocketSet = userSockets.get(user.id);
-                if (userSocketSet) {
-                    userSocketSet.forEach(socketId => {
-                        socketToUser.delete(socketId);
-                        const socketInstance = io.sockets.sockets.get(socketId);
-                        if (socketInstance) {
-                            socketInstance.disconnect(true);
-                        }
-                    });
+            const socketIds = userSockets.get(user.id);
+            if (socketIds) {
+                socketIds.delete(socket.id);
+                if (socketIds.size === 0) {
                     userSockets.delete(user.id);
                 }
-                logger_1.default.info({ userId: user.id }, `[Socket.IO] Logout explícito. Todas as sessões do usuário foram encerradas.`);
-                broadcastLoggedInUsers(io);
             }
+            socketToUser.delete(socket.id);
+            logger_1.default.info({ user: { id: user.id, nome: user.nome }, socketId: socket.id }, '[Socket.IO] Cliente desconectado.');
+            broadcastLoggedInUsers(io);
+        });
+        socket.on('user-logout', () => {
+            const user = socketToUser.get(socket.id);
+            if (!user) {
+                return;
+            }
+            const socketIds = userSockets.get(user.id);
+            if (socketIds) {
+                socketIds.forEach((socketId) => {
+                    socketToUser.delete(socketId);
+                    const socketInstance = io.sockets.sockets.get(socketId);
+                    if (socketInstance) {
+                        socketInstance.disconnect(true);
+                    }
+                });
+                userSockets.delete(user.id);
+            }
+            logger_1.default.info({ userId: user.id }, '[Socket.IO] Logout explícito. Todas as sessões do usuário foram encerradas.');
+            broadcastLoggedInUsers(io);
         });
     });
 };
 exports.onSocketConnection = onSocketConnection;
+// Emite um evento para todos os administradores logados atualmente
+const notifyAdmins = (event, payload) => {
+    if (!currentIo)
+        return;
+    for (const [socketId, user] of socketToUser.entries()) {
+        if (user.role === 'admin') {
+            currentIo.to(socketId).emit(event, payload);
+        }
+    }
+};
+exports.notifyAdmins = notifyAdmins;
+// Alias para compatibilidade com importação existente no server
+exports.initializeSocket = exports.onSocketConnection;

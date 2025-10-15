@@ -4,10 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = void 0;
+exports.googleLogin = exports.login = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma_1 = require("../lib/prisma"); // Importando o Prisma Client
+const google_auth_library_1 = require("google-auth-library");
+const socketService_1 = require("@/services/socketService");
 const logger_1 = __importDefault(require("@/config/logger"));
 const login = async (req, res) => {
     const { email, senha } = req.body;
@@ -58,3 +60,59 @@ const login = async (req, res) => {
     }
 };
 exports.login = login;
+const googleLogin = async (req, res) => {
+    const { id_token } = req.body;
+    if (!id_token) {
+        res.status(400).json({ message: 'id_token é obrigatório.' });
+        return;
+    }
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+        logger_1.default.error('[AUTH] GOOGLE_CLIENT_ID não definido no ambiente');
+        res.status(500).json({ message: 'Configuração OAuth ausente.' });
+        return;
+    }
+    try {
+        const oauthClient = new google_auth_library_1.OAuth2Client(clientId);
+        const ticket = await oauthClient.verifyIdToken({ idToken: id_token, audience: clientId });
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) {
+            res.status(401).json({ message: 'Token inválido.' });
+            return;
+        }
+        const email = payload.email;
+        const nome = payload.name || email.split('@')[0];
+        // Usuário já existe? Faz login normal
+        const usuario = await prisma_1.prisma.usuario.findUnique({ where: { email }, include: { obm: true } });
+        if (usuario) {
+            if (!process.env.JWT_SECRET) {
+                res.status(500).json({ message: 'JWT_SECRET ausente.' });
+                return;
+            }
+            const tokenPayload = {
+                id: usuario.id,
+                nome: usuario.nome,
+                role: usuario.role,
+                perfil: usuario.role,
+                obm: usuario.obm ? { id: usuario.obm.id, nome: usuario.obm.nome } : null,
+            };
+            const token = jsonwebtoken_1.default.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '7d' });
+            res.status(200).json({ token });
+            return;
+        }
+        // Não existe: sinaliza necessidade de aprovação
+        // Opcional: notificar admins que houve tentativa de acesso Google ainda não cadastrada
+        try {
+            (0, socketService_1.notifyAdmins)('acesso:google-primeiro-login', { nome, email, quando: new Date().toISOString() });
+        }
+        catch (e) {
+            logger_1.default.warn({ err: e }, '[AUTH] Falha ao notificar admins sobre first-login Google');
+        }
+        res.status(200).json({ needsApproval: true, profile: { nome, email } });
+    }
+    catch (error) {
+        logger_1.default.error({ err: error }, '[AUTH] Erro ao verificar token Google');
+        res.status(401).json({ message: 'Falha na autenticação Google.' });
+    }
+};
+exports.googleLogin = googleLogin;

@@ -180,3 +180,6 @@ export const notifyAdmins = (event: string, payload: any) => {
     }
   }
 };
+
+// Alias para compatibilidade com importação existente no server
+export const initializeSocket = onSocketConnection;

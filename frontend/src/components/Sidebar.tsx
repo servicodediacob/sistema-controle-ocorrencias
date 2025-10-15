@@ -6,12 +6,10 @@ import { useAuth } from '../contexts/AuthProvider';
 import {
   LayoutDashboard, BarChart3, FileText, FilePlus, Users, UserCheck,
   Database, ShieldAlert, UserCircle, ChevronDown, ChevronUp, LogOut,
-  ChevronsLeft, ChevronsRight
+  ChevronsLeft, ChevronsRight, ExternalLink // <-- 1. Importe o novo ícone
 } from 'lucide-react';
 import SystemStatusIndicator from './SystemStatusIndicator';
 
-// ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Definir a interface para as props que o Sidebar recebe.
 interface SidebarProps {
   onLogout: () => void;
   isCollapsed: boolean;
@@ -19,7 +17,6 @@ interface SidebarProps {
   closeMobileMenu: () => void;
 }
 
-// Componente para os links do menu
 const NavItem: React.FC<{ to: string; icon: React.ReactNode; label: string; isCollapsed: boolean; onClick: () => void; }> = ({ to, icon, label, isCollapsed, onClick }) => {
   const navLinkClasses = "flex items-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700";
   const activeClasses = "bg-blue-700 text-white";
@@ -37,9 +34,7 @@ const NavItem: React.FC<{ to: string; icon: React.ReactNode; label: string; isCo
   );
 };
 
-// 2. Aplicar a interface de props ao componente Sidebar.
 const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed, closeMobileMenu }) => {
-// ======================= FIM DA CORREÇÃO =======================
   const { user } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(!isCollapsed);
 
@@ -57,6 +52,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
       <nav className="flex-1 space-y-2 p-2">
         <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        
+        {/* ====================================================== */}
+        {/* == 2. ADICIONE O NOVO LINK PARA O DASHBOARD EXTERNO == */}
+        {/* ====================================================== */}
+        <NavItem to="/estatisticas-externas" icon={<ExternalLink size={20} />} label="Dashboard Externo" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+
         <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatório Estatístico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatório de Óbitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lançar Ocorrências" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
