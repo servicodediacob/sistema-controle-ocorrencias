@@ -1,74 +1,66 @@
 ﻿// api/src/server.ts
 
-// Carrega as variáveis de ambiente do arquivo .env o mais cedo possível
-import './config/envLoader';
-
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
-import logger from './config/logger';
-import { onSocketConnection } from './services/socketService';
+import { Server } from 'socket.io';
 
-// Importação das rotas
+// --- ROTAS ---
 import authRoutes from './routes/authRoutes';
+import usuarioRoutes from './routes/usuarioRoutes';
 import acessoRoutes from './routes/acessoRoutes';
+import perfilRoutes from './routes/perfilRoutes';
+import unidadesRoutes from './routes/unidadesRoutes';
+import dadosRoutes from './routes/dadosRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
-import perfilRoutes from './routes/perfilRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 import auditoriaRoutes from './routes/auditoriaRoutes';
-import dadosRoutes from './routes/dadosRoutes';
+import estatisticasRoutes from './routes/estatisticasRoutes';
 import diagRoutes from './routes/diagRoutes';
+// A rota 'relatorioRoutes' não foi encontrada, mantendo comentada
+// import relatorioRoutes from './routes/relatorioRoutes';
 
-// --- Configuração de CORS ---
-const defaultAllowedOrigins = [
-  'http://localhost:5173',
-  'https://siscob-iota.vercel.app',
-  'https://sistema-ocorrencias-frontend-alpha.vercel.app',
-];
-const extraAllowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',' ).map((origin) => origin.trim()).filter(Boolean)
-  : [];
-const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...extraAllowedOrigins]));
-if (extraAllowedOrigins.length > 0) {
-  logger.info({ allowedOrigins }, '[CORS] Origem(s) adicionais carregadas de CORS_ORIGINS.');
-}
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      logger.warn({ origin }, 'Origem bloqueada pelo CORS');
-      callback(new Error('Nao permitido pelo CORS'));
-    }
-  },
-  credentials: true,
-};
+// --- MIDDLEWARES E SERVIÇOS (CORRIGIDO) ---
+import { proteger } from './middleware/authMiddleware'; // Usando o nome de exportação correto
+const { onSocketConnection } = require('./services/socketService'); // Usando 'require' para garantir a importação
 
-// --- Inicialização da Aplicação ---
 const app = express();
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// --- Rotas ---
-app.use('/api/diag', diagRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/acesso', acessoRoutes);
-app.use('/api/plantao', plantaoRoutes);
-app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
-app.use('/api/perfil', perfilRoutes);
-app.use('/api/auditoria', auditoriaRoutes);
-app.use('/api', dadosRoutes);
-
-// --- Configuração do Servidor HTTP e Socket.IO ---
-const httpServer = createServer(app );
-const io = new SocketIOServer(httpServer, { cors: corsOptions } );
-onSocketConnection(io);
-
-// --- Inicialização do Servidor ---
-const PORT = process.env.PORT || 3001;
-const server = httpServer.listen(PORT, ( ) => {
-  logger.info(`Servidor rodando na porta ${PORT} em modo ${process.env.NODE_ENV || 'development'}`);
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+  },
 });
 
-export default server;
+// Inicializa o Socket.IO
+onSocketConnection(io);
+
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+app.use(express.json());
+
+// Rotas públicas
+app.use('/api/auth', authRoutes);
+app.use('/api/acesso', acessoRoutes); // possui públicas e protegidas dentro do arquivo
+app.use('/api/diag', diagRoutes); // diagnóstico público
+
+// Rotas protegidas (cada router aplica seu próprio middleware quando necessário)
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/perfil', perfilRoutes);
+app.use('/api/unidades', unidadesRoutes);
+app.use('/api', dadosRoutes); // agrega /naturezas, /usuarios, /unidades, etc
+app.use('/api/plantao', plantaoRoutes);
+app.use('/api/ocorrencias', ocorrenciaDetalhadaRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api', estatisticasRoutes); // mantém endpoints /estatisticas/*
+// app.use('/api', proteger, relatorioRoutes);
+
+server.listen(PORT, () => {
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
+});
+
+export { io };

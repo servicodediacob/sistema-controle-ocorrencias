@@ -1,7 +1,7 @@
 // Caminho: frontend/src/pages/LoginPage.tsx
 
 import { useState, useEffect, ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
 import { authGoogle, solicitarAcessoGoogle, getCidades, ICidade } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
@@ -28,6 +28,7 @@ const Spinner = (): ReactElement => (
 declare global { interface Window { google?: any } }
 
 function LoginPage(): ReactElement {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     senha: '',
@@ -38,11 +39,17 @@ function LoginPage(): ReactElement {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login, loginWithJwt } = useAuth();
+  const { user, login, loginWithJwt } = useAuth();
   const { addNotification } = useNotification();
   const [obms, setObms] = useState<ICidade[]>([]);
   const [selectedObm, setSelectedObm] = useState<string>('');
   const [pendingGoogleProfile, setPendingGoogleProfile] = useState<{ nome: string; email: string } | null>(null);
+  // Se já estiver autenticado, redireciona para a home
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user]);
   // Carrega OBMs apenas quando o modal for aberto (evita 401 na tela pública)
   useEffect(() => {
     if (pendingGoogleProfile && obms.length === 0) {
@@ -91,6 +98,8 @@ function LoginPage(): ReactElement {
 
       // 2. Correção: A função 'login' é chamada com UM único objeto 'formData'.
       await login(formData);
+      // Redireciona após login bem-sucedido
+      navigate('/');
       // ==========================================================================
 
     } catch (err: unknown) {

@@ -27,21 +27,25 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ isCollaps
     const checkStatus = async () => {
       try {
         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-        await axios.get(`${apiBaseUrl}/diag`  );
-        setStatus('ok');
-        setLastMessage('Todos os serviços estão operacionais.');
-      } catch (error: any) {
-        if (axios.isAxiosError(error) && error.response) {
-          setStatus('error');
-          const services = error.response.data?.servicos;
-          const failedService = services ? Object.keys(services).find(key => services[key].status === 'error') : 'desconhecido';
-          setLastMessage(`Falha no serviço: ${failedService}.`);
-          console.error("DIAGNÓSTICO FALHOU:", error.response.data);
+        const res = await axios.get(`${apiBaseUrl}/diag`, {
+          // Não trate 503 como exceção para evitar erros no console
+          validateStatus: () => true,
+        });
+
+        const report = res.data as any;
+        if (res.status === 200 && report?.geral?.status === 'ok') {
+          setStatus('ok');
+          setLastMessage('Todos os serviços estão operacionais.');
         } else {
+          const services = report?.servicos;
+          const failedService = services ? Object.keys(services).find(key => services[key].status === 'error') : 'desconhecido';
           setStatus('error');
-          setLastMessage('API offline ou inacessível.');
-          console.error("DIAGNÓSTICO FALHOU: API offline.", error);
+          setLastMessage(`Falha no serviço: ${failedService}.`);
         }
+      } catch (error) {
+        // Erro de rede (sem resposta)
+        setStatus('error');
+        setLastMessage('API offline ou inacessível.');
       }
     };
 

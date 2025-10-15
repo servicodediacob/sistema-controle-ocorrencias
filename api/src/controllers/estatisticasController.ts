@@ -1,11 +1,18 @@
 // api/src/controllers/estatisticasController.ts
-import { Response } from 'express';
-import { RequestWithUser } from '@/middleware/authMiddleware';
-import { prisma } from '../lib/prisma';
-import logger from '@/config/logger';
-import { parseDateParam } from '@/utils/date';
 
-// ... (interfaces e registrarEstatisticasLote sem alterações)
+import { Response, Request } from 'express';
+import { RequestWithUser } from '../middleware/authMiddleware'; // Corrigido para caminho relativo
+import { prisma } from '../lib/prisma'; // Corrigido para caminho relativo
+import logger from '../config/logger'; // Corrigido para caminho relativo
+import { parseDateParam } from '../utils/date'; // Corrigido para caminho relativo
+import jwt from 'jsonwebtoken';
+import axios from 'axios';
+
+// Segredos para a integração (use variáveis de ambiente em produção)
+const SHARED_SECRET = process.env.SSO_SHARED_SECRET || 'seu-segredo-compartilhado';
+const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
+
+// Interfaces existentes
 interface IEstatisticaAgrupada {
   cidade_nome: string;
   crbm_nome: string;
@@ -21,6 +28,8 @@ interface EstatisticaPayload {
   obm_id: number;
   estatisticas: { natureza_id: number; quantidade: number }[];
 }
+
+// --- SUAS FUNÇÕES EXISTENTES (Sem alterações na lógica interna) ---
 
 export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
   const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
@@ -80,7 +89,6 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
   }
 };
 
-
 export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
   const { data } = req.query;
   if (!data || typeof data !== 'string') {
@@ -88,8 +96,6 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
   }
 
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // Usa parseDateParam para evitar problemas de fuso/UTC e garante o dia completo no horário local
     const base = parseDateParam(data, 'data');
     const dataInicio = new Date(base);
     dataInicio.setHours(0, 0, 0, 0);
@@ -103,13 +109,9 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
         natureza: true,
       },
     });
-    // ======================= FIM DA CORREÇÃO =======================
-
+    
     const dadosAgrupados: Record<string, IEstatisticaAgrupada> = {};
 
-    // Importante: usamos a combinação Cidade x Natureza (por ID) para evitar
-    // colisões de subgrupos com o mesmo nome, por exemplo “Outros” em
-    // diferentes grupos (Incêndio vs. Ações Preventivas).
     const processarItem = (item: any, quantidade: number) => {
       const cidadeNome = item.obm?.nome;
       const crbmNome = item.obm?.crbm?.nome;
@@ -119,7 +121,6 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
       const naturezaGrupo = item.natureza?.grupo;
 
       if (cidadeNome && naturezaNome && crbmNome) {
-        // Chave única e estável: Cidade|naturezaId (ou, como fallback, grupo|subgrupo)
         const naturezaChave = naturezaId !== null
           ? String(naturezaId)
           : `${naturezaGrupo}|${naturezaNome}`;
@@ -152,7 +153,6 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
   }
 };
 
-// ... (resto do arquivo sem alterações)
 export const limparTodosOsDadosDoDia = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
   const { data } = req.query;
   const usuario = req.usuario;
@@ -182,5 +182,24 @@ export const limparTodosOsDadosDoDia = async (req: RequestWithUser, res: Respons
   } catch (error) {
     logger.error({ err: error, query: req.query }, 'Erro ao limpar todos os dados do dia.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// --- NOVA FUNÇÃO PARA A INTEGRAÇÃO ---
+
+export const getSisgpoDashboard = async (req: Request, res: Response) => {
+  try {
+    const token = jwt.sign({}, SHARED_SECRET, { expiresIn: '1m' });
+
+    const response = await axios.get(`${SISGPO_API_URL}/api/external/dashboard`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Erro ao buscar dados do dashboard do sisgpo:', error);
+    res.status(500).json({ message: 'Falha ao obter dados externos.' });
   }
 };
