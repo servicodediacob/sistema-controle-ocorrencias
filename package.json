@@ -13,6 +13,7 @@
     "api"
   ],
   "scripts": {
+    "dev": "concurrently -n backend,frontend -c yellow,cyan \"npm run dev:3002 --workspace=api\" \"npm run dev:5174 --workspace=frontend\"",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=api",
     "build:frontend": "npm run build --workspace=frontend",
@@ -24,6 +25,8 @@
     "vite": "^5.0.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
+    "concurrently": "^9.0.1",
     "dotenv-cli": "^10.0.0",
     "execa": "^7.2.0",
     "start-server-and-test": "^2.0.5"

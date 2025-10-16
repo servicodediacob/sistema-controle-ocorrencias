@@ -15,8 +15,8 @@ import dashboardRoutes from './routes/dashboardRoutes';
 // import relatorioRoutes from './routes/relatorioRoutes'; // CORREÇÃO: Removido
 import auditoriaRoutes from './routes/auditoriaRoutes';
 import estatisticasRoutes from './routes/estatisticasRoutes';
+import diagRoutes from './routes/diagRoutes';
 import externalRoutes from './routes/externalRoutes'; // CORREÇÃO: Garantindo que a importação existe
-import { proteger } from './middleware/authMiddleware';
 import { initializeSocket } from './services/socketService'; // CORREÇÃO: Usando import nomeado
 
 const app = express();
@@ -36,25 +36,27 @@ app.use(express.json());
 
 // Rotas públicas
 app.use('/api/auth', authRoutes);
+app.use('/api/diag', diagRoutes);
+app.use('/api/acesso', acessoRoutes);
 
 // Rota externa para integração
 app.use('/api', externalRoutes);
 
-// Rotas protegidas
-app.use('/api', proteger, usuarioRoutes);
-app.use('/api', proteger, acessoRoutes);
-app.use('/api', proteger, perfilRoutes);
-app.use('/api', proteger, unidadesRoutes);
-app.use('/api', proteger, dadosRoutes);
-app.use('/api', proteger, plantaoRoutes);
-app.use('/api', proteger, ocorrenciaDetalhadaRoutes);
-app.use('/api', proteger, dashboardRoutes);
-// app.use('/api', proteger, relatorioRoutes); // Removido
-app.use('/api', proteger, auditoriaRoutes);
-app.use('/api', proteger, estatisticasRoutes);
+// Demais rotas (cada modulo aplica sua propria protecao)
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/perfil', perfilRoutes);
+app.use('/api/unidades', unidadesRoutes);
+app.use('/api/plantao', plantaoRoutes);
+app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+// app.use('/api', relatorioRoutes); // Removido
+app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api', estatisticasRoutes);
+app.use('/api', dadosRoutes);
 
 server.listen(PORT, () => {
-  console.log(`✅ Servidor rodando na porta ${PORT}`);
+  console.log(`[API] Servidor rodando na porta ${PORT}`);
 });
 
 export { io };
+

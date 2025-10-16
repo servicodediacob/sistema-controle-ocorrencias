@@ -203,3 +203,28 @@ export const getSisgpoDashboard = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Falha ao obter dados externos.' });
   }
 };
+
+export const getEspelhoBase = async (_req: Request, res: Response) => {
+  try {
+    const obms = await prisma.oBM.findMany({
+      include: {
+        crbm: true,
+      },
+      orderBy: [
+        { crbm: { nome: 'asc' } },
+        { nome: 'asc' },
+      ],
+    });
+
+    const base = obms.map((obm) => ({
+      id: obm.id,
+      cidade_nome: obm.nome,
+      crbm_nome: obm.crbm?.nome || 'N/A',
+    }));
+
+    res.json(base);
+  } catch (error) {
+    logger.error({ err: error }, 'Erro ao buscar base de espelho de lançamentos.');
+    res.status(500).json({ message: 'Erro interno ao buscar base de espelho.' });
+  }
+};

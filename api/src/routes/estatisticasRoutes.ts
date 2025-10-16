@@ -16,10 +16,11 @@ const router = Router();
 
 // --- Rotas existentes ---
 router.post('/estatisticas/lote', proteger, registrarEstatisticasLote);
-router.get('/estatisticas/agrupadas', proteger, getEstatisticasAgrupadasPorData);
+router.get('/estatisticas/por-data', proteger, getEstatisticasAgrupadasPorData);
 router.delete('/estatisticas/limpar-dia', proteger, roleMiddleware(['ADMIN']), limparTodosOsDadosDoDia);
 
 // --- Nova rota para a integração ---
-router.get('/estatisticas-externas/dashboard', proteger, getSisgpoDashboard);
+router.get('/estatisticas-externas/dashboard', getSisgpoDashboard);
 
 export default router;
+

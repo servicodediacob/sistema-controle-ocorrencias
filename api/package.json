@@ -8,6 +8,7 @@
     "start": "node -r tsconfig-paths/register dist/server.js",
     "migrate": "node scripts/migrate-deploy.js",
     "dev": "nodemon",
+    "dev:3002": "cross-env PORT=3002 nodemon",
     "create:admin": "ts-node -r tsconfig-paths/register scripts/create-admin.ts",
     "test": "jest"
   },

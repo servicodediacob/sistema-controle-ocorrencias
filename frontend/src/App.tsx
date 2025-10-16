@@ -16,7 +16,6 @@ import OcorrenciaPage from './pages/OcorrenciaPage';
 import RelatorioObitosPage from './pages/RelatorioObitosPage';
 import GestaoOcorrenciasPage from './pages/GestaoOcorrenciasPage';
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
-import EstatisticasExternasPage from './pages/EstatisticasExternasPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
   const { user } = useAuth();
@@ -50,7 +49,6 @@ const App: React.FC = () => {
         <Route path="/relatorio-obitos" element={<PrivateRoute><RelatorioObitosPage /></PrivateRoute>} />
         <Route path="/lancar-ocorrencias" element={<PrivateRoute><LancamentoPage /></PrivateRoute>} />
         <Route path="/ocorrencia/:id" element={<PrivateRoute><OcorrenciaPage /></PrivateRoute>} />
-        <Route path="/estatisticas-externas" element={<PrivateRoute><EstatisticasExternasPage /></PrivateRoute>} />
         <Route path="/gerenciar-usuarios" element={<PrivateRoute roles={['ADMIN']}><GestaoUsuariosPage /></PrivateRoute>} />
         <Route path="/gerenciar-acessos" element={<PrivateRoute roles={['ADMIN']}><GestaoAcessoPage /></PrivateRoute>} />
         <Route path="/gerenciar-dados" element={<PrivateRoute roles={['ADMIN']}><GestaoDadosApoioPage /></PrivateRoute>} />

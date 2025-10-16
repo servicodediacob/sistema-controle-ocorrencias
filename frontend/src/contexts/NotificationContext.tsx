@@ -1,6 +1,6 @@
 // Caminho: frontend/src/contexts/NotificationContext.tsx
 
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 
 // ======================= INÍCIO DA CORREÇÃO =======================
@@ -25,13 +25,15 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<INotification[]>([]);
+  const idCounterRef = useRef(0);
 
   const removeNotification = useCallback((id: number) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
   const addNotification = useCallback((message: string, type: NotificationType) => {
-    const id = Date.now();
+    idCounterRef.current += 1;
+    const id = idCounterRef.current;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => removeNotification(id), 5000);
   }, [removeNotification]);
