@@ -10,6 +10,8 @@ export interface JwtPayload {
   role: 'admin' | 'user';
   obm_id: number | null;
   nome: string; // <-- CORREÇÃO: ADICIONAMOS A PROPRIEDADE 'nome'
+  perfil?: 'admin' | 'user';
+  obm_nome?: string | null;
 }
 
 // Estende a interface Request do Express para incluir nosso payload de usuário

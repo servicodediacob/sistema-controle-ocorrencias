@@ -18,8 +18,14 @@ export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
     return res.status(400).json({ message: 'A data 茅 obrigat贸ria.' });
   }
   try {
+    const dataInicio = new Date(data + 'T00:00:00.000Z');
+    const dataFim = new Date(data + 'T23:59:59.999Z');
+
     const registros = await prisma.obitoRegistro.findMany({
-      where: { data_ocorrencia: new Date(data) },
+      where: { 
+        data_ocorrencia: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+      },
       include: {
         natureza: { select: { subgrupo: true } },
         obm: { select: { nome: true } },
@@ -89,8 +95,16 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
 export const deletarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
     try {
-        await prisma.obitoRegistro.delete({ where: { id: Number(id) } });
-        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de 贸bito deletado.');
+        const resultado = await prisma.obitoRegistro.updateMany({
+            where: { id: Number(id), deletado_em: null },
+            data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
+        });
+
+        if (resultado.count === 0) {
+            return res.status(404).json({ message: 'Registro de 觔ito n鉶 encontrado.' });
+        }
+
+        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de 觔ito marcado como exclu韉o.');
         return res.status(204).send();
     } catch (error) {
         logger.error({ err: error, params: req.params }, 'Erro ao deletar registro de 贸bito.');
@@ -104,11 +118,21 @@ export const limparRegistrosPorData = async (req: RequestWithUser, res: Response
         return res.status(400).json({ message: 'O par芒metro "data" 茅 obrigat贸rio.' });
     }
     try {
-        const result = await prisma.obitoRegistro.deleteMany({ where: { data_ocorrencia: new Date(data as string) } });
-        logger.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de 贸bitos limpos por data.');
-        return res.status(200).json({ message: `Opera莽茫o conclu铆da. ${result.count} registros de 贸bito foram exclu铆dos para a data ${data}.` });
+        const dataInicio = new Date(data + 'T00:00:00.000Z');
+        const dataFim = new Date(data + 'T23:59:59.999Z');
+
+        const result = await prisma.obitoRegistro.updateMany({ 
+            where: { 
+                data_ocorrencia: { gte: dataInicio, lte: dataFim },
+                deletado_em: null 
+            },
+            data: { deletado_em: new Date() }
+        });
+        logger.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de 贸bitos (soft) limpos por data.');
+        return res.status(200).json({ message: `Opera莽茫o conclu铆da. ${result.count} registros de 贸bito foram marcados como exclu铆dos para a data ${data}.` });
     } catch (error) {
         logger.error({ err: error, data }, 'Erro ao limpar registros de 贸bito por data.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
+

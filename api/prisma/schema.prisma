@@ -117,6 +117,7 @@ model OcorrenciaDetalhada {
   horario_ocorrencia  DateTime? @db.Time
   usuario_id          Int?
   criado_em           DateTime? @default(now()) @db.Timestamptz()
+  deletado_em         DateTime? @db.Timestamptz()
 
   natureza NaturezaOcorrencia  @relation(fields: [natureza_id], references: [id], onDelete: Restrict)
   cidade   OBM                 @relation(fields: [cidade_id], references: [id], onDelete: Restrict)
@@ -156,6 +157,7 @@ model EstatisticaDiaria {
   quantidade    Int       @default(0)
   usuario_id    Int?
   criado_em     DateTime? @default(now()) @db.Timestamptz()
+  deletado_em   DateTime? @db.Timestamptz()
 
   obm      OBM                @relation(fields: [obm_id], references: [id], onDelete: Cascade)
   natureza NaturezaOcorrencia @relation(fields: [natureza_id], references: [id], onDelete: Cascade)
@@ -174,6 +176,7 @@ model ObitoRegistro {
   quantidade_vitimas Int       @default(1)
   usuario_id         Int?
   criado_em          DateTime? @default(now()) @db.Timestamptz()
+  deletado_em        DateTime? @db.Timestamptz()
 
   natureza NaturezaOcorrencia @relation(fields: [natureza_id], references: [id], onDelete: Restrict)
   obm      OBM                @relation(fields: [obm_id], references: [id], onDelete: Cascade)

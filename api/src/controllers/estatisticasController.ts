@@ -49,32 +49,48 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
 
   try {
     const dataParsed = parseDateParam(data_registro, 'data_registro');
+    const registrosValidos = estatisticas.filter(stat => stat.quantidade > 0);
+
     await prisma.$transaction(async (tx) => {
-      await tx.estatisticaDiaria.deleteMany({
+      const agora = new Date();
+
+      await tx.estatisticaDiaria.updateMany({
         where: {
           data_registro: dataParsed,
           obm_id: obm_id,
+          deletado_em: null,
+        },
+        data: {
+          deletado_em: agora,
         },
       });
 
-      const dadosParaCriar = estatisticas
-        .filter(stat => stat.quantidade > 0)
-        .map(stat => ({
-          data_registro: dataParsed,
-          obm_id: obm_id,
-          natureza_id: stat.natureza_id,
-          quantidade: stat.quantidade,
-          usuario_id: usuario.id,
-        }));
-
-      if (dadosParaCriar.length > 0) {
-        await tx.estatisticaDiaria.createMany({
-          data: dadosParaCriar,
+      for (const stat of registrosValidos) {
+        await tx.estatisticaDiaria.upsert({
+          where: {
+            uq_dia_obm_natureza: {
+              data_registro: dataParsed,
+              obm_id: obm_id,
+              natureza_id: stat.natureza_id,
+            },
+          },
+          update: {
+            quantidade: stat.quantidade,
+            usuario_id: usuario.id,
+            deletado_em: null,
+          },
+          create: {
+            data_registro: dataParsed,
+            obm_id: obm_id,
+            natureza_id: stat.natureza_id,
+            quantidade: stat.quantidade,
+            usuario_id: usuario.id,
+          },
         });
       }
     });
 
-    const totalRegistros = estatisticas.filter(s => s.quantidade > 0).length;
+    const totalRegistros = registrosValidos.length;
     if (totalRegistros === 0) {
       logger.info({ data: data_registro, obm_id }, 'Registros de estatísticas limpos (nenhum dado novo para inserir).');
       return res.status(200).json({ message: 'Nenhuma estatística para registrar. Registros anteriores para o dia e OBM foram limpos.' });
@@ -103,7 +119,10 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
     dataFim.setHours(23, 59, 59, 999);
 
     const estatisticas = await prisma.estatisticaDiaria.findMany({
-      where: { data_registro: { gte: dataInicio, lte: dataFim } },
+      where: { 
+        data_registro: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+      },
       include: {
         obm: { include: { crbm: true } },
         natureza: true,
@@ -169,12 +188,23 @@ export const limparTodosOsDadosDoDia = async (req: RequestWithUser, res: Respons
   const dataFim = new Date(data + 'T23:59:59.999Z');
 
   try {
-    const [loteResult, detalhadasResult] = await prisma.$transaction([
-      prisma.estatisticaDiaria.deleteMany({ where: { data_registro: { gte: dataInicio, lte: dataFim } } }),
-      prisma.ocorrenciaDetalhada.deleteMany({ where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } } }),
+    const now = new Date();
+    const [loteResult, detalhadasResult, obitosResult] = await prisma.$transaction([
+      prisma.estatisticaDiaria.updateMany({ 
+        where: { data_registro: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        data: { deletado_em: now }
+      }),
+      prisma.ocorrenciaDetalhada.updateMany({ 
+        where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        data: { deletado_em: now }
+      }),
+      prisma.obitoRegistro.updateMany({ 
+        where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        data: { deletado_em: now }
+      }),
     ]);
 
-    const totalLimpado = loteResult.count + detalhadasResult.count;
+    const totalLimpado = loteResult.count + detalhadasResult.count + obitosResult.count;
     logger.info({ data, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
     
     return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });

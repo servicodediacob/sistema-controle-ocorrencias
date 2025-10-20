@@ -51,6 +51,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       nome: usuario.nome,
       role: usuario.role,
       perfil: usuario.role, // Mantido para compatibilidade com frontend
+      obm_id: usuario.obm_id ?? (usuario.obm ? usuario.obm.id : null),
+      obm_nome: usuario.obm?.nome ?? null,
       obm: usuario.obm ? { id: usuario.obm.id, nome: usuario.obm.nome } : null,
     };
 
@@ -102,6 +104,8 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
         nome: usuario.nome,
         role: usuario.role,
         perfil: usuario.role,
+        obm_id: usuario.obm_id ?? (usuario.obm ? usuario.obm.id : null),
+        obm_nome: usuario.obm?.nome ?? null,
         obm: usuario.obm ? { id: usuario.obm.id, nome: usuario.obm.nome } : null,
       };
       const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '7d' });

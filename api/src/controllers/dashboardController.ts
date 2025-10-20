@@ -14,6 +14,7 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
     const totalEstatisticas = await prisma.estatisticaDiaria.aggregate({
       _sum: { quantidade: true },
       where: {
+        deletado_em: null,
         natureza: { grupo: { not: 'Relatório de Óbitos' } },
         data_registro: {
           gte: hojeInicio,
@@ -25,6 +26,7 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
     // Total de ocorrências detalhadas do dia
     const totalDetalhadas = await prisma.ocorrenciaDetalhada.count({
       where: {
+        deletado_em: null,
         natureza: { grupo: { not: 'Relatório de Óbitos' } },
         data_ocorrencia: {
           gte: hojeInicio,
@@ -39,13 +41,19 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
     // Total de óbitos (soma de vítimas)
     const totalObitos = await prisma.obitoRegistro.aggregate({
       _sum: { quantidade_vitimas: true },
+      where: {
+        deletado_em: null,
+      },
     });
 
     // Ocorrências por natureza (histórico)
     const ocorrenciasPorNatureza = await prisma.estatisticaDiaria.groupBy({
       by: ['natureza_id'],
       _sum: { quantidade: true },
-      where: { natureza: { grupo: { not: 'Relatório de Óbitos' } } },
+      where: { 
+        deletado_em: null,
+        natureza: { grupo: { not: 'Relatório de Óbitos' } } 
+      },
       orderBy: { _sum: { quantidade: 'desc' } },
     });
 
@@ -62,6 +70,9 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
     const ocorrenciasPorCrbm = await prisma.estatisticaDiaria.groupBy({
       by: ['obm_id'],
       _sum: { quantidade: true },
+      where: {
+        deletado_em: null,
+      },
     });
 
     const obmsInfo = await prisma.oBM.findMany({

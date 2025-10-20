@@ -20,6 +20,7 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
     const estatisticas = await prisma.estatisticaDiaria.findMany({
       where: {
         data_registro: { gte: dataInicioDate, lte: dataFimDate },
+        deletado_em: null,
         natureza: { grupo: { not: 'Relatório de Óbitos' } },
       },
       include: {
@@ -32,6 +33,7 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
     const detalhadas = await prisma.ocorrenciaDetalhada.findMany({
       where: {
         data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate },
+        deletado_em: null,
         natureza: { grupo: { not: 'Relatório de Óbitos' } },
       },
       include: {
@@ -42,7 +44,10 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
 
     // 3. Busca de Óbitos
     const obitos = await prisma.obitoRegistro.findMany({
-      where: { data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate } },
+      where: { 
+        data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate },
+        deletado_em: null,
+      },
       include: {
         natureza: { select: { subgrupo: true } },
         obm: { select: { nome: true } },
@@ -109,3 +114,4 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
+

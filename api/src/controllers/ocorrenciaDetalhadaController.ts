@@ -93,6 +93,7 @@ export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res:
           gte: dataInicio,
           lte: dataFim,
         },
+        deletado_em: null,
       },
       include: { natureza: true, cidade: true },
       orderBy: [{ horario_ocorrencia: 'asc' }, { id: 'asc' }],
@@ -161,11 +162,20 @@ export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Re
 export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   try {
-    await prisma.ocorrenciaDetalhada.delete({ where: { id: Number(id) } });
-    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'OcorrÃªncia detalhada deletada.');
+    const resultado = await prisma.ocorrenciaDetalhada.updateMany({
+      where: { id: Number(id), deletado_em: null },
+      data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
+    });
+
+    if (resultado.count === 0) {
+      return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
+    }
+
+    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada marcada como excluída.');
     return res.status(204).send();
   } catch (error) {
-    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrÃªncia detalhada.');
+    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
+
