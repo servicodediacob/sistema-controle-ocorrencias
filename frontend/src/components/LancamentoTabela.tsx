@@ -291,14 +291,14 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
         ))}
       </div>
 
-      <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block overflow-x-auto">
-        <table className="min-w-[1300px] w-full border-collapse table-fixed">
+      <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block max-h-[75vh] overflow-y-auto relative">
+        <table className="w-full border-collapse table-fixed text-xs">
           <thead className="bg-gray-700 text-white">
             <tr>
               <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
               <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.codigo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-3 text-center uppercase" title={nat.nome}>
+                <th key={nat.codigo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-2 text-center uppercase" title={nat.nome}>
                   {nat.abreviacao || nat.nome}
                 </th>
               ))}
@@ -344,17 +344,8 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                     })}
                     <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
-                      <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3">
-                        {podeEditar ? (
-                          <button
-                            onClick={() => onEdit(cidade, dadosParaEdicao)}
-                            className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400"
-                          >
-                            Editar
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-500">Sem permissão</span>
-                        )}
+                      <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3 relative">
+                        <button onClick={() => onEdit(cidade, dadosParaEdicao)} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
                       </td>
                     )}
                   </tr>

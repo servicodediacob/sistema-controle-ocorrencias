@@ -233,6 +233,16 @@ function LancamentoPage() {
     setIsModalOpen(true);
   };
 
+  const totalGeralLote = useMemo(() => {
+    return dadosTabela.reduce((acc, item) => acc + item.quantidade, 0);
+  }, [dadosTabela]);
+
+  const cidadesComDados = useMemo(() => {
+    return new Set(dadosTabela.map(d => d.cidade_nome));
+  }, [dadosTabela]);
+
+  const cidadesPendentes = cidades.length - cidadesComDados.size;
+
   if (loadingDataApoio) {
     return (
       <MainLayout pageTitle="Lançar Ocorrências">
@@ -288,6 +298,21 @@ function LancamentoPage() {
           >
             Lançamento em Lote
           </button>
+        </div>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h3 className="text-sm text-text">Total de Cidades</h3>
+          <p className="text-2xl font-bold text-text-strong">{cidades.length}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h3 className="text-sm text-text">Cidades Pendentes</h3>
+          <p className={`text-2xl font-bold ${cidadesPendentes > 0 ? 'text-orange-500' : 'text-green-500'}`}>{cidadesPendentes}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h3 className="text-sm text-text">Total Geral (Lote)</h3>
+          <p className="text-2xl font-bold text-teal-400">{totalGeralLote}</p>
         </div>
       </div>
 
