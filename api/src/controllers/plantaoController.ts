@@ -15,6 +15,7 @@ export const getPlantao = async (_req: Request, res: Response): Promise<void> =>
 
     const ocorrenciasDestaque = await prisma.ocorrenciaDetalhada.findMany({
       where: {
+        deletado_em: null,
         data_ocorrencia: {
           gte: hojeInicio,
           lte: hojeFim,

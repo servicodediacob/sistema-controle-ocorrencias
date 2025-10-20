@@ -23,20 +23,10 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
       },
     });
 
-    // Total de ocorrências detalhadas do dia
-    const totalDetalhadas = await prisma.ocorrenciaDetalhada.count({
-      where: {
-        deletado_em: null,
-        natureza: { grupo: { not: 'Relatório de Óbitos' } },
-        data_ocorrencia: {
-          gte: hojeInicio,
-          lte: hojeFim,
-        },
-      },
-    });
-
+    // O total de ocorrências agora vem apenas das estatísticas em lote.
+    // A contagem de ocorrências detalhadas foi removida para evitar dupla contagem.
     const totalLote = totalEstatisticas._sum?.quantidade || 0;
-    const totalOcorrencias = totalLote + totalDetalhadas;
+    const totalOcorrencias = totalLote;
 
     // Total de óbitos (soma de vítimas)
     const totalObitos = await prisma.obitoRegistro.aggregate({
