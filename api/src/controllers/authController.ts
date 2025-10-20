@@ -75,6 +75,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
+    console.error('GOOGLE_CLIENT_ID não está definida. O login com Google não funcionará.');
     logger.error('[AUTH] GOOGLE_CLIENT_ID não definido no ambiente');
     res.status(500).json({ message: 'Configuração OAuth ausente.' });
     return;

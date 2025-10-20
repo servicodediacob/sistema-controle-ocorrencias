@@ -114,43 +114,69 @@ function LoginPage(): ReactElement {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Carrega script do Google Identity Services se necessário
+      // Garante que o script do Google Identity Services esteja carregado
       if (!window.google) {
         await new Promise<void>((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = 'https://accounts.google.com/gsi/client';
-          s.async = true; s.defer = true;
-          s.onload = () => resolve();
-          s.onerror = () => reject(new Error('Falha ao carregar Google Identity'));
-          document.head.appendChild(s);
+          const script = document.createElement('script');
+          script.src = 'https://accounts.google.com/gsi/client';
+          script.async = true;
+          script.defer = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Falha ao carregar o script do Google Identity.'));
+          document.head.appendChild(script);
         });
       }
 
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-      if (!clientId) { addNotification('GOOGLE_CLIENT_ID não configurado.', 'error'); return; }
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        console.error('VITE_GOOGLE_CLIENT_ID não está definida. O login com Google não funcionará.');
+        addNotification('O login com Google não está configurado.', 'error');
+        return;
+      }
 
-      await new Promise<void>((resolve, reject) => {
-        try {
-          window.google.accounts.id.initialize({ client_id: clientId, callback: async (resp: any) => {
-            try {
-              const result = await authGoogle(resp.credential);
-              if (result.token) {
-                loginWithJwt(result.token);
-              } else if (result.needsApproval && result.profile) {
-                setPendingGoogleProfile(result.profile);
-              } else {
-                addNotification('Falha no login com Google.', 'error');
-              }
-            } catch (e) {
-              addNotification('Falha na verificação do Google.', 'error');
+      // Inicializa o cliente
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: any) => {
+          try {
+            const result = await authGoogle(response.credential);
+            if (result.token) {
+              loginWithJwt(result.token);
+              navigate('/'); // Redireciona após o login
+            } else if (result.needsApproval && result.profile) {
+              setPendingGoogleProfile(result.profile);
+            } else {
+              addNotification('Falha no login com Google. Tente novamente.', 'error');
             }
-          }});
-          window.google.accounts.id.prompt();
-          resolve();
-        } catch (e) { reject(e); }
+          } catch (error) {
+            console.error("Erro na autenticação com o backend:", error);
+            addNotification('Falha na verificação com o servidor.', 'error');
+          }
+        },
       });
-    } catch (e) {
-      addNotification('Erro ao iniciar Google Sign-In.', 'error');
+
+      // Exibe o pop-up de login e trata o erro de cancelamento
+      window.google.accounts.id.prompt((notification: any) => {
+        // A documentação da GSI sugere que podemos verificar 'isNotDisplayed' ou 'isSkipped'.
+        // No entanto, o erro AbortError é mais comum quando o usuário fecha manualmente.
+        // O try/catch abaixo lida com isso de forma mais robusta.
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+           // Opcional: logar se o prompt não foi exibido por algum motivo (ex: bloqueador de pop-up)
+           console.info('Google Sign-In prompt não foi exibido ou foi ignorado.');
+        }
+      });
+
+    } catch (error: any) {
+      // Esta é a parte crucial: capturar e identificar o AbortError.
+      if (error.name === 'AbortError') {
+        // O usuário cancelou o login. Isso é esperado.
+        // Você pode logar para depuração ou simplesmente ignorar.
+        console.log('Login com Google cancelado pelo usuário.');
+      } else {
+        // Trata outros erros inesperados durante a inicialização ou chamada do prompt.
+        console.error('Erro inesperado durante o Google Sign-In:', error);
+        addNotification('Ocorreu um erro ao tentar o login com Google.', 'error');
+      }
     }
   };
 
