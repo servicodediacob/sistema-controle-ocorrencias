@@ -35,6 +35,8 @@ interface LancamentoTabelaProps {
   loading: boolean;
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
   showActions?: boolean;
+  canEditObmId?: number | null;
+  isAdmin?: boolean;
 }
 
 const renderComponent = (props: Partial<LancamentoTabelaProps> = {}) => {
@@ -45,6 +47,7 @@ const renderComponent = (props: Partial<LancamentoTabelaProps> = {}) => {
     cidades: mockCidades,
     loading: false,
     showActions: true,
+    isAdmin: true,
   };
   return render(<LancamentoTabela {...defaultProps} {...props} />);
 };

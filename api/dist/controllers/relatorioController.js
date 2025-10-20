@@ -20,6 +20,7 @@ const getRelatorioCompleto = async (req, res) => {
         const estatisticas = await prisma_1.prisma.estatisticaDiaria.findMany({
             where: {
                 data_registro: { gte: dataInicioDate, lte: dataFimDate },
+                deletado_em: null,
                 natureza: { grupo: { not: 'Relatório de Óbitos' } },
             },
             include: {
@@ -31,6 +32,7 @@ const getRelatorioCompleto = async (req, res) => {
         const detalhadas = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
             where: {
                 data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate },
+                deletado_em: null,
                 natureza: { grupo: { not: 'Relatório de Óbitos' } },
             },
             include: {
@@ -40,7 +42,10 @@ const getRelatorioCompleto = async (req, res) => {
         });
         // 3. Busca de Óbitos
         const obitos = await prisma_1.prisma.obitoRegistro.findMany({
-            where: { data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate } },
+            where: {
+                data_ocorrencia: { gte: dataInicioDate, lte: dataFimDate },
+                deletado_em: null,
+            },
             include: {
                 natureza: { select: { subgrupo: true } },
                 obm: { select: { nome: true } },

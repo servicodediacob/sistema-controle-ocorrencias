@@ -17,6 +17,7 @@ const getDashboardStats = async (_req, res) => {
         const totalEstatisticas = await prisma_1.prisma.estatisticaDiaria.aggregate({
             _sum: { quantidade: true },
             where: {
+                deletado_em: null,
                 natureza: { grupo: { not: 'Relatório de Óbitos' } },
                 data_registro: {
                     gte: hojeInicio,
@@ -27,6 +28,7 @@ const getDashboardStats = async (_req, res) => {
         // Total de ocorrências detalhadas do dia
         const totalDetalhadas = await prisma_1.prisma.ocorrenciaDetalhada.count({
             where: {
+                deletado_em: null,
                 natureza: { grupo: { not: 'Relatório de Óbitos' } },
                 data_ocorrencia: {
                     gte: hojeInicio,
@@ -39,12 +41,18 @@ const getDashboardStats = async (_req, res) => {
         // Total de óbitos (soma de vítimas)
         const totalObitos = await prisma_1.prisma.obitoRegistro.aggregate({
             _sum: { quantidade_vitimas: true },
+            where: {
+                deletado_em: null,
+            },
         });
         // Ocorrências por natureza (histórico)
         const ocorrenciasPorNatureza = await prisma_1.prisma.estatisticaDiaria.groupBy({
             by: ['natureza_id'],
             _sum: { quantidade: true },
-            where: { natureza: { grupo: { not: 'Relatório de Óbitos' } } },
+            where: {
+                deletado_em: null,
+                natureza: { grupo: { not: 'Relatório de Óbitos' } }
+            },
             orderBy: { _sum: { quantidade: 'desc' } },
         });
         const naturezasInfo = await prisma_1.prisma.naturezaOcorrencia.findMany({
@@ -59,6 +67,9 @@ const getDashboardStats = async (_req, res) => {
         const ocorrenciasPorCrbm = await prisma_1.prisma.estatisticaDiaria.groupBy({
             by: ['obm_id'],
             _sum: { quantidade: true },
+            where: {
+                deletado_em: null,
+            },
         });
         const obmsInfo = await prisma_1.prisma.oBM.findMany({
             where: { id: { in: ocorrenciasPorCrbm.map((o) => o.obm_id) } },

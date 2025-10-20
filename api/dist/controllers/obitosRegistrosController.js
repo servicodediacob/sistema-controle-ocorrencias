@@ -12,8 +12,13 @@ const getObitosPorData = async (req, res) => {
         return res.status(400).json({ message: 'A data é obrigatória.' });
     }
     try {
+        const dataInicio = new Date(data + 'T00:00:00.000Z');
+        const dataFim = new Date(data + 'T23:59:59.999Z');
         const registros = await prisma_1.prisma.obitoRegistro.findMany({
-            where: { data_ocorrencia: new Date(data) },
+            where: {
+                data_ocorrencia: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+            },
             include: {
                 natureza: { select: { subgrupo: true } },
                 obm: { select: { nome: true } },
@@ -83,8 +88,14 @@ exports.atualizarObitoRegistro = atualizarObitoRegistro;
 const deletarObitoRegistro = async (req, res) => {
     const { id } = req.params;
     try {
-        await prisma_1.prisma.obitoRegistro.delete({ where: { id: Number(id) } });
-        logger_1.default.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de óbito deletado.');
+        const resultado = await prisma_1.prisma.obitoRegistro.updateMany({
+            where: { id: Number(id), deletado_em: null },
+            data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
+        });
+        if (resultado.count === 0) {
+            return res.status(404).json({ message: 'Registro de �bito n�o encontrado.' });
+        }
+        logger_1.default.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de �bito marcado como exclu�do.');
         return res.status(204).send();
     }
     catch (error) {
@@ -99,9 +110,17 @@ const limparRegistrosPorData = async (req, res) => {
         return res.status(400).json({ message: 'O parâmetro "data" é obrigatório.' });
     }
     try {
-        const result = await prisma_1.prisma.obitoRegistro.deleteMany({ where: { data_ocorrencia: new Date(data) } });
-        logger_1.default.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de óbitos limpos por data.');
-        return res.status(200).json({ message: `Operação concluída. ${result.count} registros de óbito foram excluídos para a data ${data}.` });
+        const dataInicio = new Date(data + 'T00:00:00.000Z');
+        const dataFim = new Date(data + 'T23:59:59.999Z');
+        const result = await prisma_1.prisma.obitoRegistro.updateMany({
+            where: {
+                data_ocorrencia: { gte: dataInicio, lte: dataFim },
+                deletado_em: null
+            },
+            data: { deletado_em: new Date() }
+        });
+        logger_1.default.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de óbitos (soft) limpos por data.');
+        return res.status(200).json({ message: `Operação concluída. ${result.count} registros de óbito foram marcados como excluídos para a data ${data}.` });
     }
     catch (error) {
         logger_1.default.error({ err: error, data }, 'Erro ao limpar registros de óbito por data.');

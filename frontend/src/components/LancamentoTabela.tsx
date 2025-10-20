@@ -20,6 +20,8 @@ interface LancamentoTabelaProps {
   loading: boolean;
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
   showActions?: boolean;
+  canEditObmId?: number | null;
+  isAdmin?: boolean;
 }
 
 // --- MobileCard e CrbmAccordion permanecem os mesmos ---
@@ -89,9 +91,11 @@ interface CrbmAccordionProps {
   naturezas: NaturezaTabela[];
   onEdit: (cidade: ICidade, dadosAtuais: Record<string, number>) => void;
   showActions: boolean;
+  canEditObmId?: number | null;
+  isAdmin?: boolean;
 }
 
-const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, dadosMapa, naturezas, onEdit, showActions }) => {
+const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, dadosMapa, naturezas, onEdit, showActions, canEditObmId, isAdmin }) => {
   const [isOpen, setIsOpen] = useState(false);
   // helpers locais
   const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -127,12 +131,13 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
       {isOpen && (
         <div className="space-y-2 border-t border-border p-4">
           {cidadesDoCrbm.map(cidade => {
-            const ocorrências: Record<string, number> = {};
+            const podeEditarCidade = !!(isAdmin || (canEditObmId !== undefined && canEditObmId !== null && canEditObmId === cidade.id));
+            const ocorrencias: Record<string, number> = {};
             let totalLinha = 0;
             naturezas.forEach(nat => {
               const qtd = dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0;
               if (qtd > 0 && nat.abreviacao) {
-                ocorrências[nat.abreviacao] = qtd;
+                ocorrencias[nat.abreviacao] = qtd;
               }
               totalLinha += qtd;
             });
@@ -146,10 +151,10 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
               <MobileCard
                 key={`mobile-${cidade.id}`}
                 cidade={cidade}
-                ocorrencias={ocorrências}
+                ocorrencias={ocorrencias}
                 total={totalLinha}
                 onEdit={() => onEdit(cidade, dadosParaEdicao)}
-                showActions={showActions}
+                showActions={Boolean(showActions && podeEditarCidade)}
               />
             );
           })}
@@ -162,12 +167,14 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
 
 
 const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
-  dadosApi, 
-  cidades, 
-  naturezas, 
-  loading, 
-  onEdit, 
-  showActions = true 
+  dadosApi,
+  cidades,
+  naturezas,
+  loading,
+  onEdit,
+  showActions = true,
+  canEditObmId = null,
+  isAdmin = false,
 }) => {
   if (loading) {
     return <SkeletonTable data-testid="skeleton-table" />;
@@ -278,6 +285,8 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
             naturezas={naturezas}
             onEdit={onEdit}
             showActions={showActions}
+            canEditObmId={canEditObmId}
+            isAdmin={isAdmin}
           />
         ))}
       </div>
@@ -302,7 +311,8 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
           
           {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
             <tbody key={crbm} className="bg-surface">
-              {listaCidades.map((cidade, index) => {
+            {listaCidades.map((cidade, index) => {
+                const podeEditar = !!(isAdmin || (canEditObmId !== undefined && canEditObmId !== null && canEditObmId === cidade.id));
                 const dadosParaEdicao: Record<string, number> = {};
                 let totalLinha = 0;
                 naturezas.forEach(nat => {
@@ -335,7 +345,16 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                     <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
                       <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3">
-                        <button onClick={() => onEdit(cidade, dadosParaEdicao)} className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        {podeEditar ? (
+                          <button
+                            onClick={() => onEdit(cidade, dadosParaEdicao)}
+                            className="rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400"
+                          >
+                            Editar
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500">Sem permissão</span>
+                        )}
                       </td>
                     )}
                   </tr>

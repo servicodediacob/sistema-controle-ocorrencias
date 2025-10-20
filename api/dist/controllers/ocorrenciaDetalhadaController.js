@@ -70,6 +70,7 @@ const getOcorrenciasDetalhadasPorData = async (req, res) => {
                     gte: dataInicio,
                     lte: dataFim,
                 },
+                deletado_em: null,
             },
             include: { natureza: true, cidade: true },
             orderBy: [{ horario_ocorrencia: 'asc' }, { id: 'asc' }],
@@ -136,12 +137,18 @@ exports.atualizarOcorrenciaDetalhada = atualizarOcorrenciaDetalhada;
 const deletarOcorrenciaDetalhada = async (req, res) => {
     const { id } = req.params;
     try {
-        await prisma_1.prisma.ocorrenciaDetalhada.delete({ where: { id: Number(id) } });
-        logger_1.default.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada deletada.');
+        const resultado = await prisma_1.prisma.ocorrenciaDetalhada.updateMany({
+            where: { id: Number(id), deletado_em: null },
+            data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
+        });
+        if (resultado.count === 0) {
+            return res.status(404).json({ message: 'Ocorr�ncia detalhada n�o encontrada.' });
+        }
+        logger_1.default.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorr�ncia detalhada marcada como exclu�da.');
         return res.status(204).send();
     }
     catch (error) {
-        logger_1.default.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
+        logger_1.default.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorr�ncia detalhada.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };

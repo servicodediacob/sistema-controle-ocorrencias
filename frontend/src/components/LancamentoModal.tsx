@@ -43,16 +43,26 @@ function LancamentoModal({
   // 1. A função getInitialQuantidades agora mapeia o subgrupo (string) para o ID da natureza (number)
   //    e armazena a quantidade usando o ID como chave.
   const getInitialQuantidades = () => {
-    const quantidadesIniciais: Record<string, string> = {};
-    if (isEditing && itemParaEditar) {
-      for (const subgrupo in itemParaEditar.dados) {
-        const natureza = naturezas.find((n) => n.subgrupo === subgrupo);
-        if (natureza) {
-          // A chave do estado agora é o ID da natureza
-          quantidadesIniciais[natureza.id.toString()] = itemParaEditar.dados[subgrupo].toString();
-        }
-      }
+    if (!isEditing || !itemParaEditar) {
+      return {};
     }
+
+    const quantidadesIniciais: Record<string, string> = {};
+
+    Object.entries(itemParaEditar.dados).forEach(([chave, quantidade]) => {
+      const natureza = naturezas.find((n) => {
+        if (!n.id) return false;
+        if (n.id.toString() === chave) return true;
+        if (n.subgrupo === chave) return true;
+        if (n.grupo && `${n.grupo}|${n.subgrupo}` === chave) return true;
+        return false;
+      });
+
+      if (natureza?.id) {
+        quantidadesIniciais[natureza.id.toString()] = String(quantidade ?? 0);
+      }
+    });
+
     return quantidadesIniciais;
   };
   // ======================= FIM DA CORREÇÃO =======================
@@ -105,7 +115,7 @@ function LancamentoModal({
         natureza_id: Number(naturezaIdStr),
         quantidade: Number(quantidadeStr) || 0,
       }))
-      .filter(item => item.quantidade > 0); // Enviamos apenas o que for maior que zero
+      .filter(stat => Number.isFinite(stat.quantidade) && !Number.isNaN(stat.natureza_id));
 
     const payload: IEstatisticaLotePayload = {
       data_registro: dataRegistro,

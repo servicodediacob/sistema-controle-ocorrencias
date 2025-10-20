@@ -39,66 +39,110 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
     return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
 
-  if (usuario.role !== 'admin' && usuario.obm_id !== obm_id) {
-    return res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
+  if (usuario.role !== 'admin') {
+    if (!usuario.obm_id) {
+      logger.warn({ usuarioId: usuario.id }, 'Usuário sem OBM tentou registrar estatísticas.');
+      return res.status(403).json({ message: 'Acesso negado. Seu usuário não possui uma OBM vinculada.' });
+    }
+    if (usuario.obm_id !== obm_id) {
+      logger.warn({ usuarioId: usuario.id, obmSolicitada: obm_id, obmUsuario: usuario.obm_id }, 'Usuário tentou registrar estatísticas para outra OBM.');
+      return res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
+    }
   }
 
-  if (!data_registro || !obm_id || !estatisticas) {
+  if (!data_registro || !obm_id || !Array.isArray(estatisticas)) {
     return res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
   }
 
   try {
     const dataParsed = parseDateParam(data_registro, 'data_registro');
-    const registrosValidos = estatisticas.filter(stat => stat.quantidade > 0);
+    const agora = new Date();
 
-    await prisma.$transaction(async (tx) => {
-      const agora = new Date();
-
-      await tx.estatisticaDiaria.updateMany({
-        where: {
-          data_registro: dataParsed,
-          obm_id: obm_id,
-          deletado_em: null,
-        },
-        data: {
-          deletado_em: agora,
-        },
-      });
-
-      for (const stat of registrosValidos) {
-        await tx.estatisticaDiaria.upsert({
-          where: {
-            uq_dia_obm_natureza: {
-              data_registro: dataParsed,
-              obm_id: obm_id,
-              natureza_id: stat.natureza_id,
-            },
-          },
-          update: {
-            quantidade: stat.quantidade,
-            usuario_id: usuario.id,
-            deletado_em: null,
-          },
-          create: {
-            data_registro: dataParsed,
-            obm_id: obm_id,
-            natureza_id: stat.natureza_id,
-            quantidade: stat.quantidade,
-            usuario_id: usuario.id,
-          },
-        });
+    const estatisticasNormalizadas = new Map<number, number>();
+    estatisticas.forEach((item) => {
+      const naturezaId = Number(item.natureza_id);
+      const quantidade = Number(item.quantidade ?? 0);
+      if (Number.isInteger(naturezaId) && naturezaId > 0) {
+        estatisticasNormalizadas.set(naturezaId, quantidade < 0 ? 0 : quantidade);
       }
     });
 
-    const totalRegistros = registrosValidos.length;
-    if (totalRegistros === 0) {
-      logger.info({ data: data_registro, obm_id }, 'Registros de estatísticas limpos (nenhum dado novo para inserir).');
-      return res.status(200).json({ message: 'Nenhuma estatística para registrar. Registros anteriores para o dia e OBM foram limpos.' });
+    if (estatisticasNormalizadas.size === 0) {
+      logger.info({ data: data_registro, obm_id }, 'Nenhuma estatística válida recebida para processamento.');
+      return res.status(200).json({ message: 'Nenhuma estatística para registrar.' });
     }
-    
-    logger.info({ data: data_registro, obm_id, count: totalRegistros }, 'Estatísticas em lote registradas com sucesso.');
-    return res.status(201).json({ message: `${totalRegistros} tipo(s) de estatística registrados com sucesso para a OBM!` });
 
+    let registrosAtualizados = 0;
+    let registrosCriados = 0;
+    let registrosRemovidos = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (const [naturezaId, quantidade] of estatisticasNormalizadas.entries()) {
+        if (quantidade > 0) {
+          const atualizado = await tx.estatisticaDiaria.updateMany({
+            where: {
+              data_registro: dataParsed,
+              obm_id,
+              natureza_id: naturezaId,
+            },
+            data: {
+              quantidade,
+              usuario_id: usuario.id,
+              deletado_em: null,
+            },
+          });
+
+          if (atualizado.count && atualizado.count > 0) {
+            registrosAtualizados += atualizado.count;
+            continue;
+          }
+
+          await tx.estatisticaDiaria.create({
+            data: {
+              data_registro: dataParsed,
+              obm_id,
+              natureza_id: naturezaId,
+              quantidade,
+              usuario_id: usuario.id,
+            },
+          });
+          registrosCriados += 1;
+        } else {
+          const removido = await tx.estatisticaDiaria.updateMany({
+            where: {
+              data_registro: dataParsed,
+              obm_id,
+              natureza_id: naturezaId,
+              deletado_em: null,
+            },
+            data: {
+              deletado_em: agora,
+              usuario_id: usuario.id,
+            },
+          });
+          registrosRemovidos += removido.count ?? 0;
+        }
+      }
+    });
+
+    logger.info(
+      {
+        data: data_registro,
+        obm_id,
+        registrosAtualizados,
+        registrosCriados,
+        registrosRemovidos,
+        usuarioId: usuario.id,
+      },
+      'Processamento de estatísticas em lote concluído.'
+    );
+
+    return res.status(200).json({
+      message: 'Estatísticas processadas com sucesso.',
+      atualizados: registrosAtualizados,
+      criados: registrosCriados,
+      removidos: registrosRemovidos,
+    });
   } catch (error) {
     logger.error({ err: error, body: req.body }, 'Erro ao registrar estatísticas em lote.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });

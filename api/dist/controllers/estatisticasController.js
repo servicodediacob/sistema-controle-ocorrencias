@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSisgpoDashboard = exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
+exports.getEspelhoBase = exports.getSisgpoDashboard = exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
 const prisma_1 = require("../lib/prisma"); // Corrigido para caminho relativo
 const logger_1 = __importDefault(require("../config/logger")); // Corrigido para caminho relativo
 const date_1 = require("../utils/date"); // Corrigido para caminho relativo
@@ -20,43 +20,98 @@ const registrarEstatisticasLote = async (req, res) => {
     if (!usuario) {
         return res.status(401).json({ message: 'Usuário não autenticado.' });
     }
-    if (usuario.role !== 'admin' && usuario.obm_id !== obm_id) {
-        return res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
+    if (usuario.role !== 'admin') {
+        if (!usuario.obm_id) {
+            logger_1.default.warn({ usuarioId: usuario.id }, 'Usuário sem OBM tentou registrar estatísticas.');
+            return res.status(403).json({ message: 'Acesso negado. Seu usuário não possui uma OBM vinculada.' });
+        }
+        if (usuario.obm_id !== obm_id) {
+            logger_1.default.warn({ usuarioId: usuario.id, obmSolicitada: obm_id, obmUsuario: usuario.obm_id }, 'Usuário tentou registrar estatísticas para outra OBM.');
+            return res.status(403).json({ message: 'Acesso negado. Você só pode registrar dados para a sua própria OBM.' });
+        }
     }
-    if (!data_registro || !obm_id || !estatisticas) {
+    if (!data_registro || !obm_id || !Array.isArray(estatisticas)) {
         return res.status(400).json({ message: 'Dados incompletos. data_registro, obm_id e estatisticas são obrigatórios.' });
     }
     try {
         const dataParsed = (0, date_1.parseDateParam)(data_registro, 'data_registro');
-        await prisma_1.prisma.$transaction(async (tx) => {
-            await tx.estatisticaDiaria.deleteMany({
-                where: {
-                    data_registro: dataParsed,
-                    obm_id: obm_id,
-                },
-            });
-            const dadosParaCriar = estatisticas
-                .filter(stat => stat.quantidade > 0)
-                .map(stat => ({
-                data_registro: dataParsed,
-                obm_id: obm_id,
-                natureza_id: stat.natureza_id,
-                quantidade: stat.quantidade,
-                usuario_id: usuario.id,
-            }));
-            if (dadosParaCriar.length > 0) {
-                await tx.estatisticaDiaria.createMany({
-                    data: dadosParaCriar,
-                });
+        const agora = new Date();
+        const estatisticasNormalizadas = new Map();
+        estatisticas.forEach((item) => {
+            const naturezaId = Number(item.natureza_id);
+            const quantidade = Number(item.quantidade ?? 0);
+            if (Number.isInteger(naturezaId) && naturezaId > 0) {
+                estatisticasNormalizadas.set(naturezaId, quantidade < 0 ? 0 : quantidade);
             }
         });
-        const totalRegistros = estatisticas.filter(s => s.quantidade > 0).length;
-        if (totalRegistros === 0) {
-            logger_1.default.info({ data: data_registro, obm_id }, 'Registros de estatísticas limpos (nenhum dado novo para inserir).');
-            return res.status(200).json({ message: 'Nenhuma estatística para registrar. Registros anteriores para o dia e OBM foram limpos.' });
+        if (estatisticasNormalizadas.size === 0) {
+            logger_1.default.info({ data: data_registro, obm_id }, 'Nenhuma estatística válida recebida para processamento.');
+            return res.status(200).json({ message: 'Nenhuma estatística para registrar.' });
         }
-        logger_1.default.info({ data: data_registro, obm_id, count: totalRegistros }, 'Estatísticas em lote registradas com sucesso.');
-        return res.status(201).json({ message: `${totalRegistros} tipo(s) de estatística registrados com sucesso para a OBM!` });
+        let registrosAtualizados = 0;
+        let registrosCriados = 0;
+        let registrosRemovidos = 0;
+        await prisma_1.prisma.$transaction(async (tx) => {
+            for (const [naturezaId, quantidade] of estatisticasNormalizadas.entries()) {
+                if (quantidade > 0) {
+                    const atualizado = await tx.estatisticaDiaria.updateMany({
+                        where: {
+                            data_registro: dataParsed,
+                            obm_id,
+                            natureza_id: naturezaId,
+                        },
+                        data: {
+                            quantidade,
+                            usuario_id: usuario.id,
+                            deletado_em: null,
+                        },
+                    });
+                    if (atualizado.count && atualizado.count > 0) {
+                        registrosAtualizados += atualizado.count;
+                        continue;
+                    }
+                    await tx.estatisticaDiaria.create({
+                        data: {
+                            data_registro: dataParsed,
+                            obm_id,
+                            natureza_id: naturezaId,
+                            quantidade,
+                            usuario_id: usuario.id,
+                        },
+                    });
+                    registrosCriados += 1;
+                }
+                else {
+                    const removido = await tx.estatisticaDiaria.updateMany({
+                        where: {
+                            data_registro: dataParsed,
+                            obm_id,
+                            natureza_id: naturezaId,
+                            deletado_em: null,
+                        },
+                        data: {
+                            deletado_em: agora,
+                            usuario_id: usuario.id,
+                        },
+                    });
+                    registrosRemovidos += removido.count ?? 0;
+                }
+            }
+        });
+        logger_1.default.info({
+            data: data_registro,
+            obm_id,
+            registrosAtualizados,
+            registrosCriados,
+            registrosRemovidos,
+            usuarioId: usuario.id,
+        }, 'Processamento de estatísticas em lote concluído.');
+        return res.status(200).json({
+            message: 'Estatísticas processadas com sucesso.',
+            atualizados: registrosAtualizados,
+            criados: registrosCriados,
+            removidos: registrosRemovidos,
+        });
     }
     catch (error) {
         logger_1.default.error({ err: error, body: req.body }, 'Erro ao registrar estatísticas em lote.');
@@ -76,7 +131,10 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
         const dataFim = new Date(base);
         dataFim.setHours(23, 59, 59, 999);
         const estatisticas = await prisma_1.prisma.estatisticaDiaria.findMany({
-            where: { data_registro: { gte: dataInicio, lte: dataFim } },
+            where: {
+                data_registro: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+            },
             include: {
                 obm: { include: { crbm: true } },
                 natureza: true,
@@ -131,11 +189,22 @@ const limparTodosOsDadosDoDia = async (req, res) => {
     const dataInicio = new Date(data + 'T00:00:00.000Z');
     const dataFim = new Date(data + 'T23:59:59.999Z');
     try {
-        const [loteResult, detalhadasResult] = await prisma_1.prisma.$transaction([
-            prisma_1.prisma.estatisticaDiaria.deleteMany({ where: { data_registro: { gte: dataInicio, lte: dataFim } } }),
-            prisma_1.prisma.ocorrenciaDetalhada.deleteMany({ where: { data_ocorrencia: { gte: dataInicio, lte: dataFim } } }),
+        const now = new Date();
+        const [loteResult, detalhadasResult, obitosResult] = await prisma_1.prisma.$transaction([
+            prisma_1.prisma.estatisticaDiaria.updateMany({
+                where: { data_registro: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                data: { deletado_em: now }
+            }),
+            prisma_1.prisma.ocorrenciaDetalhada.updateMany({
+                where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                data: { deletado_em: now }
+            }),
+            prisma_1.prisma.obitoRegistro.updateMany({
+                where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                data: { deletado_em: now }
+            }),
         ]);
-        const totalLimpado = loteResult.count + detalhadasResult.count;
+        const totalLimpado = loteResult.count + detalhadasResult.count + obitosResult.count;
         logger_1.default.info({ data, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
         return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });
     }
@@ -162,3 +231,27 @@ const getSisgpoDashboard = async (req, res) => {
     }
 };
 exports.getSisgpoDashboard = getSisgpoDashboard;
+const getEspelhoBase = async (_req, res) => {
+    try {
+        const obms = await prisma_1.prisma.oBM.findMany({
+            include: {
+                crbm: true,
+            },
+            orderBy: [
+                { crbm: { nome: 'asc' } },
+                { nome: 'asc' },
+            ],
+        });
+        const base = obms.map((obm) => ({
+            id: obm.id,
+            cidade_nome: obm.nome,
+            crbm_nome: obm.crbm?.nome || 'N/A',
+        }));
+        res.json(base);
+    }
+    catch (error) {
+        logger_1.default.error({ err: error }, 'Erro ao buscar base de espelho de lançamentos.');
+        res.status(500).json({ message: 'Erro interno ao buscar base de espelho.' });
+    }
+};
+exports.getEspelhoBase = getEspelhoBase;

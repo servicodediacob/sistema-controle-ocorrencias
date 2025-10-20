@@ -29,6 +29,7 @@ const getObitosPorData = async (req, res) => {
       JOIN naturezas_ocorrencia n ON obr.natureza_id = n.id
       LEFT JOIN obms o ON obr.obm_id = o.id
       WHERE obr.data_ocorrencia = $1
+        AND obr.deletado_em IS NULL
       ORDER BY n.subgrupo, obr.id;
     `;
         const { rows } = await db_1.default.query(query, [data]);

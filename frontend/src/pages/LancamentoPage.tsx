@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider';
+import { useAuth } from '../contexts/AuthProvider';
 import {
   ICidade,
   IEstatisticaAgrupada,
@@ -57,6 +58,10 @@ const ORDEM_E_ABREVIACOES_COLUNAS = [
 function LancamentoPage() {
   const { cidades, naturezas, loading: loadingDataApoio } = useData();
   const { addNotification } = useNotification();
+  const { user: usuarioLogado } = useAuth();
+
+  const isAdmin = (usuarioLogado?.role ?? '').toLowerCase() === 'admin';
+  const obmPermitidaId = usuarioLogado?.obm_id ?? null;
 
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
   const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
@@ -178,6 +183,10 @@ function LancamentoPage() {
   };
 
   const handleLimparLancamentos = async () => {
+    if (!isAdmin) {
+      addNotification('Ação restrita a administradores.', 'error');
+      return;
+    }
     const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do dia ${dataFormatada}?`)) {
       try {
@@ -194,6 +203,10 @@ function LancamentoPage() {
   };
 
   const handleEdit = (cidade: ICidade, dadosAtuais?: Record<string, number>) => {
+    if (!isAdmin && obmPermitidaId !== cidade.id) {
+      addNotification('Você não tem permissão para editar os dados desta OBM.', 'error');
+      return;
+    }
     let dados: Record<string, number> = dadosAtuais || {};
     if (!dadosAtuais) {
       const normalize = (s: string) => s
@@ -249,16 +262,18 @@ function LancamentoPage() {
         </div>
         
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <button
-            onClick={handleLimparLancamentos}
-            disabled={
-              loadingPagina ||
-              (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)
-            }
-            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Limpar Lançamentos do Dia
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleLimparLancamentos}
+              disabled={
+                loadingPagina ||
+                (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)
+              }
+              className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Limpar Lançamentos do Dia
+            </button>
+          )}
           <button
             onClick={() => { setOcorrenciaParaEditar(null); setIsDetalheModalOpen(true); }}
             disabled={loadingPagina}
@@ -285,6 +300,9 @@ function LancamentoPage() {
           naturezas={naturezasParaTabela}
           loading={loadingPagina}
           onEdit={handleEdit}
+          showActions={Boolean(isAdmin || obmPermitidaId)}
+          canEditObmId={isAdmin ? null : obmPermitidaId ?? null}
+          isAdmin={isAdmin}
         />
       ) : (
         <div className="p-4 text-center text-text">
