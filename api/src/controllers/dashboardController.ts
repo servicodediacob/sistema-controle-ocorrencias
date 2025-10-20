@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
+import { parseDateParam } from '../utils/date';
 
 export const getDashboardStats = async (_req: Request, res: Response) => {
   try {
@@ -139,30 +140,139 @@ export const getOcorrenciasPorNatureza = async (_req: Request, res: Response) =>
   }
 };
 
-export const getDashboardDataForSso = async (_req: Request, res: Response) => {
+// Retorna um payload completo para o dashboard do SISGPO (SSO)
+export const getDashboardDataForSso = async (req: Request, res: Response) => {
+  const dataParam = req.query.data as string | undefined;
+
+  // Se a data não for fornecida, usa a data atual (UTC)
+  const data = dataParam || new Date().toISOString().split('T')[0];
+
   try {
-    const totalOcorrencias = await prisma.ocorrenciaDetalhada.count();
-    const totalOcorrenciasHoje = await prisma.ocorrenciaDetalhada.count({
+    const dataInicio = parseDateParam(data, 'data');
+    dataInicio.setUTCHours(0, 0, 0, 0);
+
+    const dataFim = new Date(dataInicio);
+    dataFim.setUTCHours(23, 59, 59, 999);
+
+    // --- LÓGICA DE AGREGAÇÃO REVISADA ---
+
+    // 1. Deixar o banco de dados agrupar e somar os dados para o espelho
+    const dadosAgrupados = await prisma.estatisticaDiaria.groupBy({
+      by: ['obm_id', 'natureza_id'],
       where: {
-        data_ocorrencia: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        },
+        data_registro: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+      },
+      _sum: {
+        quantidade: true,
       },
     });
 
-    // Mantém contagem de registros de óbitos para compatibilidade
-    const totalObitos = await prisma.obitoRegistro.count();
+    // 2. Buscar os nomes correspondentes aos IDs para enriquecer os dados
+    const obmIds = dadosAgrupados.map(d => d.obm_id);
+    const naturezaIds = dadosAgrupados.map(d => d.natureza_id);
 
-    const dashboardData = {
-      totalOcorrencias,
-      totalOcorrenciasHoje,
-      totalObitos,
+    const [obms, naturezas] = await Promise.all([
+      prisma.oBM.findMany({ where: { id: { in: obmIds } }, include: { crbm: true } }),
+      prisma.naturezaOcorrencia.findMany({ where: { id: { in: naturezaIds } } })
+    ]);
+
+    // Criar mapas para busca rápida
+    const obmMap = new Map(obms.map(o => [o.id, o]));
+    const naturezaMap = new Map(naturezas.map(n => [n.id, n]));
+
+    // 3. Montar o payload final do 'espelho'
+    const espelho = dadosAgrupados.map(dado => {
+      const obm = obmMap.get(dado.obm_id);
+      const natureza = naturezaMap.get(dado.natureza_id);
+      return {
+        cidade_nome: obm?.nome || 'Desconhecida',
+        crbm_nome: obm?.crbm?.nome || 'Desconhecido',
+        natureza_nome: natureza?.subgrupo || 'Desconhecida',
+        quantidade: dado._sum.quantidade || 0,
+      };
+    });
+
+    // --- FIM DA LÓGICA REVISADA ---
+
+    // O restante da lógica permanece o mesmo
+
+    // 2. Dados para o "Relatório de Óbitos"
+    const obitos = await prisma.obitoRegistro.findMany({
+      where: {
+        data_ocorrencia: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+      },
+      include: {
+        obm: true,
+        natureza: true, // Inclui a natureza do óbito
+      },
+    });
+
+    // 3. Dados para "Ocorrências de Destaque"
+    const ocorrenciasDestaque = await prisma.ocorrenciaDetalhada.findMany({
+      where: {
+        data_ocorrencia: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+      },
+      orderBy: { id: 'desc' },
+      take: 1,
+    });
+
+    // 4. Estrutura base do espelho (todas as OBMs)
+    const espelhoBase = await prisma.oBM.findMany({
+      include: { crbm: true },
+      orderBy: [{ crbm: { nome: 'asc' } }, { nome: 'asc' }],
+    });
+
+    // 5. Estatísticas gerais (total de ocorrências e óbitos)
+    const totalOcorrenciasLote = await prisma.estatisticaDiaria.aggregate({
+      _sum: { quantidade: true },
+      where: {
+        data_registro: { gte: dataInicio, lte: dataFim },
+        deletado_em: null,
+        natureza: { grupo: { not: 'Relatório de Óbitos' } },
+      },
+    });
+
+    const totalObitosDia = obitos.reduce((sum, item) => sum + item.quantidade_vitimas, 0);
+
+    // Monta o payload final no formato esperado pelo SISGPO
+    const responsePayload = {
+      data,
+      stats: {
+        totalOcorrencias: totalOcorrenciasLote._sum.quantidade || 0,
+        totalObitos: totalObitosDia,
+        ocorrenciasPorNatureza: [], 
+        ocorrenciasPorCrbm: [],
+      },
+      plantao: {
+        ocorrenciasDestaque,
+        supervisorPlantao: null,
+      },
+      relatorio: {
+        estatisticas: [],
+        obitos: obitos.map(o => ({
+          id: o.id,
+          numero_ocorrencia: o.numero_ocorrencia,
+          quantidade_vitimas: o.quantidade_vitimas,
+          obm_nome: o.obm.nome,
+          natureza_nome: o.natureza.subgrupo,
+        })),
+      },
+      espelho, // Usa a variável 'espelho' montada com a nova lógica
+      espelhoBase: espelhoBase.map(obm => ({
+        id: obm.id,
+        cidade_nome: obm.nome,
+        crbm_nome: obm.crbm.nome,
+      })),
     };
 
-    res.json(dashboardData);
+    res.status(200).json(responsePayload);
+
   } catch (error) {
-    console.error('Erro ao buscar dados do dashboard para SSO:', error);
-    res.status(500).json({ message: 'Erro interno ao buscar dados do dashboard.' });
+    logger.error({ err: error, query: req.query }, 'Erro ao gerar payload do dashboard para SISGPO.');
+    res.status(500).json({ message: 'Erro interno ao processar dados para o dashboard.' });
   }
 };
 

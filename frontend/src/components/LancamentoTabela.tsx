@@ -1,4 +1,4 @@
-// frontend/src/components/LancamentoTabela.tsx
+﻿// frontend/src/components/LancamentoTabela.tsx
 
 import React, { useState, useMemo } from 'react';
 import { IEstatisticaAgrupada, ICidade } from '../services/api';
@@ -75,7 +75,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
               onClick={onEdit}
               className="mt-4 w-full rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
             >
-              Editar Lançamento
+              Editar Lan?amento
             </button>
           )}
         </div>
@@ -180,7 +180,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     return <SkeletonTable data-testid="skeleton-table" />;
   }
 
-  // Normalização e mapeamentos robustos para evitar divergências
+  // Normaliza??o e mapeamentos robustos para evitar diverg?ncias
   const normalize = (s: string) => s
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -190,12 +190,22 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
   const keyFor = (cidadeNome: string, codigo: string) => `${normalize(cidadeNome)}|${codigo}`;
 
-  // Mapas auxiliares para resolução por nome e por par grupo|subgrupo
+  // Mapas auxiliares para resolu??o por nome e por par grupo|subgrupo
   const naturezaNomeParaCodigo = useMemo(() =>
     naturezas.reduce((acc, nat) => {
-      acc[normalize(nat.nome)] = nat.codigo;
-      if (nat.subgrupo) acc[normalize(nat.subgrupo)] = nat.codigo;
-      if (nat.grupo && nat.subgrupo) acc[`${normalize(nat.grupo)}|${normalize(nat.subgrupo)}`] = nat.codigo;
+      const nomeNorm = normalize(nat.nome);
+      if (nomeNorm) acc[nomeNorm] = nat.codigo;
+
+      if (nat.subgrupo) {
+        const subNorm = normalize(nat.subgrupo);
+        acc[subNorm] = nat.codigo;
+        if (nat.grupo) {
+          const grupoNorm = normalize(nat.grupo);
+          acc[`${grupoNorm}|${subNorm}`] = nat.codigo;
+          acc[`${grupoNorm} - ${subNorm}`] = nat.codigo;
+        }
+      }
+
       return acc;
     }, {} as Record<string, string>)
   , [naturezas]);
@@ -207,17 +217,37 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
     }, {} as Record<string, string>)
   , [naturezas]);
 
+  const codigosDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    naturezas.forEach((nat) => {
+      if (nat.codigo !== undefined && nat.codigo !== null) {
+        set.add(String(nat.codigo));
+      }
+    });
+    return set;
+  }, [naturezas]);
+
   const dadosMapa = useMemo(() => {
     return dadosApi.reduce((acc: Record<string, number>, item: IEstatisticaAgrupada) => {
       // Preferimos o ID da natureza para evitar ambiguidades (ex.: "Outros").
       const codigoFromId = item.natureza_id ? String(item.natureza_id) : undefined;
-      let codigo: string | undefined = codigoFromId;
+      let codigo: string | undefined = (codigoFromId && codigosDisponiveis.has(codigoFromId)) ? codigoFromId : undefined;
 
       if (!codigo) {
         const nomeChave = normalize(item.natureza_nome);
+        const partesNome = nomeChave.split('-').map(parte => parte.trim()).filter(Boolean);
+        const subgrupoNormalizado = partesNome.length > 1 ? partesNome[partesNome.length - 1] : nomeChave;
+        const grupoNormalizado = item.natureza_grupo ? normalize(item.natureza_grupo) : undefined;
         const abrevChave = item.natureza_abreviacao ? normalize(item.natureza_abreviacao) : '';
-        const grupoSubChave = item.natureza_grupo ? `${normalize(item.natureza_grupo)}|${nomeChave}` : '';
-        codigo = naturezaNomeParaCodigo[grupoSubChave] || naturezaNomeParaCodigo[nomeChave] || (abrevChave ? naturezaAbrevParaCodigo[abrevChave] : undefined);
+        const grupoSubChave = grupoNormalizado ? `${grupoNormalizado}|${subgrupoNormalizado}` : '';
+        const grupoNomeComposto = grupoNormalizado ? `${grupoNormalizado} - ${subgrupoNormalizado}` : '';
+
+        codigo =
+          naturezaNomeParaCodigo[nomeChave] ||
+          naturezaNomeParaCodigo[subgrupoNormalizado] ||
+          naturezaNomeParaCodigo[grupoSubChave] ||
+          naturezaNomeParaCodigo[grupoNomeComposto] ||
+          (abrevChave ? naturezaAbrevParaCodigo[abrevChave] : undefined);
       }
 
       if (codigo) {
@@ -304,7 +334,7 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
               ))}
               <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
               {showActions && (
-                <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">AÇÕES</th>
+                <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">A??ES</th>
               )}
             </tr>
           </thead>
@@ -381,3 +411,4 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 };
 
 export default LancamentoTabela;
+

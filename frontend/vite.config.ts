@@ -6,15 +6,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Define a porta padrão para o servidor de desenvolvimento
+    // Porta preferencial; Vite escolhera a primeira disponivel quando 5173 estiver ocupada
     port: 5173,
-    // IMPORTANTE: Faz o Vite falhar se a porta já estiver em uso,
-    // em vez de tentar outra. Isso evita erros silenciosos.
-    strictPort: true,
+    strictPort: false,
   },
   preview: {
-    // Garante que o preview também use a mesma porta
+    // Mesmo comportamento para o modo preview
     port: 5173,
-    strictPort: true,
+    strictPort: false,
   },
 });

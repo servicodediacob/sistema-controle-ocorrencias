@@ -29,7 +29,7 @@ const ORDEM_COLUNAS: Array<{ grupo: string; subgrupo: string; abreviacao: string
 ];
 
 function LancamentoWidget() {
-  const { cidades } = useData();
+  const { cidades, naturezas } = useData();
   const { addNotification } = useNotification();
 
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
@@ -67,16 +67,36 @@ function LancamentoWidget() {
   };
 
   // Converte ORDEM_COLUNAS para o formato esperado por LancamentoTabela
-  const naturezasTabela = useMemo(() =>
-    ORDEM_COLUNAS.map(({ grupo, subgrupo, abreviacao }, idx) => ({
-      codigo: String(idx + 1), // código sintético estável por ordem
-      nome: subgrupo,
-      subgrupo,
-      abreviacao,
-      grupo,
-    })),
-    []
-  );
+  const naturezasTabela = useMemo(() => {
+    const normalize = (value?: string | null) =>
+      (value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+    return ORDEM_COLUNAS.map(({ grupo, subgrupo, abreviacao }, idx) => {
+      const grupoNorm = normalize(grupo);
+      const subgrupoNorm = normalize(subgrupo);
+
+      const naturezaCorrespondente = naturezas.find(
+        nat => normalize(nat.grupo) === grupoNorm && normalize(nat.subgrupo) === subgrupoNorm
+      );
+
+      const codigo = naturezaCorrespondente?.id
+        ? String(naturezaCorrespondente.id)
+        : `${grupoNorm}|${subgrupoNorm}|${idx}`;
+
+      return {
+        codigo,
+        nome: subgrupo,
+        subgrupo,
+        abreviacao,
+        grupo,
+      };
+    });
+  }, [naturezas]);
 
   return (
     <div className="mt-6 w-full rounded-lg bg-surface border border-border p-6 text-text">
