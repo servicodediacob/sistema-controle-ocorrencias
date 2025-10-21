@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+﻿﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -59,4 +59,3 @@ server.listen(PORT, () => {
 });
 
 export { io };
-
