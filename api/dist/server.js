@@ -38,7 +38,8 @@ const defaultAllowedOrigins = [
     'https://sisgpo.vercel.app',
     'https://sistema-controle-ocorrencias-fronte.vercel.app',
 ];
-const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+const rawAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? '';
+const envAllowedOrigins = rawAllowedOrigins
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
