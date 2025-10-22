@@ -177,3 +177,5 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
+
+// FORÇAR PUSH ENV.LOCAL
