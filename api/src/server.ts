@@ -31,7 +31,33 @@ initializeSocket(io);
 
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// Lista de origens permitidas
+const allowedOrigins = [
+  'https://sisgpo.vercel.app',
+  'https://sistema-controle-ocorrencias-fronte.vercel.app',
+  // Adicione outras origens se necessário, por exemplo, para desenvolvimento local:
+  // 'http://localhost:3000',
+  // 'http://localhost:5173'
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Permite requisições sem 'origin' (ex: mobile apps, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Rotas públicas
