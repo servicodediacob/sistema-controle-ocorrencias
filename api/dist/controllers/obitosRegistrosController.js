@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.limparRegistrosPorData = exports.deletarObitoRegistro = exports.atualizarObitoRegistro = exports.criarObitoRegistro = exports.getObitosPorData = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 const getObitosPorData = async (req, res) => {
     const { data } = req.query;
     if (!data || typeof data !== 'string') {

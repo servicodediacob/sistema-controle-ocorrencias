@@ -2,8 +2,8 @@
 // Caminho: api/src/routes/unidadesRoutes.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const authMiddleware_1 = require("@/middleware/authMiddleware"); // Usando alias
-const unidadesController_1 = require("@/controllers/unidadesController"); // Usando alias
+const authMiddleware_1 = require("../middleware/authMiddleware"); // Usando alias
+const unidadesController_1 = require("../controllers/unidadesController"); // Usando alias
 const router = (0, express_1.Router)();
 // Rotas para /api/unidades
 router.route('/')

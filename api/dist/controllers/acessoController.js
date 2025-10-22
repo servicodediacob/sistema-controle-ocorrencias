@@ -7,8 +7,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.gerenciarSolicitacao = exports.solicitarAcessoGoogle = exports.listarSolicitacoes = exports.solicitarAcesso = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma_1 = require("../lib/prisma");
-const socketService_1 = require("@/services/socketService");
-const logger_1 = __importDefault(require("@/config/logger"));
+const socketService_1 = require("../services/socketService");
+const logger_1 = __importDefault(require("../config/logger"));
 const solicitarAcesso = async (req, res) => {
     const { nome, email, senha, obm_id } = req.body;
     if (!nome || !email || !senha || !obm_id) {

@@ -5,54 +5,45 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDashboardDataForSso = exports.getOcorrenciasPorNatureza = exports.getOcorrenciasRecentes = exports.getDashboardStats = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
+const date_1 = require("../utils/date");
+const RELATORIO_DE_OBITOS = 'Relatório de Óbitos';
 const getDashboardStats = async (_req, res) => {
     try {
-        // Define o intervalo (UTC) do dia atual
         const hojeInicio = new Date();
         hojeInicio.setUTCHours(0, 0, 0, 0);
         const hojeFim = new Date();
         hojeFim.setUTCHours(23, 59, 59, 999);
-        // Total de ocorrências do dia em lote (estatísticas diárias)
+        const filtroDiario = {
+            deletado_em: null,
+            data_registro: {
+                gte: hojeInicio,
+                lte: hojeFim,
+            },
+        };
+        const filtroDiarioSemObitos = {
+            ...filtroDiario,
+            natureza: { grupo: { not: RELATORIO_DE_OBITOS } },
+        };
         const totalEstatisticas = await prisma_1.prisma.estatisticaDiaria.aggregate({
             _sum: { quantidade: true },
-            where: {
-                deletado_em: null,
-                natureza: { grupo: { not: 'Relatório de Óbitos' } },
-                data_registro: {
-                    gte: hojeInicio,
-                    lte: hojeFim,
-                },
-            },
+            where: filtroDiarioSemObitos,
         });
-        // Total de ocorrências detalhadas do dia
-        const totalDetalhadas = await prisma_1.prisma.ocorrenciaDetalhada.count({
+        const totalOcorrencias = totalEstatisticas._sum?.quantidade ?? 0;
+        const totalObitos = await prisma_1.prisma.obitoRegistro.aggregate({
+            _sum: { quantidade_vitimas: true },
             where: {
                 deletado_em: null,
-                natureza: { grupo: { not: 'Relatório de Óbitos' } },
                 data_ocorrencia: {
                     gte: hojeInicio,
                     lte: hojeFim,
                 },
             },
         });
-        const totalLote = totalEstatisticas._sum?.quantidade || 0;
-        const totalOcorrencias = totalLote + totalDetalhadas;
-        // Total de óbitos (soma de vítimas)
-        const totalObitos = await prisma_1.prisma.obitoRegistro.aggregate({
-            _sum: { quantidade_vitimas: true },
-            where: {
-                deletado_em: null,
-            },
-        });
-        // Ocorrências por natureza (histórico)
         const ocorrenciasPorNatureza = await prisma_1.prisma.estatisticaDiaria.groupBy({
             by: ['natureza_id'],
             _sum: { quantidade: true },
-            where: {
-                deletado_em: null,
-                natureza: { grupo: { not: 'Relatório de Óbitos' } }
-            },
+            where: filtroDiarioSemObitos,
             orderBy: { _sum: { quantidade: 'desc' } },
         });
         const naturezasInfo = await prisma_1.prisma.naturezaOcorrencia.findMany({
@@ -60,16 +51,13 @@ const getDashboardStats = async (_req, res) => {
         });
         const naturezaMap = new Map(naturezasInfo.map((n) => [n.id, n.subgrupo]));
         const statsPorNatureza = ocorrenciasPorNatureza.map((item) => ({
-            nome: naturezaMap.get(item.natureza_id) || 'Desconhecida',
-            total: item._sum?.quantidade || 0,
+            nome: naturezaMap.get(item.natureza_id) ?? 'Desconhecida',
+            total: item._sum?.quantidade ?? 0,
         }));
-        // Ocorrências por CRBM (histórico)
         const ocorrenciasPorCrbm = await prisma_1.prisma.estatisticaDiaria.groupBy({
             by: ['obm_id'],
             _sum: { quantidade: true },
-            where: {
-                deletado_em: null,
-            },
+            where: filtroDiarioSemObitos,
         });
         const obmsInfo = await prisma_1.prisma.oBM.findMany({
             where: { id: { in: ocorrenciasPorCrbm.map((o) => o.obm_id) } },
@@ -78,18 +66,18 @@ const getDashboardStats = async (_req, res) => {
         const crbmMap = new Map();
         ocorrenciasPorCrbm.forEach((item) => {
             const obm = obmsInfo.find((o) => o.id === item.obm_id);
-            if (obm) {
-                const crbm = crbmMap.get(obm.crbm_id) || { nome: obm.crbm.nome, total: 0 };
-                crbm.total += item._sum?.quantidade || 0;
-                crbmMap.set(obm.crbm_id, crbm);
+            if (!obm) {
+                return;
             }
+            const acumulado = crbmMap.get(obm.crbm_id) ?? { nome: obm.crbm.nome, total: 0 };
+            acumulado.total += item._sum?.quantidade ?? 0;
+            crbmMap.set(obm.crbm_id, acumulado);
         });
-        const statsPorCrbm = Array.from(crbmMap.values()).sort((a, b) => b.total - a.total);
         res.status(200).json({
             totalOcorrencias,
-            totalObitos: totalObitos._sum?.quantidade_vitimas || 0,
+            totalObitos: totalObitos._sum?.quantidade_vitimas ?? 0,
             ocorrenciasPorNatureza: statsPorNatureza,
-            ocorrenciasPorCrbm: statsPorCrbm,
+            ocorrenciasPorCrbm: Array.from(crbmMap.values()).sort((a, b) => b.total - a.total),
         });
     }
     catch (error) {
@@ -120,20 +108,33 @@ const getOcorrenciasRecentes = async (_req, res) => {
 exports.getOcorrenciasRecentes = getOcorrenciasRecentes;
 const getOcorrenciasPorNatureza = async (_req, res) => {
     try {
+        const hojeInicio = new Date();
+        hojeInicio.setUTCHours(0, 0, 0, 0);
+        const hojeFim = new Date();
+        hojeFim.setUTCHours(23, 59, 59, 999);
+        const filtroDiarioSemObitos = {
+            deletado_em: null,
+            data_registro: {
+                gte: hojeInicio,
+                lte: hojeFim,
+            },
+            natureza: { grupo: { not: RELATORIO_DE_OBITOS } },
+        };
         const agrupado = await prisma_1.prisma.estatisticaDiaria.groupBy({
             by: ['natureza_id'],
             _sum: { quantidade: true },
+            where: filtroDiarioSemObitos,
             orderBy: { _sum: { quantidade: 'desc' } },
             take: 5,
         });
-        const naturezasIds = agrupado.map((i) => i.natureza_id);
+        const naturezasIds = agrupado.map((item) => item.natureza_id);
         const naturezas = await prisma_1.prisma.naturezaOcorrencia.findMany({
             where: { id: { in: naturezasIds } },
         });
         const naturezaMap = new Map(naturezas.map((n) => [n.id, n.subgrupo]));
         const resultado = agrupado.map((item) => ({
-            nome: naturezaMap.get(item.natureza_id) || 'Desconhecida',
-            quantidade: item._sum?.quantidade || 0,
+            nome: naturezaMap.get(item.natureza_id) ?? 'Desconhecida',
+            quantidade: item._sum?.quantidade ?? 0,
         }));
         res.json(resultado);
     }
@@ -143,28 +144,107 @@ const getOcorrenciasPorNatureza = async (_req, res) => {
     }
 };
 exports.getOcorrenciasPorNatureza = getOcorrenciasPorNatureza;
-const getDashboardDataForSso = async (_req, res) => {
+const getDashboardDataForSso = async (req, res) => {
+    const dataParam = req.query.data;
+    const data = dataParam || new Date().toISOString().split('T')[0];
     try {
-        const totalOcorrencias = await prisma_1.prisma.ocorrenciaDetalhada.count();
-        const totalOcorrenciasHoje = await prisma_1.prisma.ocorrenciaDetalhada.count({
+        const dataInicio = (0, date_1.parseDateParam)(data, 'data');
+        dataInicio.setUTCHours(0, 0, 0, 0);
+        const dataFim = new Date(dataInicio);
+        dataFim.setUTCHours(23, 59, 59, 999);
+        const dadosAgrupados = await prisma_1.prisma.estatisticaDiaria.groupBy({
+            by: ['obm_id', 'natureza_id'],
             where: {
-                data_ocorrencia: {
-                    gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                },
+                data_registro: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+            },
+            _sum: {
+                quantidade: true,
             },
         });
-        // Mantém contagem de registros de óbitos para compatibilidade
-        const totalObitos = await prisma_1.prisma.obitoRegistro.count();
-        const dashboardData = {
-            totalOcorrencias,
-            totalOcorrenciasHoje,
-            totalObitos,
+        const obmIds = dadosAgrupados.map((dado) => dado.obm_id);
+        const naturezaIds = dadosAgrupados.map((dado) => dado.natureza_id);
+        const [obms, naturezas] = await Promise.all([
+            prisma_1.prisma.oBM.findMany({ where: { id: { in: obmIds } }, include: { crbm: true } }),
+            prisma_1.prisma.naturezaOcorrencia.findMany({ where: { id: { in: naturezaIds } } }),
+        ]);
+        const obmMap = new Map(obms.map((obm) => [obm.id, obm]));
+        const naturezaMap = new Map(naturezas.map((natureza) => [natureza.id, natureza]));
+        const espelho = dadosAgrupados.map((dado) => {
+            const obm = obmMap.get(dado.obm_id);
+            const natureza = naturezaMap.get(dado.natureza_id);
+            return {
+                cidade_nome: obm?.nome || 'Desconhecida',
+                crbm_nome: obm?.crbm?.nome || 'Desconhecido',
+                natureza_nome: natureza?.subgrupo || 'Desconhecida',
+                quantidade: dado._sum.quantidade || 0,
+            };
+        });
+        const obitos = await prisma_1.prisma.obitoRegistro.findMany({
+            where: {
+                data_ocorrencia: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+            },
+            include: {
+                obm: true,
+                natureza: true,
+            },
+        });
+        const ocorrenciasDestaque = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
+            where: {
+                data_ocorrencia: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+            },
+            orderBy: { id: 'desc' },
+            take: 1,
+        });
+        const espelhoBase = await prisma_1.prisma.oBM.findMany({
+            include: { crbm: true },
+            orderBy: [{ crbm: { nome: 'asc' } }, { nome: 'asc' }],
+        });
+        const totalOcorrenciasLote = await prisma_1.prisma.estatisticaDiaria.aggregate({
+            _sum: { quantidade: true },
+            where: {
+                data_registro: { gte: dataInicio, lte: dataFim },
+                deletado_em: null,
+                natureza: { grupo: { not: RELATORIO_DE_OBITOS } },
+            },
+        });
+        const totalObitosDia = obitos.reduce((sum, item) => sum + item.quantidade_vitimas, 0);
+        const responsePayload = {
+            data,
+            stats: {
+                totalOcorrencias: totalOcorrenciasLote._sum.quantidade || 0,
+                totalObitos: totalObitosDia,
+                ocorrenciasPorNatureza: [],
+                ocorrenciasPorCrbm: [],
+            },
+            plantao: {
+                ocorrenciasDestaque,
+                supervisorPlantao: null,
+            },
+            relatorio: {
+                estatisticas: [],
+                obitos: obitos.map((obito) => ({
+                    id: obito.id,
+                    numero_ocorrencia: obito.numero_ocorrencia,
+                    quantidade_vitimas: obito.quantidade_vitimas,
+                    obm_nome: obito.obm.nome,
+                    natureza_nome: obito.natureza.subgrupo,
+                })),
+            },
+            espelho,
+            espelhoBase: espelhoBase.map((obm) => ({
+                id: obm.id,
+                cidade_nome: obm.nome,
+                crbm_nome: obm.crbm.nome,
+            })),
         };
-        res.json(dashboardData);
+        res.status(200).json(responsePayload);
     }
     catch (error) {
-        console.error('Erro ao buscar dados do dashboard para SSO:', error);
-        res.status(500).json({ message: 'Erro interno ao buscar dados do dashboard.' });
+        logger_1.default.error({ err: error, query: req.query }, 'Erro ao gerar payload do dashboard para SISGPO.');
+        res.status(500).json({ message: 'Erro interno ao processar dados para o dashboard.' });
     }
 };
 exports.getDashboardDataForSso = getDashboardDataForSso;

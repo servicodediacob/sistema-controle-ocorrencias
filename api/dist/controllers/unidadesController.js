@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCrbms = exports.excluirUnidade = exports.atualizarUnidade = exports.criarUnidade = exports.getUnidades = void 0;
 const prisma_1 = require("../lib/prisma"); // Importa a instância singleton do Prisma Client
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 // Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
 const isPrismaKnownError = (e) => !!e && typeof e.code === 'string';
 /**

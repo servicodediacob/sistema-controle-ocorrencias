@@ -4,12 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const dashboardController_1 = require("@/controllers/dashboardController");
-const healthController_1 = require("@/controllers/healthController");
-const plantaoController_1 = require("@/controllers/plantaoController");
-const relatorioController_1 = require("@/controllers/relatorioController");
-const estatisticasController_1 = require("@/controllers/estatisticasController");
-const verifySsoJwt_1 = __importDefault(require("@/middleware/verifySsoJwt"));
+const dashboardController_1 = require("../controllers/dashboardController");
+const healthController_1 = require("../controllers/healthController");
+const plantaoController_1 = require("../controllers/plantaoController");
+const relatorioController_1 = require("../controllers/relatorioController");
+const estatisticasController_1 = require("../controllers/estatisticasController");
+const verifySsoJwt_1 = __importDefault(require("../middleware/verifySsoJwt"));
 const router = (0, express_1.Router)();
 // Health permanece público para monitoramento
 router.get('/health', healthController_1.checkHealth);

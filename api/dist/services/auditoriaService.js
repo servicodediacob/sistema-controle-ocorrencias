@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registrarAcao = void 0;
-const db_1 = __importDefault(require("@/db"));
-const logger_1 = __importDefault(require("@/config/logger"));
+const db_1 = __importDefault(require("../db"));
+const logger_1 = __importDefault(require("../config/logger"));
 /**
  * Registra uma ação de auditoria no banco de dados.
  * @param req - O objeto de requisição, que deve conter as informações do usuário autenticado.

@@ -6,9 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedProductionAdmin = seedProductionAdmin;
 // api/src/db/seed.ts
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const db_1 = __importDefault(require("@/db")); // <-- CORRIGIDO
-require("@/config/envLoader"); // <-- CORRIGIDO
-const logger_1 = __importDefault(require("@/config/logger")); // <-- CORRIGIDO
+const db_1 = __importDefault(require("../db")); // <-- CORRIGIDO
+require("../config/envLoader"); // <-- CORRIGIDO
+const logger_1 = __importDefault(require("../config/logger")); // <-- CORRIGIDO
 async function seedProductionAdmin() {
     // ... (o resto da função permanece igual)
     logger_1.default.info('--- INICIANDO SCRIPT DE SEED PARA USUÁRIO ADMIN ---');

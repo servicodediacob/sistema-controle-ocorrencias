@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRelatorioCompleto = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
-const date_1 = require("@/utils/date");
+const logger_1 = __importDefault(require("../config/logger"));
+const date_1 = require("../utils/date");
 const getRelatorioCompleto = async (req, res) => {
     const { data_inicio, data_fim } = req.query;
     if (!data_inicio || !data_fim) {

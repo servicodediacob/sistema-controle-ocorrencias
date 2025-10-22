@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deletarOcorrenciaDetalhada = exports.atualizarOcorrenciaDetalhada = exports.getOcorrenciasDetalhadasPorData = exports.criarOcorrenciaDetalhada = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 const criarOcorrenciaDetalhada = async (req, res) => {
     const payload = req.body;
     const usuario_id = req.usuario?.id;

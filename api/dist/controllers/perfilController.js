@@ -5,10 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.alterarPropriaSenha = void 0;
-const db_1 = __importDefault(require("@/db"));
+const db_1 = __importDefault(require("../db"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const logger_1 = __importDefault(require("@/config/logger"));
-const auditoriaService_1 = require("@/services/auditoriaService");
+const logger_1 = __importDefault(require("../config/logger"));
+const auditoriaService_1 = require("../services/auditoriaService");
 const alterarPropriaSenha = async (req, res) => {
     const { senhaAtual, novaSenha } = req.body;
     const usuarioId = req.usuario?.id;

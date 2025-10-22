@@ -9,8 +9,8 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma_1 = require("../lib/prisma"); // Importando o Prisma Client
 const google_auth_library_1 = require("google-auth-library");
-const socketService_1 = require("@/services/socketService");
-const logger_1 = __importDefault(require("@/config/logger"));
+const socketService_1 = require("../services/socketService");
+const logger_1 = __importDefault(require("../config/logger"));
 const login = async (req, res) => {
     const { email, senha } = req.body;
     if (!email || !senha) {

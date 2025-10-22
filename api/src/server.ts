@@ -1,4 +1,4 @@
-﻿﻿import 'dotenv/config';
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -12,12 +12,12 @@ import dadosRoutes from './routes/dadosRoutes';
 import plantaoRoutes from './routes/plantaoRoutes';
 import ocorrenciaDetalhadaRoutes from './routes/ocorrenciaDetalhadaRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
-// import relatorioRoutes from './routes/relatorioRoutes'; // CORREÇÃO: Removido
+// import relatorioRoutes from './routes/relatorioRoutes'; // Removido
 import auditoriaRoutes from './routes/auditoriaRoutes';
 import estatisticasRoutes from './routes/estatisticasRoutes';
 import diagRoutes from './routes/diagRoutes';
-import externalRoutes from './routes/externalRoutes'; // CORREÇÃO: Garantindo que a importação existe
-import { initializeSocket } from './services/socketService'; // CORREÇÃO: Usando import nomeado
+import externalRoutes from './routes/externalRoutes';
+import { initializeSocket } from './services/socketService';
 
 const app = express();
 const server = createServer(app);
@@ -31,26 +31,30 @@ initializeSocket(io);
 
 const PORT = process.env.PORT || 3001;
 
-// Lista de origens permitidas
-const allowedOrigins = [
+const defaultAllowedOrigins = [
   'https://sisgpo.vercel.app',
   'https://sistema-controle-ocorrencias-fronte.vercel.app',
-  // Adicione outras origens se necessário, por exemplo, para desenvolvimento local:
-  // 'http://localhost:3000',
-  // 'http://localhost:5173'
 ];
+
+const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+const allowedOrigins = envAllowedOrigins.length > 0 ? envAllowedOrigins : defaultAllowedOrigins;
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Permite requisições sem 'origin' (ex: mobile apps, curl)
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+
+    console.warn(`[CORS] Origin '${origin}' blocked. Allowed origins: ${allowedOrigins.join(', ')}`);
+    return callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -60,22 +64,19 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Rotas públicas
 app.use('/api/auth', authRoutes);
 app.use('/api/diag', diagRoutes);
 app.use('/api/acesso', acessoRoutes);
 
-// Rota externa para integração
 app.use('/api', externalRoutes);
 
-// Demais rotas (cada modulo aplica sua propria protecao)
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/perfil', perfilRoutes);
 app.use('/api/unidades', unidadesRoutes);
 app.use('/api/plantao', plantaoRoutes);
 app.use('/api/ocorrencias-detalhadas', ocorrenciaDetalhadaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-// app.use('/api', relatorioRoutes); // Removido
+// app.use('/api', relatorioRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api', estatisticasRoutes);
 app.use('/api', dadosRoutes);

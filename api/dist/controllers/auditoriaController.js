@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listarLogs = void 0;
-const db_1 = __importDefault(require("@/db"));
-const logger_1 = __importDefault(require("@/config/logger"));
+const db_1 = __importDefault(require("../db"));
+const logger_1 = __importDefault(require("../config/logger"));
 const listarLogs = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15;

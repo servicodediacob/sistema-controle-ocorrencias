@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setSupervisorPlantao = exports.getSupervisores = exports.getPlantao = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 const getPlantao = async (_req, res) => {
     try {
         // ======================= INÍCIO DA CORREÇÃO =======================
@@ -16,6 +16,7 @@ const getPlantao = async (_req, res) => {
         hojeFim.setUTCHours(23, 59, 59, 999);
         const ocorrenciasDestaque = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
             where: {
+                deletado_em: null,
                 data_ocorrencia: {
                     gte: hojeInicio,
                     lte: hojeFim,

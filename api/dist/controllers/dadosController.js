@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.excluirNatureza = exports.atualizarNatureza = exports.criarNatureza = exports.getNaturezasPorNomes = exports.getNaturezas = void 0;
 const prisma_1 = require("../lib/prisma");
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 // Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
 const isPrismaKnownError = (e) => !!e && typeof e.code === 'string';
 const getNaturezas = async (_req, res) => {

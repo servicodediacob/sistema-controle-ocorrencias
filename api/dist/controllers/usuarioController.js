@@ -5,9 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.excluirUsuario = exports.atualizarUsuario = exports.criarUsuario = exports.listarUsuarios = void 0;
-const db_1 = __importDefault(require("@/db"));
+const db_1 = __importDefault(require("../db"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const logger_1 = __importDefault(require("@/config/logger"));
+const logger_1 = __importDefault(require("../config/logger"));
 // 2. ATUALIZAR A ASSINATURA DA FUNÇÃO
 const listarUsuarios = async (_req, res) => {
     try {
