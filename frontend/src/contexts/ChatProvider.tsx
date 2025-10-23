@@ -159,9 +159,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
         addNotification(`Nova mensagem de ${message.senderName}`, 'info');
-        void new Audio('/sounds/notification.mp3')
-          .play()
-          .catch((error) => console.warn('Não foi possível tocar o som de notificação:', error));
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+          gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (error) {
+          console.warn('Não foi possível tocar o som de notificação:', error);
+        }
       }
     };
 
