@@ -8,21 +8,15 @@ const ChatContainer = () => {
   const { openChats } = useChat();
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:bottom-0 sm:left-auto sm:right-24 z-50 flex justify-center sm:justify-end items-end gap-4">
+    <div className="fixed bottom-0 left-0 right-0 sm:bottom-0 sm:left-auto sm:right-24 z-50 flex flex-col-reverse items-center sm:flex-row sm:items-end sm:justify-end gap-4">
       {/* Mapeia os IDs dos chats abertos para renderizar cada janela */}
-      {openChats.map((userId, index) => (
-        <div
-          key={userId}
-          style={{
-            // Empilha as janelas de chat da direita para a esquerda
-            transform: `translateX(-${index * 10}px)`,
-          }}
-        >
+      {openChats.map((userId) => (
+        <div key={userId}>
           <PrivateChatWindow partnerId={userId} />
         </div>
       ))}
     </div>
-  );
+  )
 };
 
 export default ChatContainer;
