@@ -62,8 +62,40 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { socket } = useSocket();
   const { addNotification } = useNotification();
 
-  const [conversations, setConversations] = useState<Conversations>({});
-  const [openChats, setOpenChats] = useState<number[]>([]);
+  const [conversations, setConversations] = useState<Conversations>(() => {
+    try {
+      const savedConversations = sessionStorage.getItem('chatConversations');
+      return savedConversations ? JSON.parse(savedConversations) : {};
+    } catch (error) {
+      console.error('Failed to parse conversations from sessionStorage', error);
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('chatConversations', JSON.stringify(conversations));
+    } catch (error) {
+      console.error('Failed to save conversations to sessionStorage', error);
+    }
+  }, [conversations]);
+  const [openChats, setOpenChats] = useState<number[]>(() => {
+    try {
+      const savedOpenChats = sessionStorage.getItem('openChats');
+      return savedOpenChats ? JSON.parse(savedOpenChats) : [];
+    } catch (error) {
+      console.error('Failed to parse open chats from sessionStorage', error);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('openChats', JSON.stringify(openChats));
+    } catch (error) {
+      console.error('Failed to save open chats to sessionStorage', error);
+    }
+  }, [openChats]);
   const [onlineUsers, setOnlineUsers] = useState<LoggedInUser[]>([]);
 
   const openChatWith = useCallback(
