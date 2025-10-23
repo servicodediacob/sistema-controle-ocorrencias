@@ -31,7 +31,7 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
     if (isObm) {
       const obmItem = item as IObm;
       return {
-        nome: obmItem?.cidade_nome || '',
+        nomes: isEditing ? [obmItem?.cidade_nome || ''] : [''],
         crbm_id: obmItem?.crbm_id || (crbms.length > 0 ? crbms[0].id : ''),
       };
     }
@@ -42,17 +42,49 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
     };
   };
 
-  const [formData, setFormData] = useState(getInitialState);
+  const [formData, setFormData] = useState<{ nomes: string[]; crbm_id: number } | { grupo: string; subgrupo: string }>(getInitialState);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const finalValue = name === 'crbm_id' ? parseInt(value, 10) : value;
-    setFormData(prev => ({ ...prev, [name]: finalValue }));
+    if (name === 'crbm_id') {
+      setFormData(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleObmNameChange = (index: number, value: string) => {
+    setFormData(prev => {
+      const obmFormData = prev as { nomes: string[]; crbm_id: number };
+      const newNomes = [...obmFormData.nomes];
+      newNomes[index] = value;
+      return { ...prev, nomes: newNomes };
+    });
+  };
+
+  const handleAddObmName = () => {
+    setFormData(prev => {
+      const obmFormData = prev as { nomes: string[]; crbm_id: number };
+      return { ...prev, nomes: [...obmFormData.nomes, ''] };
+    });
+  };
+
+  const handleRemoveObmName = (index: number) => {
+    setFormData(prev => {
+      const obmFormData = prev as { nomes: string[]; crbm_id: number };
+      const newNomes = obmFormData.nomes.filter((_, i) => i !== index);
+      return { ...prev, nomes: newNomes.length > 0 ? newNomes : [''] };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSave(formData);
+    if (isObm) {
+      const obmFormData = formData as { nomes: string[]; crbm_id: number };
+      onSave({ crbm_id: obmFormData.crbm_id, nomes: obmFormData.nomes.filter(nome => nome.trim() !== '') });
+    } else {
+      onSave(formData);
+    }
   };
 
   return (
@@ -64,13 +96,41 @@ function DataModal({ item, type, onClose, onSave, crbms }: DataModalProps): Reac
             <>
               <div className="flex flex-col gap-2">
                 <label htmlFor="crbm_id" className="text-sm text-text">CRBM</label>
-                <select id="crbm_id" name="crbm_id" value={(formData as any).crbm_id} onChange={handleChange} className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                <select id="crbm_id" name="crbm_id" value={(formData as { crbm_id: number }).crbm_id} onChange={handleChange} className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                   {crbms.map(crbm => <option key={crbm.id} value={crbm.id}>{crbm.nome}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="nome" className="text-sm text-text">Nome da OBM (Unidade)</label>
-                <input type="text" id="nome" name="nome" value={(formData as any).nome} onChange={handleChange} required className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+                <label className="text-sm text-text">Nome(s) da(s) OBM(s) (Unidade)</label>
+                {(formData as { nomes: string[] }).nomes.map((nome, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      id={`nome-${index}`}
+                      name={`nome-${index}`}
+                      value={nome}
+                      onChange={(e) => handleObmNameChange(index, e.target.value)}
+                      required
+                      className="w-full rounded-md border border-border bg-background p-3 text-text-strong focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                    {((formData as { nomes: string[] }).nomes.length > 1 || isEditing) && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveObmName(index)}
+                        className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleAddObmName}
+                  className="mt-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  Adicionar mais OBM
+                </button>
               </div>
             </>
           ) : (
@@ -141,8 +201,19 @@ function GestaoDadosApoioPage(): ReactElement {
 
     try {
       if (activeTab === 'obm') {
-        const payload = { crbm_id: formData.crbm_id, nome: formData.nome };
-        isEditing ? await updateUnidade(itemEmEdicao!.id, payload) : await createUnidade(payload);
+        if (isEditing) {
+          const payload = { crbm_id: formData.crbm_id, nome: formData.nomes[0] };
+          await updateUnidade(itemEmEdicao!.id, payload);
+        } else {
+          // Adicionar múltiplas OBMs
+          const crbm_id = formData.crbm_id;
+          const nomes = formData.nomes as string[];
+          for (const nome of nomes) {
+            if (nome.trim() !== '') {
+              await createUnidade({ crbm_id, nome });
+            }
+          }
+        }
       } else {
         const payload = { grupo: formData.grupo, subgrupo: formData.subgrupo };
         isEditing ? await updateNatureza(itemEmEdicao!.id, payload) : await createNatureza(payload);
