@@ -1,24 +1,43 @@
 .chat-window {
-  position: fixed;
-  left: 50%;
-  top: 50%;
+  position: relative;
   z-index: 1100; /* z-index alto para ficar sobre outros elementos */
-
-  /* Tamanho responsivo */
-  width: 90vw;
-  max-width: 400px;
-  height: 80vh;
-  max-height: 600px;
-
-  /* Estado inicial da animação */
+  width: min(22rem, calc(100vw - 3rem));
+  min-height: 22rem;
+  max-height: calc(100vh - 5rem);
   opacity: 0;
-  transform: translate(-50%, 100vh); /* Começa fora da tela, embaixo */
-  
-  /* Animação suave */
-  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+  transform: translateY(2rem);
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
 .chat-window.visible {
   opacity: 1;
-  transform: translate(-50%, -50%); /* Posição final: centralizado */
+  transform: translateY(0); /* Anima o surgimento de baixo para cima */
+}
+
+@media (max-width: 768px) {
+  .chat-window {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: 0;
+    width: calc(100vw - 2rem);
+    height: 85vh;
+    min-height: 0;
+    max-width: 480px;
+    max-height: 85vh;
+    border-radius: 1.25rem 1.25rem 0 0;
+    transform: translate(-50%, 100%);
+  }
+
+  .chat-window.visible {
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-window {
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 1rem 1rem 0 0;
+  }
 }
