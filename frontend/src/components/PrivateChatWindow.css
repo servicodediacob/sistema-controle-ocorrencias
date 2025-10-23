@@ -1,0 +1,24 @@
+.chat-window {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1100; /* z-index alto para ficar sobre outros elementos */
+
+  /* Tamanho responsivo */
+  width: 90vw;
+  max-width: 400px;
+  height: 80vh;
+  max-height: 600px;
+
+  /* Estado inicial da animação */
+  opacity: 0;
+  transform: translate(-50%, 100vh); /* Começa fora da tela, embaixo */
+  
+  /* Animação suave */
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.chat-window.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%); /* Posição final: centralizado */
+}

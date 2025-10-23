@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '../contexts/ChatProvider';
 import { useAuth } from '../contexts/AuthProvider';
+import './PrivateChatWindow.css'; // Importa o novo CSS
 
 interface PrivateChatWindowProps {
   partnerId: number;
@@ -10,17 +11,22 @@ interface PrivateChatWindowProps {
 
 function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   const { usuario } = useAuth();
-  // Obtém a lista de usuários online do contexto do chat
   const { conversations, sendMessage, closeChat, onlineUsers } = useChat();
+  const [isVisible, setIsVisible] = useState(false);
   
   const [newMessage, setNewMessage] = useState('');
   const messages = conversations[partnerId] || [];
   
-  // Encontra o nome do parceiro de conversa na lista de usuários online
   const partner = onlineUsers.find(u => u.id === partnerId);
   const partnerName = partner?.nome || `Usuário ${partnerId}`;
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Efeito para a animação de entrada
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Efeito para rolar para a última mensagem
   useEffect(() => {
@@ -36,7 +42,7 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   };
 
   return (
-    <div className="fixed top-1/2 left-1/2 z-[1001] flex h-[80vh] w-[90vw] max-w-md max-h-[600px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-border bg-surface shadow-2xl">
+    <div className={`chat-window ${isVisible ? 'visible' : ''} flex flex-col bg-surface border border-border shadow-2xl rounded-lg`}>
       {/* Cabeçalho da Janela de Chat */}
       <div className="flex items-center justify-between flex-shrink-0 border-b border-border p-2">
         <div className="flex items-center gap-2 pl-2">
