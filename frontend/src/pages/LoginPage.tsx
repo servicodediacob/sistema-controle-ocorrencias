@@ -1,6 +1,6 @@
 // Caminho: frontend/src/pages/LoginPage.tsx
 
-import { useState, useEffect, ReactElement } from 'react';
+import { useState, useEffect, ReactElement, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
 import { authGoogle, solicitarAcessoGoogle, getCidades, ICidade } from '../services/api';
@@ -112,71 +112,91 @@ function LoginPage(): ReactElement {
 
   const isFormInvalid = Object.keys(errors).length > 0;
 
-  const handleGoogleSignIn = async () => {
-    try {
-      // Garante que o script do Google Identity Services esteja carregado
-      if (!window.google) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://accounts.google.com/gsi/client';
-          script.async = true;
-          script.defer = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Falha ao carregar o script do Google Identity.'));
-          document.head.appendChild(script);
-        });
-      }
+  const isSignInInProgress = useRef(false);
 
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        console.error('VITE_GOOGLE_CLIENT_ID não está definida. O login com Google não funcionará.');
-        addNotification('O login com Google não está configurado.', 'error');
+  // Efeito para inicializar o Google Sign-In de forma segura
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error('VITE_GOOGLE_CLIENT_ID não está definida. O login com Google não funcionará.');
+      return;
+    }
+
+    const initializeGsi = () => {
+      if (!window.google) {
+        console.error("Objeto 'google' não encontrado no window.");
         return;
       }
 
-      // Inicializa o cliente
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: any) => {
-          try {
-            const result = await authGoogle(response.credential);
-            if (result.token) {
-              loginWithJwt(result.token);
-              navigate('/'); // Redireciona após o login
-            } else if (result.needsApproval && result.profile) {
-              setPendingGoogleProfile(result.profile);
-            } else {
-              addNotification('Falha no login com Google. Tente novamente.', 'error');
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (response: any) => {
+            isSignInInProgress.current = false;
+            try {
+              const result = await authGoogle(response.credential);
+              if (result.token) {
+                loginWithJwt(result.token);
+                navigate('/');
+              } else if (result.needsApproval && result.profile) {
+                setPendingGoogleProfile(result.profile);
+              } else {
+                addNotification('Falha no login com Google. Tente novamente.', 'error');
+              }
+            } catch (error) {
+              console.error("Erro na autenticação com o backend:", error);
+              addNotification('Falha na verificação com o servidor.', 'error');
             }
-          } catch (error) {
-            console.error("Erro na autenticação com o backend:", error);
-            addNotification('Falha na verificação com o servidor.', 'error');
-          }
-        },
-      });
+          },
+        });
+      } catch (error) {
+        console.error("Falha ao inicializar o Google Sign-In:", error);
+        addNotification('Não foi possível iniciar o serviço de login do Google.', 'error');
+      }
+    };
 
-      // Exibe o pop-up de login e trata o erro de cancelamento
+    if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGsi;
+      script.onerror = () => {
+        addNotification('Falha ao carregar script do Google. Tente recarregar a página.', 'error');
+      };
+      document.head.appendChild(script);
+    } else {
+      initializeGsi();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleGoogleSignIn = () => {
+    console.log('1. handleGoogleSignIn foi chamado.');
+
+    if (isSignInInProgress.current) {
+      console.log('2. Bloqueado: login já em andamento.');
+      return;
+    }
+    if (!window.google?.accounts?.id) {
+      console.error('3. Erro: window.google.accounts.id não existe. GSI não foi inicializado corretamente.');
+      addNotification('Serviço de login não está pronto. Tente novamente em um instante.', 'warning');
+      return;
+    }
+
+    isSignInInProgress.current = true;
+    console.log('4. Tentando chamar o prompt do Google...');
+
+    try {
       window.google.accounts.id.prompt((notification: any) => {
-        // A documentação da GSI sugere que podemos verificar 'isNotDisplayed' ou 'isSkipped'.
-        // No entanto, o erro AbortError é mais comum quando o usuário fecha manualmente.
-        // O try/catch abaixo lida com isso de forma mais robusta.
+        console.log('Callback do prompt recebido:', notification);
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-           // Opcional: logar se o prompt não foi exibido por algum motivo (ex: bloqueador de pop-up)
-           console.info('Google Sign-In prompt não foi exibido ou foi ignorado.');
+          isSignInInProgress.current = false;
         }
       });
-
-    } catch (error: any) {
-      // Esta é a parte crucial: capturar e identificar o AbortError.
-      if (error.name === 'AbortError') {
-        // O usuário cancelou o login. Isso é esperado.
-        // Você pode logar para depuração ou simplesmente ignorar.
-        console.log('Login com Google cancelado pelo usuário.');
-      } else {
-        // Trata outros erros inesperados durante a inicialização ou chamada do prompt.
-        console.error('Erro inesperado durante o Google Sign-In:', error);
-        addNotification('Ocorreu um erro ao tentar o login com Google.', 'error');
-      }
+    } catch (error) {
+      isSignInInProgress.current = false;
+      console.error("5. Erro ao chamar o prompt:", error);
     }
   };
 
