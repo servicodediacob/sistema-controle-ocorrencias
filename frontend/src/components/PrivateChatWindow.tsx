@@ -36,7 +36,7 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   };
 
   return (
-    <div className="flex h-[400px] w-72 flex-col rounded-lg bg-surface border border-border shadow-2xl">
+    <div className="fixed top-1/2 left-1/2 z-[1001] flex h-[80vh] w-[90vw] max-w-md max-h-[600px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-border bg-surface shadow-2xl">
       {/* Cabeçalho da Janela de Chat */}
       <div className="flex items-center justify-between flex-shrink-0 border-b border-border p-2">
         <div className="flex items-center gap-2 pl-2">
