@@ -1,0 +1,4 @@
+console.log('Componente de Login RENDERIZADO');
+console.log('useEffect de inicialização do GSI disparado');
+console.log('Componente de Login DESMONTADO');
+console.log('handleGoogleSignIn CHAMADO!');
