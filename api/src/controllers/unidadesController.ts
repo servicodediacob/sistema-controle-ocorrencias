@@ -3,6 +3,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma'; // Importa a instância singleton do Prisma Client
 import logger from '@/config/logger';
+import { OBM } from '@prisma/client'; // Importa o tipo OBM do Prisma Client
 // Type guard simples para erros conhecidos do Prisma (baseado no campo 'code')
 const isPrismaKnownError = (e: unknown): e is { code: string } => !!e && typeof (e as any).code === 'string';
 
@@ -49,6 +50,19 @@ export const criarUnidade = async (req: Request, res: Response): Promise<void> =
   }
 
   try {
+    const existingObm = await prisma.$queryRaw<OBM[]>`
+      SELECT id, nome, crbm_id FROM "obms" WHERE nome = ${nome}
+    `;
+
+    if (existingObm.length > 0) {
+      const obm = existingObm[0];
+      const crbm = await prisma.cRBM.findUnique({ where: { id: obm.crbm_id } });
+      res.status(409).json({
+        message: `A OBM "${nome}" já existe e está associada ao CRBM "${crbm?.nome || 'desconhecido'}".`,
+      });
+      return;
+    }
+
     const novaUnidade = await prisma.oBM.create({
       data: {
         nome: nome,
@@ -58,12 +72,6 @@ export const criarUnidade = async (req: Request, res: Response): Promise<void> =
     logger.info({ unidade: novaUnidade }, 'Nova unidade (OBM) criada.');
     res.status(201).json(novaUnidade);
   } catch (error) {
-    // O Prisma fornece códigos de erro específicos para diferentes violações de constraints.
-    // P2002 é o código para violação de constraint de unicidade (unique).
-    if (isPrismaKnownError(error) && error.code === 'P2002') {
-      res.status(409).json({ message: `A OBM "${nome}" já existe.` });
-      return;
-    }
     logger.error({ err: error, body: req.body }, 'Erro ao criar unidade (OBM).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
