@@ -55,6 +55,10 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
       orderBy: { data_ocorrencia: 'desc' },
     });
 
+    // --- DEBUG: Verificando dados brutos de óbitos ---
+    console.log('--- Dados Brutos de Óbitos ---');
+    console.dir(obitos, { depth: null });
+
     // Processamento e Agregação dos Dados (em memória)
     const relatorioMap: Map<string, any> = new Map();
     const todasNaturezas = await prisma.naturezaOcorrencia.findMany({
@@ -100,12 +104,16 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
     });
 
     const totalGeralEstatisticas = estatisticasFinais.reduce((acc, curr) => acc + curr.total_geral, 0);
-    const totalObitos = obitos.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
+    const totalObitos = obitos.reduce((acc, curr) => acc + (curr.quantidade_vitimas || 0), 0);
+
+    // --- DEBUG: Verificando o total calculado ---
+    console.log('--- Total de Óbitos Calculado ---');
+    console.log(totalObitos);
 
     // Assumindo que req.user é populado pelo middleware de autenticação
     const usuarioNome = (req as any).user?.nome || 'Usuário Desconhecido';
 
-    res.status(200).json({
+    const responseData = {
       estatisticas: estatisticasFinais,
       totalGeralEstatisticas,
       obitos: obitos.map(o => ({ ...o, natureza_nome: o.natureza.subgrupo, obm_nome: o.obm?.nome })),
@@ -114,7 +122,13 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
       usuarioNome,
       dataInicio: dataInicioDate.toISOString().split('T')[0],
       dataFim: dataFimDate.toISOString().split('T')[0],
-    });
+    };
+
+    // --- DEBUG: Verificando o objeto de resposta final ---
+    console.log('--- Objeto de Resposta Final ---');
+    console.dir(responseData, { depth: null });
+
+    res.status(200).json(responseData);
 
   } catch (error) {
     if ((error as any)?.name === 'BadRequestError') {
