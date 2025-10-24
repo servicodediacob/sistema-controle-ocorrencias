@@ -177,23 +177,36 @@ function LancamentoModal({
             const natsDoGrupo = naturezasAgrupadas[grupo];
             if (!natsDoGrupo) return null;
 
+            const isObmSelected = !!obmId;
+
+            const handleDisabledClick = () => {
+              if (!isObmSelected) {
+                addNotification('Por favor, selecione uma OBM para inserir dados.', 'warning');
+              }
+            };
+
             return (
-              <fieldset key={grupo} className="rounded-lg border border-gray-700 p-6">
-                <legend className="px-2 text-lg font-bold text-yellow-400">{grupo}</legend>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 pt-2">
-                  {natsDoGrupo.map((nat: IDataApoio) => (
-                    <div key={nat.id} className="flex flex-col gap-2">
-                      <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
-                      <input
-                        id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
-                        value={quantidades[nat.id.toString()] || ''}
-                        onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
-                        className={`rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${parseInt(quantidades[nat.id.toString()], 10) > 0 ? 'highlight-input' : ''}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </fieldset>
+              <div key={grupo} onClick={handleDisabledClick}>
+                <fieldset 
+                  className={`rounded-lg border border-gray-700 p-6 ${!isObmSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!isObmSelected}
+                >
+                  <legend className="px-2 text-lg font-bold text-yellow-400">{grupo}</legend>
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 pt-2">
+                    {natsDoGrupo.map((nat: IDataApoio) => (
+                      <div key={nat.id} className="flex flex-col gap-2">
+                        <label htmlFor={`nat-${nat.id}`} className="text-sm text-gray-400">{nat.subgrupo}</label>
+                        <input
+                          id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
+                          value={quantidades[nat.id.toString()] || ''}
+                          onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
+                          className={`rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${parseInt(quantidades[nat.id.toString()], 10) > 0 ? 'highlight-input' : ''}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
             );
           })}
         </form>
