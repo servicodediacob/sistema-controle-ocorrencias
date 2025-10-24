@@ -49,18 +49,9 @@ function LancamentoModal({
 
     const quantidadesIniciais: Record<string, string> = {};
 
-    Object.entries(itemParaEditar.dados).forEach(([chave, quantidade]) => {
-      const natureza = naturezas.find((n) => {
-        if (!n.id) return false;
-        if (n.id.toString() === chave) return true;
-        if (n.subgrupo === chave) return true;
-        if (n.grupo && `${n.grupo}|${n.subgrupo}` === chave) return true;
-        return false;
-      });
-
-      if (natureza?.id) {
-        quantidadesIniciais[natureza.id.toString()] = String(quantidade ?? 0);
-      }
+    Object.entries(itemParaEditar.dados).forEach(([naturezaId, quantidade]) => {
+      // As chaves em itemParaEditar.dados já devem ser os IDs das naturezas
+      quantidadesIniciais[naturezaId] = String(quantidade ?? 0);
     });
 
     return quantidadesIniciais;
@@ -197,7 +188,7 @@ function LancamentoModal({
                         id={`nat-${nat.id}`} type="number" min="0" placeholder="0"
                         value={quantidades[nat.id.toString()] || ''}
                         onChange={e => handleQuantidadeChange(nat.id, e.target.value)}
-                        className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                        className={`rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${parseInt(quantidades[nat.id.toString()], 10) > 0 ? 'highlight-input' : ''}`}
                       />
                     </div>
                   ))}

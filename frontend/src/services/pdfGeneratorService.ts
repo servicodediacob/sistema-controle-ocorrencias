@@ -14,7 +14,8 @@ interface jsPDFWithAutoTable extends jsPDF {
 export const gerarPDFRelatorioCompleto = (
   dados: IRelatorioCompleto,
   dataInicio: string,
-  dataFim: string
+  dataFim: string,
+  usuarioNome: string
 ) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const dataFormatada = new Date().toLocaleDateString('pt-BR');
@@ -25,9 +26,10 @@ export const gerarPDFRelatorioCompleto = (
   doc.text('Relatório Consolidado de Ocorrências', 14, 22);
   doc.setFontSize(11);
   doc.text(`Período: ${periodo}`, 14, 30);
-  doc.text(`Gerado em: ${dataFormatada}`, 14, 36);
+  doc.text(`Gerado por: ${usuarioNome}`, 14, 36);
+  doc.text(`Gerado em: ${dataFormatada}`, 14, 42);
 
-  let finalY = 40; // Posição inicial para o conteúdo
+  let finalY = 46; // Posição inicial para o conteúdo
 
   // --- Tabela de Estatísticas ---
   if (dados.estatisticas.length > 0) {
@@ -35,6 +37,21 @@ export const gerarPDFRelatorioCompleto = (
     doc.text('Relatório Estatístico', 14, finalY + 10);
     const crbmHeads = [...CRBM_HEADERS] as unknown as string[];
     const header = ['Natureza', 'Total Capital', ...crbmHeads, 'Total Geral'];
+    const parseToNumber = (value: unknown): number => {
+      const num = Number(typeof value === 'string' ? value.replace(/\./g, '').replace(',', '.') : value);
+      return Number.isFinite(num) ? num : 0;
+    };
+    const totalCapital = dados.estatisticas.reduce(
+      (acc, item) => acc + parseToNumber((item as any).total_capital),
+      0,
+    );
+    const totalPorCrbm = crbmHeads.map((headerKey) =>
+      dados.estatisticas.reduce((acc, item) => acc + parseToNumber((item as any)[headerKey]), 0),
+    );
+    const totalGeral = dados.estatisticas.reduce(
+      (acc, item) => acc + parseToNumber((item as any).total_geral),
+      0,
+    );
     doc.autoTable({
       startY: finalY + 15,
       head: [header],
@@ -44,9 +61,26 @@ export const gerarPDFRelatorioCompleto = (
         ...crbmHeads.map(h => (item as any)[h] ?? '0'),
         item.total_geral,
       ]),
+      foot: [[
+        'TOTAL GERAL',
+        String(totalCapital),
+        ...totalPorCrbm.map(total => String(total)),
+        String(totalGeral),
+      ]],
       theme: 'striped',
       headStyles: { fillColor: [22, 160, 133] },
+      columnStyles: {
+        0: { halign: 'left' },
+        ...Object.fromEntries(header.slice(1).map((_, idx) => [idx + 1, { halign: 'center' }])),
+      },
       styles: { fontSize: 9 },
+      footStyles: {
+        fillColor: [30, 83, 139],
+        textColor: 255,
+        halign: 'center',
+        valign: 'middle',
+        fontStyle: 'bold',
+      },
     });
     // A API da versão atual expõe o último Y em `doc.lastAutoTable`
     finalY = ((doc as unknown) as any).lastAutoTable?.finalY ?? finalY;
@@ -70,6 +104,9 @@ export const gerarPDFRelatorioCompleto = (
       headStyles: { fillColor: [192, 57, 43] },
     });
     finalY = ((doc as unknown) as any).lastAutoTable?.finalY ?? finalY;
+      doc.setFontSize(11);
+      doc.text(`Total de Óbitos: ${dados.totalObitos}`, 14, finalY + 5);
+      finalY += 5;
   }
 
   // --- Tabela de Destaques ---

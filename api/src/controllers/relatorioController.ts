@@ -99,10 +99,21 @@ export const getRelatorioCompleto = async (req: Request, res: Response): Promise
       return a.subgrupo.localeCompare(b.subgrupo);
     });
 
+    const totalGeralEstatisticas = estatisticasFinais.reduce((acc, curr) => acc + curr.total_geral, 0);
+    const totalObitos = obitos.reduce((acc, curr) => acc + curr.quantidade_vitimas, 0);
+
+    // Assumindo que req.user é populado pelo middleware de autenticação
+    const usuarioNome = (req as any).user?.nome || 'Usuário Desconhecido';
+
     res.status(200).json({
       estatisticas: estatisticasFinais,
+      totalGeralEstatisticas,
       obitos: obitos.map(o => ({ ...o, natureza_nome: o.natureza.subgrupo, obm_nome: o.obm?.nome })),
+      totalObitos,
       destaques: detalhadas.map(d => ({ ...d, natureza_descricao: d.natureza.subgrupo, obm_nome: d.cidade.nome, crbm_nome: d.cidade.crbm.nome })),
+      usuarioNome,
+      dataInicio: dataInicioDate.toISOString().split('T')[0],
+      dataFim: dataFimDate.toISOString().split('T')[0],
     });
 
   } catch (error) {

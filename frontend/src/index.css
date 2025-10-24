@@ -18,3 +18,8 @@
     @apply bg-background text-text;
   }
 }
+
+.highlight-input {
+  border-color: #34d399; /* Tailwind's emerald-400 */
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.5); /* A subtle glow */
+}

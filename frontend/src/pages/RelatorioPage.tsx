@@ -10,6 +10,7 @@ import RelatorioObitosTable from '../components/RelatorioObitosTable';
 import RelatorioDestaquesTable from '../components/RelatorioDestaquesTable';
 // ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthProvider';
 import MainLayout from '../components/MainLayout';
 import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
@@ -22,6 +23,7 @@ function RelatorioPage() {
   const [dataFim, setDataFim] = useState(today);
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotification();
+  const { user: usuarioLogado } = useAuth();
 
   // ======================= INÍCIO DA CORREÇÃO =======================
   // 3. Estados para armazenar os novos dados
@@ -76,7 +78,8 @@ function RelatorioPage() {
       addNotification('Não há dados para gerar o PDF.', 'warning');
       return;
     }
-    gerarPDFRelatorioCompleto({ estatisticas, obitos, destaques }, dataInicio, dataFim);
+    const usuarioNome = usuarioLogado?.nome || 'Usuário Desconhecido';
+    gerarPDFRelatorioCompleto({ estatisticas, obitos, destaques }, dataInicio, dataFim, usuarioNome);
   };
   // ======================= FIM DA CORREÇÃO =======================
 
