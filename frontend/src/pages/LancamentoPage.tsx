@@ -1,4 +1,4 @@
-﻿// frontend/src/pages/LancamentoPage.tsx
+﻿﻿// frontend/src/pages/LancamentoPage.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
@@ -412,4 +412,3 @@ function LancamentoPage() {
 }
 
 export default LancamentoPage;
-
