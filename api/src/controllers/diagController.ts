@@ -116,7 +116,83 @@ const checkSisgpoStatus = async (): Promise<IDiagnosticCheck> => {
 };
 
 export const runDiagnostics = async (_req: Request, res: Response): Promise<void> => {
-  // Health check deve ser simples e rápido.
-  // Apenas confirma que o servidor web está de pé e respondendo.
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  const timestamp = new Date().toISOString();
+
+  // 1. Verifica conexão com o banco de dados (consulta simples)
+  let database: IDiagnosticCheck;
+  try {
+    const [, durationMs] = await timePromise(db.query('SELECT 1'));
+    database = {
+      status: 'ok',
+      message: 'Consulta básica ao banco executada com sucesso.',
+      durationMs,
+    };
+  } catch (err) {
+    const failure = err as { error?: unknown; duration?: number };
+    logger.error({ err: failure?.error ?? err }, '[Diag] Falha ao consultar o banco de dados.');
+    database = {
+      status: 'error',
+      message: 'Falha ao executar consulta básica no banco de dados.',
+      durationMs: failure?.duration,
+      details: stringifyDetails(failure?.error),
+    };
+  }
+
+  // 2. Valida configuração de autenticação (JWT secret)
+  let auth: IDiagnosticCheck;
+  const authStart = process.hrtime();
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    auth = {
+      status: 'error',
+      message: 'JWT_SECRET não configurado.',
+      durationMs: toDurationMs(process.hrtime(authStart)),
+    };
+  } else {
+    try {
+      const token = jwt.sign({ ping: true }, jwtSecret, { expiresIn: '1m' });
+      jwt.verify(token, jwtSecret);
+      auth = {
+        status: 'ok',
+        message: 'Segredo JWT válido.',
+        durationMs: toDurationMs(process.hrtime(authStart)),
+      };
+    } catch (error) {
+      logger.error({ err: error }, '[Diag] Falha ao validar JWT_SECRET.');
+      auth = {
+        status: 'error',
+        message: 'Falha ao validar JWT_SECRET.',
+        durationMs: toDurationMs(process.hrtime(authStart)),
+        details: stringifyDetails(error instanceof Error ? error.message : error),
+      };
+    }
+  }
+
+  // 3. Consulta serviço externo SISGPO (se configurado)
+  const sisgpo = await checkSisgpoStatus();
+
+  const services: IDiagnosticsReport['servicos'] = {
+    database,
+    auth,
+    sisgpo,
+  };
+
+  const serviceStatuses = Object.values(services).map((svc) => svc.status);
+  let geralStatus: DiagnosticStatus = 'ok';
+  if (serviceStatuses.includes('error')) {
+    geralStatus = 'error';
+  } else if (serviceStatuses.includes('degraded')) {
+    geralStatus = 'degraded';
+  }
+
+  const report: IDiagnosticsReport = {
+    geral: {
+      status: geralStatus,
+      timestamp,
+    },
+    servicos: services,
+  };
+
+  const statusCode = geralStatus === 'error' ? 500 : 200;
+  res.status(statusCode).json(report);
 };
