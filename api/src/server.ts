@@ -1,4 +1,16 @@
 import 'dotenv/config';
+
+// Tratamento de Erros Globais (deve vir antes de qualquer outro código)
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...', reason);
+  process.exit(1);
+});
+
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';

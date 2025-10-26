@@ -116,73 +116,7 @@ const checkSisgpoStatus = async (): Promise<IDiagnosticCheck> => {
 };
 
 export const runDiagnostics = async (_req: Request, res: Response): Promise<void> => {
-  logger.info('Iniciando diagnostico geral do sistema...');
-
-  const report: IDiagnosticsReport = {
-    geral: {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-    },
-    servicos: {
-      database: { status: 'degraded', message: 'Verificacao nao executada' },
-      auth: { status: 'degraded', message: 'Verificacao nao executada' },
-      sisgpo: { status: 'degraded', message: 'Verificacao nao executada' },
-    },
-  };
-
-  // 1. Diagnostico do banco de dados
-  try {
-    const [, duration] = await timePromise(db.query('SELECT NOW()'));
-    report.servicos.database = {
-      status: 'ok',
-      message: 'Conexao bem-sucedida.',
-      durationMs: duration,
-    };
-  } catch (err: any) {
-    report.servicos.database = {
-      status: 'error',
-      message: 'Falha na conexao com o banco de dados.',
-      durationMs: err.duration,
-      details: err.error instanceof Error ? err.error.message : 'Erro desconhecido.',
-    };
-    report.geral.status = 'error';
-    logger.error({ err: err.error }, 'Diagnostico falhou na verificacao do banco de dados.');
-  }
-
-  // 2. Diagnostico do sistema de autenticacao (JWT)
-  try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('A variavel de ambiente JWT_SECRET nao esta definida.');
-    }
-    const testPayload = { id: 'test' };
-    const testToken = jwt.sign(testPayload, secret, { expiresIn: '1s' });
-    jwt.verify(testToken, secret);
-    report.servicos.auth = {
-      status: 'ok',
-      message: 'Segredo JWT esta configurado e funcional.',
-    };
-  } catch (error: any) {
-    report.servicos.auth = {
-      status: 'error',
-      message: 'Falha no sistema de autenticacao.',
-      details: error.message,
-    };
-    report.geral.status = 'error';
-    logger.error({ err: error }, 'Diagnostico falhou na verificacao do JWT.');
-  }
-
-  // 3. Diagnostico do SISGPO
-  const sisgpoCheck = await checkSisgpoStatus();
-  report.servicos.sisgpo = sisgpoCheck;
-  if (sisgpoCheck.status === 'error') {
-    report.geral.status = 'error';
-  } else if (sisgpoCheck.status === 'degraded' && report.geral.status === 'ok') {
-    report.geral.status = 'degraded';
-  }
-
-  const httpStatus = report.geral.status === 'error' ? 503 : 200;
-  logger.info(`Diagnostico concluido com status: ${report.geral.status}`);
-
-  res.status(httpStatus).json(report);
+  // Health check deve ser simples e rápido.
+  // Apenas confirma que o servidor web está de pé e respondendo.
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 };
