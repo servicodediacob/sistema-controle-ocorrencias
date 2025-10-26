@@ -1,14 +1,10 @@
 // Caminho: frontend/src/pages/RelatorioPage.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-// ======================= INÍCIO DA CORREÇÃO =======================
-// 1. Importar as interfaces e a função correta do serviço de relatório
 import { IRelatorioRow, IObitoRegistro, IDestaqueRelatorio, IDataApoio, getNaturezas } from '../services/api';
 import { getRelatorioCompleto } from '../services/relatorioService';
-// 2. Importar os novos componentes de tabela
 import RelatorioObitosTable from '../components/RelatorioObitosTable';
 import RelatorioDestaquesTable from '../components/RelatorioDestaquesTable';
-// ======================= FIM DA CORREÇÃO =======================
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthProvider';
 import MainLayout from '../components/MainLayout';
@@ -16,6 +12,7 @@ import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
 import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
 import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
+import AssinaturaModal from '../components/AssinaturaModal'; // Importar o modal
 
 function RelatorioPage() {
   const today = new Date().toISOString().split('T')[0];
@@ -25,12 +22,10 @@ function RelatorioPage() {
   const { addNotification } = useNotification();
   const { user: usuarioLogado } = useAuth();
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // 3. Estados para armazenar os novos dados
   const [estatisticas, setEstatisticas] = useState<IRelatorioRow[]>([]);
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
   const [destaques, setDestaques] = useState<IDestaqueRelatorio[]>([]);
-  // ======================= FIM DA CORREÇÃO =======================
+  const [isAssinaturaModalOpen, setAssinaturaModalOpen] = useState(false); // Estado para o modal
 
   const handleGenerateReport = useCallback(async () => {
     try {
@@ -71,17 +66,25 @@ function RelatorioPage() {
     handleGenerateReport();
   }, [handleGenerateReport]);
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // 5. Função para chamar o gerador de PDF
+  // Abre o modal
   const handleDownloadPdf = () => {
     if (estatisticas.length === 0 && obitos.length === 0 && destaques.length === 0) {
       addNotification('Não há dados para gerar o PDF.', 'warning');
       return;
     }
-    const usuarioNome = usuarioLogado?.nome || 'Usuário Desconhecido';
-    gerarPDFRelatorioCompleto({ estatisticas, obitos, destaques }, dataInicio, dataFim, usuarioNome);
+    setAssinaturaModalOpen(true);
   };
-  // ======================= FIM DA CORREÇÃO =======================
+
+  // Chamado pelo modal para gerar o PDF
+  const handleConfirmarAssinatura = (nome: string, funcao: string) => {
+    gerarPDFRelatorioCompleto(
+      { estatisticas, obitos, destaques },
+      dataInicio,
+      dataFim,
+      { nome, funcao }
+    );
+    setAssinaturaModalOpen(false);
+  };
 
   const groupedData = estatisticas.reduce((acc, row) => {
     const grupo = row.grupo;
@@ -150,7 +153,6 @@ function RelatorioPage() {
         <button onClick={handleGenerateReport} disabled={loading} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
           {loading ? 'Gerando...' : 'Gerar Relatório'}
         </button>
-        {/* 6. Botão de Download PDF */}
         <button onClick={handleDownloadPdf} disabled={loading} className="ml-auto rounded-md bg-red-700 px-6 py-3 font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60">
           Baixar PDF
         </button>
@@ -223,11 +225,17 @@ function RelatorioPage() {
             ) : <p className="text-center text-text py-4">Nenhum dado estatístico para o período.</p>}
           </div>
 
-          {/* 7. Renderizar as novas tabelas */}
           <RelatorioObitosTable obitos={obitos} />
           <RelatorioDestaquesTable destaques={destaques} />
         </div>
       )}
+
+      <AssinaturaModal
+        isOpen={isAssinaturaModalOpen}
+        onClose={() => setAssinaturaModalOpen(false)}
+        onConfirm={handleConfirmarAssinatura}
+        defaultNome={usuarioLogado?.nome}
+      />
     </MainLayout>
   );
 }

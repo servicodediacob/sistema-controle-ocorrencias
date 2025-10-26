@@ -10,12 +10,17 @@ interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
 
+interface Assinatura {
+  nome: string;
+  funcao: string;
+}
+
 // Função principal para gerar o PDF
 export const gerarPDFRelatorioCompleto = (
   dados: IRelatorioCompleto,
   dataInicio: string,
   dataFim: string,
-  usuarioNome: string
+  assinatura: Assinatura
 ) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const dataFormatada = new Date().toLocaleDateString('pt-BR');
@@ -26,7 +31,7 @@ export const gerarPDFRelatorioCompleto = (
   doc.text('Relatório Consolidado de Ocorrências', 14, 22);
   doc.setFontSize(11);
   doc.text(`Período: ${periodo}`, 14, 30);
-  doc.text(`Gerado por: ${usuarioNome}`, 14, 36);
+  doc.text(`Gerado por: ${assinatura.nome}`, 14, 36);
   doc.text(`Gerado em: ${dataFormatada}`, 14, 42);
 
   let finalY = 46; // Posição inicial para o conteúdo
@@ -82,7 +87,6 @@ export const gerarPDFRelatorioCompleto = (
         fontStyle: 'bold',
       },
     });
-    // A API da versão atual expõe o último Y em `doc.lastAutoTable`
     finalY = ((doc as unknown) as any).lastAutoTable?.finalY ?? finalY;
   }
 
@@ -128,11 +132,9 @@ export const gerarPDFRelatorioCompleto = (
       }
       return String(t);
     };
-    // Rótulos em cinza claro conforme solicitado
     const labelCell = { fillColor: [230, 230, 230], textColor: 20, fontStyle: 'bold', fontSize: 10 } as const;
     const valueCell = { textColor: 20 } as const;
 
-    // Título da seção
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(14);
     doc.text('Ocorrências de Destaque', 14, finalY + 10);
@@ -197,6 +199,13 @@ export const gerarPDFRelatorioCompleto = (
       finalY = ((doc as any).lastAutoTable?.finalY ?? startY);
     });
   }
+
+  // --- Assinatura ---
+  const signatureY = finalY + 40;
+  doc.line(60, signatureY, 150, signatureY); // Linha da assinatura
+  doc.setFontSize(10);
+  doc.text(assinatura.nome, 105, signatureY + 5, { align: 'center' });
+  doc.text(assinatura.funcao, 105, signatureY + 10, { align: 'center' });
 
   // --- Salvar o PDF ---
   doc.save(`relatorio_consolidado_${dataInicio}_a_${dataFim}.pdf`);

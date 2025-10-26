@@ -34,6 +34,7 @@ const PORT = process.env.PORT || 3001;
 const defaultAllowedOrigins = [
   'https://sisgpo.vercel.app',
   'https://sistema-controle-ocorrencias-fronte.vercel.app',
+  'http://localhost:5173',
   'http://localhost:5174',
 ];
 
