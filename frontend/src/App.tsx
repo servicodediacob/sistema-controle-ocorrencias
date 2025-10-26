@@ -1,8 +1,9 @@
 // frontend/src/App.tsx
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthProvider';
+import { offlineSyncService } from './services/offlineSyncService';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import LancamentoPage from './pages/LancamentoPage';
@@ -34,30 +35,55 @@ const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }>
   return children;
 };
 
+const AppContent: React.FC = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (user) {
+        console.log('Conexão restaurada. Tentando sincronizar dados pendentes...');
+        offlineSyncService.syncPendingLancamentos(user.id);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user]);
+
+  return (
+    <Routes>
+      {/* Públicas */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/solicitar-acesso" element={<SolicitarAcessoPage />} />
+
+      {/* Protegidas (cada página já inclui MainLayout internamente) */}
+      <Route path="/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+      <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+      <Route path="/relatorio-estatistico" element={<PrivateRoute><RelatorioPage /></PrivateRoute>} />
+      <Route path="/relatorio-obitos" element={<PrivateRoute><RelatorioObitosPage /></PrivateRoute>} />
+      <Route path="/lancar-ocorrencias" element={<PrivateRoute><LancamentoPage /></PrivateRoute>} />
+      <Route path="/ocorrencia/:id" element={<PrivateRoute><OcorrenciaPage /></PrivateRoute>} />
+      <Route path="/gerenciar-usuarios" element={<PrivateRoute roles={['ADMIN']}><GestaoUsuariosPage /></PrivateRoute>} />
+      <Route path="/gerenciar-acessos" element={<PrivateRoute roles={['ADMIN']}><GestaoAcessoPage /></PrivateRoute>} />
+      <Route path="/gerenciar-dados" element={<PrivateRoute roles={['ADMIN']}><GestaoDadosApoioPage /></PrivateRoute>} />
+      <Route path="/auditoria" element={<PrivateRoute roles={['ADMIN']}><AuditoriaPage /></PrivateRoute>} />
+      <Route path="/meu-perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
-      <Routes>
-        {/* Públicas */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/solicitar-acesso" element={<SolicitarAcessoPage />} />
-
-        {/* Protegidas (cada página já inclui MainLayout internamente) */}
-        <Route path="/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-        <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-        <Route path="/relatorio-estatistico" element={<PrivateRoute><RelatorioPage /></PrivateRoute>} />
-        <Route path="/relatorio-obitos" element={<PrivateRoute><RelatorioObitosPage /></PrivateRoute>} />
-        <Route path="/lancar-ocorrencias" element={<PrivateRoute><LancamentoPage /></PrivateRoute>} />
-        <Route path="/ocorrencia/:id" element={<PrivateRoute><OcorrenciaPage /></PrivateRoute>} />
-        <Route path="/gerenciar-usuarios" element={<PrivateRoute roles={['ADMIN']}><GestaoUsuariosPage /></PrivateRoute>} />
-        <Route path="/gerenciar-acessos" element={<PrivateRoute roles={['ADMIN']}><GestaoAcessoPage /></PrivateRoute>} />
-        <Route path="/gerenciar-dados" element={<PrivateRoute roles={['ADMIN']}><GestaoDadosApoioPage /></PrivateRoute>} />
-        <Route path="/auditoria" element={<PrivateRoute roles={['ADMIN']}><AuditoriaPage /></PrivateRoute>} />
-        <Route path="/meu-perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 };

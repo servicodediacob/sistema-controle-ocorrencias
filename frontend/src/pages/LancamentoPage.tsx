@@ -31,6 +31,7 @@ import Spinner from '../components/Spinner';
 import OcorrenciaDetalhadaModal from '../components/OcorrenciaDetalhadaModal';
 import ViewOcorrenciaDetalhadaModal from '../components/ViewOcorrenciaDetalhadaModal';
 import Icon from '../components/Icon';
+import { offlineSyncService, PendingLancamento } from '../services/offlineSyncService'; // Importar serviço offline
 
 // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
 // 1. LISTA MESTRE: Define a ordem e as abreviações exatas, alinhadas aos nomes do banco (grupo|subgrupo).
@@ -74,6 +75,9 @@ function LancamentoPage() {
   const [ocorrenciaParaEditar, setOcorrenciaParaEditar] = useState<IOcorrenciaDetalhada | null>(null);
   const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
+  const [isOnline, setIsOnline] = useState(navigator.onLine); // Estado para status online/offline
+  const [pendingOfflineLancamentos, setPendingOfflineLancamentos] = useState<PendingLancamento[]>([]); // Estado para lançamentos pendentes
+
   // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
   // 2. MAPEAMENTO: Transforma os dados da API na estrutura que a tabela precisa,
   //    usando a LISTA MESTRE para garantir a ordem e as abreviações.
@@ -102,30 +106,133 @@ function LancamentoPage() {
       } as NaturezaTabela;
     });
   }, [naturezas]);
-  // ======================= FIM DA CORREÇÃO PRINCIPAL =======================
 
+  // Função auxiliar para mesclar dados da API com lançamentos pendentes offline
+      const mergeLancamentos = useCallback(( 
+        apiData: IEstatisticaAgrupada[],
+        pendingData: PendingLancamento[],
+        allCidades: ICidade[],
+        allNaturezas: IDataApoio[]
+      ): IEstatisticaAgrupada[] => {
+        const mergedDataMap = new Map<string, IEstatisticaAgrupada>();  
+      // Popular com dados existentes da API
+      apiData.forEach(item => {
+        const key = `${item.cidade_nome}|${item.natureza_nome}`; // Chave única para mesclagem
+        mergedDataMap.set(key, { ...item });
+      });
+  
+      // Mesclar dados pendentes offline
+      pendingData.forEach(pending => {
+        const cidade = allCidades.find(c => c.id === pending.obm_id);
+        // Assumindo que cada payload de estatística tem apenas uma natureza para simplificar
+        const naturezaPayload = pending.estatisticas[0]; 
+        const natureza = allNaturezas.find(n => n.id === naturezaPayload.natureza_id);
+  
+        if (cidade && natureza) {
+          const newEntry: IEstatisticaAgrupada = {
+            crbm_nome: cidade.crbm_nome,
+            cidade_nome: cidade.cidade_nome,
+            natureza_id: natureza.id,
+            natureza_grupo: natureza.grupo,
+            natureza_nome: natureza.nome || natureza.subgrupo || '',
+            natureza_abreviacao: natureza.abreviacao || null,
+            quantidade: naturezaPayload.quantidade,
+          };
+  
+          const key = `${newEntry.cidade_nome}|${newEntry.natureza_nome}`;
+          if (mergedDataMap.has(key)) {
+            // Se já existe, adiciona a quantidade
+            const existing = mergedDataMap.get(key)!;
+            existing.quantidade += newEntry.quantidade;
+            mergedDataMap.set(key, existing);
+          } else {
+            // Caso contrário, adiciona como nova entrada
+            mergedDataMap.set(key, newEntry);
+          }
+        }
+      });
+      console.log('[mergeLancamentos] Output - mergedDataMap:', mergedDataMap);
+      return Array.from(mergedDataMap.values());
+    }, [cidades, naturezas]);
   const fetchDados = useCallback(async () => {
-    if (!dataRegistro) return;
+    if (!dataRegistro || cidades.length === 0 || naturezas.length === 0) return;
+    if (!usuarioLogado) return;
     setLoadingPagina(true);
     try {
-      const [dadosLote, dadosDetalhados] = await Promise.all([
+      const [dadosLoteApi, dadosDetalhados] = await Promise.all([
         getEstatisticasAgrupadasPorData(dataRegistro),
         getOcorrenciasDetalhadas(dataRegistro)
       ]);
-      setDadosTabela(Array.isArray(dadosLote) ? dadosLote : []);
+      console.log('[fetchDados] dadosLoteApi:', dadosLoteApi);
+      console.log('[fetchDados] dadosDetalhados:', dadosDetalhados);
+
+      // Carregar lançamentos pendentes para a data atual
+      const lancamentosPendentesParaData = (await offlineSyncService.getPendingLancamentos(usuarioLogado?.id)).filter(
+        p => p.data_registro === dataRegistro
+      );
+      console.log('[fetchDados] lancamentosPendentesParaData:', lancamentosPendentesParaData);
+
+      const mergedDadosLote = mergeLancamentos(
+        Array.isArray(dadosLoteApi) ? dadosLoteApi : [],
+        lancamentosPendentesParaData,
+        cidades,
+        naturezas
+      );
+      console.log('[fetchDados] mergedDadosLote:', mergedDadosLote);
+
+      setDadosTabela(mergedDadosLote);
       setOcorrenciasDetalhadas(Array.isArray(dadosDetalhados) ? dadosDetalhados : []);
     } catch (error) {
       addNotification('Falha ao carregar os dados da página.', 'error');
     } finally {
       setLoadingPagina(false);
     }
-  }, [dataRegistro, addNotification]);
+  }, [dataRegistro, addNotification, mergeLancamentos, cidades, naturezas, usuarioLogado?.id]);
 
   useEffect(() => {
     if (!loadingDataApoio) {
       fetchDados();
     }
   }, [fetchDados, loadingDataApoio]);
+
+  // Efeito para gerenciar o status online/offline
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Efeito para carregar lançamentos pendentes ao montar
+  useEffect(() => {
+    if (usuarioLogado) {
+      offlineSyncService.getPendingLancamentos(usuarioLogado.id).then(setPendingOfflineLancamentos);
+    }
+  }, [usuarioLogado]);
+
+  // Função para sincronizar lançamentos offline
+  const syncOfflineLancamentos = useCallback(async () => {
+    if (!isOnline || !usuarioLogado || pendingOfflineLancamentos.length === 0) {
+      return;
+    }
+
+    addNotification('Tentando sincronizar lançamentos offline...', 'info');
+    const { success } = await offlineSyncService.syncPendingLancamentos(usuarioLogado.id);
+
+    if (success) {
+      addNotification('Lançamentos offline sincronizados com sucesso!', 'success');
+      setPendingOfflineLancamentos(await offlineSyncService.getPendingLancamentos(usuarioLogado.id)); // Refresh list
+      fetchDados(); // Re-fetch main data to update totals
+    }
+  }, [isOnline, pendingOfflineLancamentos, addNotification, fetchDados, usuarioLogado]);
+
+
 
   const obmsComDados = useMemo(() => {
     const ids = dadosTabela.map(dado => {
@@ -136,14 +243,74 @@ function LancamentoPage() {
   }, [dadosTabela, cidades]);
 
   const handleSaveLote = async (payload: IEstatisticaLotePayload) => {
+    if (!isOnline) {
+      try {
+        if (!usuarioLogado) {
+          addNotification('Você precisa estar logado para salvar dados offline.', 'error');
+          return;
+        }
+        await offlineSyncService.savePendingLancamento(payload, usuarioLogado.id);
+        setPendingOfflineLancamentos(await offlineSyncService.getPendingLancamentos(usuarioLogado.id));
+        addNotification('Lançamento salvo offline. Sincronizará quando a conexão for restabelecida.', 'info');
+        setIsModalOpen(false);
+        setItemParaEditar(null);
+        return;
+      } catch (error) {
+        addNotification('Falha ao salvar lançamento offline.', 'error');
+        return;
+      }
+    }
+
     try {
       const response = await registrarEstatisticasLote(payload);
       addNotification(response.message, 'success');
       setIsModalOpen(false);
       setItemParaEditar(null);
       const novaData = payload.data_registro;
-      setDataRegistro(novaData);
-      fetchDados();
+      if (novaData !== dataRegistro) {
+        setDataRegistro(novaData);
+        fetchDados(); // Se a data mudou, busca tudo de novo
+      } else {
+        // Atualização manual para a mesma data
+        const cidade = cidades.find(c => c.id === payload.obm_id);
+        if (cidade) {
+          const newEntries: IEstatisticaAgrupada[] = payload.estatisticas.map(est => {
+            const natureza = naturezas.find(n => n.id === est.natureza_id);
+            return {
+              crbm_nome: cidade.crbm_nome,
+              cidade_nome: cidade.cidade_nome,
+              natureza_id: est.natureza_id,
+              natureza_grupo: natureza?.grupo || '',
+              natureza_nome: natureza?.subgrupo || '',
+              natureza_abreviacao: natureza?.abreviacao || null,
+              quantidade: est.quantidade,
+            };
+          });
+
+          console.log('Updating table with new entries:', newEntries);
+          setDadosTabela(prevDados => {
+            console.log('prevDados:', prevDados);
+            const dadosAtualizados = [...prevDados];
+            newEntries.forEach(newEntry => {
+              const index = dadosAtualizados.findIndex(
+                d => d.cidade_nome === newEntry.cidade_nome && d.natureza_nome === newEntry.natureza_nome && d.natureza_grupo === newEntry.natureza_grupo
+              );
+              if (index !== -1) {
+                dadosAtualizados[index] = {
+                  ...dadosAtualizados[index],
+                  quantidade: newEntry.quantidade,
+                };
+              } else {
+                dadosAtualizados.push(newEntry);
+              }
+            });
+            console.log('dadosAtualizados:', dadosAtualizados);
+            return dadosAtualizados;
+          });
+        } else {
+          fetchDados(); // Fallback caso a cidade não seja encontrada
+        }
+      }
     } catch (error) {
       addNotification(extractErrorMessage(error), 'error');
     }
@@ -315,6 +482,23 @@ function LancamentoPage() {
           <p className="text-2xl font-bold text-teal-400">{totalGeralLote}</p>
         </div>
       </div>
+
+      {pendingOfflineLancamentos.length > 0 && (
+        <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg flex items-center justify-between">
+          <span>Você tem {pendingOfflineLancamentos.length} lançamento(s) pendente(s) de sincronização.</span>
+          {isOnline && (
+            <button
+              onClick={syncOfflineLancamentos}
+              className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
+            >
+              Sincronizar Agora
+            </button>
+          )}
+          {!isOnline && (
+            <span className="ml-4 text-sm">Aguardando conexão...</span>
+          )}
+        </div>
+      )}
 
       <h2 className="text-2xl font-bold text-text-strong mb-4">Lançamentos em Lote (Estatísticas)</h2>
       

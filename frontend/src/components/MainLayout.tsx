@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthProvider'; // 1. Importar o useAuth
 import Sidebar from './Sidebar';
 import OnlineUsersPopover from './OnlineUsersPopover';
 import ChatContainer from './ChatContainer';
+import OfflineIndicator from './OfflineIndicator';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -77,6 +78,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         </div>
       </div>
       <ChatContainer />
+      <OfflineIndicator />
     </>
   );
 };

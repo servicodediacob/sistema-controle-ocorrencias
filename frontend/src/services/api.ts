@@ -37,7 +37,7 @@ export interface IPaginatedAuditoriaLogs { logs: IAuditoriaLog[]; pagination: { 
 interface ApiError { message: string; }
 
 // --- Configuração do Axios (sem alterações) ---
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const baseURL = '/api'; // URL relativa para produção
 export const api = axios.create({ baseURL }   );
 api.interceptors.request.use((config) => { const token = localStorage.getItem('@siscob:token'); if (token) { config.headers.Authorization = `Bearer ${token}`; } return config; }, (error) => Promise.reject(error));
 api.interceptors.response.use((response) => response.data, (error) => { if (axios.isAxiosError(error) && error.response?.status === 401) { console.warn('[Axios Interceptor] Erro 401. Realizando logout forçado.'); localStorage.removeItem('@siscob:token'); if (window.location.pathname !== '/login') { window.location.href = '/login'; } } return Promise.reject(error); });

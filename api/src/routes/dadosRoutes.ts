@@ -35,13 +35,16 @@ import { getDashboardStats } from '../controllers/dashboardController';
 
 const router = Router();
 
+// --- Rotas de Naturezas (Públicas) ---
+router.get('/naturezas', getNaturezas);
+router.post('/naturezas/por-nomes', getNaturezasPorNomes);
+
 // Aplica proteção a todas as rotas deste arquivo
 router.use(proteger);
 
-// --- Rotas de Naturezas ---
-router.route('/naturezas').get(getNaturezas).post(isAdmin, criarNatureza);
+// --- Rotas de Naturezas (Protegidas) ---
+router.post('/naturezas', isAdmin, criarNatureza);
 router.route('/naturezas/:id').put(isAdmin, atualizarNatureza).delete(isAdmin, excluirNatureza);
-router.post('/naturezas/por-nomes', getNaturezasPorNomes); // <-- ROTA ADICIONADA
 
 // --- Rotas de Unidades (OBMs) e CRBMs ---
 router.route('/unidades').get(getUnidades).post(isAdmin, criarUnidade);

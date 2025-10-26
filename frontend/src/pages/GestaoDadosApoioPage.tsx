@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
+import { useData } from '../contexts/DataProvider';
 import Spinner from '../components/Spinner';
 
 // ... (Componente DataModal não precisa de alterações) ...
@@ -165,6 +166,7 @@ function GestaoDadosApoioPage(): ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState<ItemType | null>(null);
   const { addNotification } = useNotification();
+  const { refetch: refetchDataApoio } = useData();
 
   const fetchData = useCallback(async () => {
     try {
@@ -221,6 +223,7 @@ function GestaoDadosApoioPage(): ReactElement {
       addNotification(successMessage, 'success');
       handleCloseModal();
       fetchData();
+      refetchDataApoio();
     } catch (err) {
       addNotification(err instanceof Error ? err.message : 'Falha ao salvar dados.', 'error');
     }

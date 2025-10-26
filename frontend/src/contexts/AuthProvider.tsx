@@ -4,6 +4,8 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode, useC
 import { decodeJwt } from 'jose';
 import { api, login as apiLogin, extractErrorMessage, IUser as ApiUser } from '../services/api';
 
+import { offlineSyncService } from '../services/offlineSyncService';
+
 // 1. Tipos compartilhados
 // Unifica o tipo de usuário com o do serviço de API e permite um alias opcional `role`.
 export type IUser = ApiUser & { role?: 'admin' | 'supervisor' | 'user' };
@@ -69,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = useCallback(() => {
+    offlineSyncService.clearAllPendingLancamentos();
     localStorage.removeItem('@siscob:token');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
