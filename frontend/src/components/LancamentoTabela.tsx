@@ -323,18 +323,18 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
       <div className="mt-8 hidden rounded-lg border border-border bg-surface text-text md:block max-h-[75vh] overflow-y-auto relative">
         <table className="w-full border-collapse table-fixed text-xs">
-          <thead className="bg-gray-700 text-white">
+          <thead className="bg-gray-800 text-white uppercase text-xs font-bold">
             <tr>
-              <th className="sticky left-0 top-0 z-30 w-[150px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">CRBM</th>
-              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b border-r border-gray-600 bg-surface p-3 text-left font-bold uppercase text-text-strong">Quartel / Cidade</th>
+              <th className="sticky left-0 top-0 z-30 w-[150px] border-b-2 border-r border-gray-700 bg-gray-800 p-3 text-left">CRBM</th>
+              <th className="sticky left-[150px] top-0 z-30 w-[250px] border-b-2 border-r border-gray-700 bg-gray-800 p-3 text-left">Quartel / Cidade</th>
               {naturezas.map(nat => (
-                <th key={nat.codigo} className="sticky top-0 z-20 border-b border-x border-gray-700 bg-gray-700 p-2 text-center uppercase" title={nat.nome}>
+                <th key={nat.codigo} className="sticky top-0 z-20 border-b-2 border-x border-gray-700 bg-gray-800 p-2 text-center" title={nat.nome}>
                   {nat.abreviacao || nat.nome}
                 </th>
               ))}
-              <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-blue-900 p-3 text-center font-bold uppercase">TOTAL</th>
+              <th className="sticky right-0 top-0 z-30 border-b-2 border-l border-gray-700 bg-gray-900 p-3 text-center">TOTAL</th>
               {showActions && (
-                <th className="sticky right-0 top-0 z-30 border-b border-l border-gray-700 bg-gray-700 p-3 text-center uppercase">A??ES</th>
+                <th className="sticky right-0 top-0 z-30 border-b-2 border-l border-gray-700 bg-gray-800 p-3 text-center">Ações</th>
               )}
             </tr>
           </thead>
