@@ -37,8 +37,10 @@ export interface IPaginatedAuditoriaLogs { logs: IAuditoriaLog[]; pagination: { 
 interface ApiError { message: string; }
 
 // --- Configuração do Axios (sem alterações) ---
-// Constrói a baseURL de forma robusta a partir da variável de ambiente\nconst rawBaseURL = import.meta.env.VITE_API_BASE_URL || \'/\';\nconst baseURL = rawBaseURL.endsWith(\'/api\') ? rawBaseURL : `${rawBaseURL.replace(/\/$/, \'\')}/api`;
-export const api = axios.create({ baseURL }   );
+// Constr�i a baseURL de forma robusta a partir da vari�vel de ambiente
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || '/';
+const baseURL = rawBaseURL.endsWith('/api') ? rawBaseURL : `${rawBaseURL.replace(/\/$/, '')}/api`;
+export const api = axios.create({ baseURL });
 api.interceptors.request.use((config) => { const token = localStorage.getItem('@siscob:token'); if (token) { config.headers.Authorization = `Bearer ${token}`; } return config; }, (error) => Promise.reject(error));
 api.interceptors.response.use((response) => response.data, (error) => { if (axios.isAxiosError(error) && error.response?.status === 401) { console.warn('[Axios Interceptor] Erro 401. Realizando logout forçado.'); localStorage.removeItem('@siscob:token'); if (window.location.pathname !== '/login') { window.location.href = '/login'; } } return Promise.reject(error); });
 export const extractErrorMessage = (error: unknown): string => { if (axios.isAxiosError(error)) { const axiosError = error as AxiosError<ApiError>; return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`; } if (error instanceof Error) return error.message; return 'Ocorreu um erro desconhecido.'; };
@@ -111,3 +113,4 @@ export const {
   getOcorrenciasDetalhadas
   // ======================= FIM DA CORREÇÃO =======================
 } = apiService;
+
