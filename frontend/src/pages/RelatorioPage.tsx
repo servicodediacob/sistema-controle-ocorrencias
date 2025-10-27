@@ -13,6 +13,7 @@ import Spinner from '../components/Spinner';
 import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
 import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
 import AssinaturaModal from '../components/AssinaturaModal'; // Importar o modal
+import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
 
 function RelatorioPage() {
   const today = new Date().toISOString().split('T')[0];
@@ -21,6 +22,17 @@ function RelatorioPage() {
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotification();
   const { user: usuarioLogado } = useAuth();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [estatisticas, setEstatisticas] = useState<IRelatorioRow[]>([]);
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
@@ -165,65 +177,71 @@ function RelatorioPage() {
           <div>
             <h2 className="text-2xl font-bold text-text-strong mb-4">Relatório Estatístico</h2>
             {estatisticas.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
-                <table className="min-w-full w-full border-collapse text-sm">
-                  <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
-                    <tr>
-                      <th className="sticky left-0 top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">GRUPO</th>
-                      <th className="sticky left-[250px] top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">NATUREZA (SUBGRUPO)</th>
-                      <th className="hidden lg:table-cell p-2">DIURNO</th>
-                      <th className="hidden lg:table-cell p-2">NOTURNO</th>
-                      <th className="p-2">TOTAL CAPITAL</th>
-                      {CRBM_HEADERS.map(h => <th key={h} className="hidden lg:table-cell p-2">{h}</th>)}
-                      <th className="p-2 lg:hidden">TOTAL INTERIOR</th>
-                      <th className="p-2">TOTAL GERAL</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(groupedData).map(([grupo, subgrupos]) => {
-                      const subtotalGrupo = subgrupos.reduce((acc, row) => {
-                        acc.diurno += Number(row.diurno) || 0;
-                        acc.noturno += Number(row.noturno) || 0;
-                        acc.total_capital += Number(row.total_capital) || 0;
-                        acc.total_geral += Number(row.total_geral) || 0;
+              <>
+                {isMobile ? (
+                  <RelatorioEstatisticoCards groupedData={groupedData} totals={totals} />
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
+                    <table className="min-w-full w-full border-collapse text-sm">
+                      <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
+                        <tr>
+                          <th className="sticky left-0 top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">GRUPO</th>
+                          <th className="sticky left-[250px] top-0 z-20 w-[250px] border-r border-border bg-surface p-3 text-left">NATUREZA (SUBGRUPO)</th>
+                          <th className="hidden lg:table-cell p-2">DIURNO</th>
+                          <th className="hidden lg:table-cell p-2">NOTURNO</th>
+                          <th className="p-2">TOTAL CAPITAL</th>
+                          {CRBM_HEADERS.map(h => <th key={h} className="hidden lg:table-cell p-2">{h}</th>)}
+                          <th className="p-2 lg:hidden">TOTAL INTERIOR</th>
+                          <th className="p-2">TOTAL GERAL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(groupedData).map(([grupo, subgrupos]) => {
+                          const subtotalGrupo = subgrupos.reduce((acc, row) => {
+                            acc.diurno += Number(row.diurno) || 0;
+                            acc.noturno += Number(row.noturno) || 0;
+                            acc.total_capital += Number(row.total_capital) || 0;
+                            acc.total_geral += Number(row.total_geral) || 0;
 
-                        CRBM_HEADERS.forEach((header) => {
-                          acc[header] += Number(row[header]) || 0;
-                        });
+                            CRBM_HEADERS.forEach((header) => {
+                              acc[header] += Number(row[header]) || 0;
+                            });
 
-                        return acc;
-                      }, criarTotaisIniciais());
+                            return acc;
+                          }, criarTotaisIniciais());
 
-                      const subtotalCrbmValues = CRBM_HEADERS.reduce((acc, header) => {
-                        acc[header] = String(subtotalGrupo[header]);
-                        return acc;
-                      }, {} as Record<typeof CRBM_HEADERS[number], string>);
+                          const subtotalCrbmValues = CRBM_HEADERS.reduce((acc, header) => {
+                            acc[header] = String(subtotalGrupo[header]);
+                            return acc;
+                          }, {} as Record<typeof CRBM_HEADERS[number], string>);
 
-                      const subtotalRow: IRelatorioRow = {
-                        grupo: grupo,
-                        subgrupo: 'SUB TOTAL',
-                        diurno: String(subtotalGrupo.diurno),
-                        noturno: String(subtotalGrupo.noturno),
-                        total_capital: String(subtotalGrupo.total_capital),
-                        total_geral: String(subtotalGrupo.total_geral),
-                        ...subtotalCrbmValues,
-                      };
+                          const subtotalRow: IRelatorioRow = {
+                            grupo: grupo,
+                            subgrupo: 'SUB TOTAL',
+                            diurno: String(subtotalGrupo.diurno),
+                            noturno: String(subtotalGrupo.noturno),
+                            total_capital: String(subtotalGrupo.total_capital),
+                            total_geral: String(subtotalGrupo.total_geral),
+                            ...subtotalCrbmValues,
+                          };
 
-                      return (
-                        <React.Fragment key={grupo}>
-                          {subgrupos.map((row, index) => (
-                            <ReportRow key={row.subgrupo} row={row} crbmHeaders={CRBM_HEADERS} isFirstInGroup={index === 0} groupSize={subgrupos.length} />
-                          ))}
-                          <ReportRow row={subtotalRow} crbmHeaders={CRBM_HEADERS} isSubtotal />
-                        </React.Fragment>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <ReportRow row={totalGeralRow} crbmHeaders={CRBM_HEADERS} isTotalGeral />
-                  </tfoot>
-                </table>
-              </div>
+                          return (
+                            <React.Fragment key={grupo}>
+                              {subgrupos.map((row, index) => (
+                                <ReportRow key={row.subgrupo} row={row} crbmHeaders={CRBM_HEADERS} isFirstInGroup={index === 0} groupSize={subgrupos.length} />
+                              ))}
+                              <ReportRow row={subtotalRow} crbmHeaders={CRBM_HEADERS} isSubtotal />
+                            </React.Fragment>
+                          )
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <ReportRow row={totalGeralRow} crbmHeaders={CRBM_HEADERS} isTotalGeral />
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </>
             ) : <p className="text-center text-text py-4">Nenhum dado estatístico para o período.</p>}
           </div>
 
