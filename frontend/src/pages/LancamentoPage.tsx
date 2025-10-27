@@ -280,48 +280,9 @@ function LancamentoPage() {
       const novaData = payload.data_registro;
       if (novaData !== dataRegistro) {
         setDataRegistro(novaData);
-        fetchDados(); // Se a data mudou, busca tudo de novo
-      } else {
-        // Atualização manual para a mesma data
-        const cidade = cidades.find(c => c.id === payload.obm_id);
-        if (cidade) {
-          const newEntries: IEstatisticaAgrupada[] = payload.estatisticas.map(est => {
-            const natureza = naturezas.find(n => n.id === est.natureza_id);
-            return {
-              crbm_nome: cidade.crbm_nome,
-              cidade_nome: cidade.cidade_nome,
-              natureza_id: est.natureza_id,
-              natureza_grupo: natureza?.grupo || '',
-              natureza_nome: natureza?.subgrupo || '',
-              natureza_abreviacao: natureza?.abreviacao || null,
-              quantidade: est.quantidade,
-            };
-          });
-
-          console.log('Updating table with new entries:', newEntries);
-          setDadosTabela(prevDados => {
-            console.log('prevDados:', prevDados);
-            const dadosAtualizados = [...prevDados];
-            newEntries.forEach(newEntry => {
-              const index = dadosAtualizados.findIndex(
-                d => d.cidade_nome === newEntry.cidade_nome && d.natureza_nome === newEntry.natureza_nome && d.natureza_grupo === newEntry.natureza_grupo
-              );
-              if (index !== -1) {
-                dadosAtualizados[index] = {
-                  ...dadosAtualizados[index],
-                  quantidade: newEntry.quantidade,
-                };
-              } else {
-                dadosAtualizados.push(newEntry);
-              }
-            });
-            console.log('dadosAtualizados:', dadosAtualizados);
-            return dadosAtualizados;
-          });
-        } else {
-          fetchDados(); // Fallback caso a cidade não seja encontrada
-        }
       }
+      fetchDados(); // Sempre busca tudo de novo para garantir a consistência
+      triggerDataRefetch(); // Notifica outros componentes que os dados foram atualizados
     } catch (error) {
       addNotification(extractErrorMessage(error), 'error');
     }
@@ -343,6 +304,7 @@ function LancamentoPage() {
         setDataRegistro(novaData);
       }
       fetchDados();
+      triggerDataRefetch(); // Notifica outros componentes que os dados foram atualizados
     } catch (error) {
       addNotification(extractErrorMessage(error), 'error');
     }

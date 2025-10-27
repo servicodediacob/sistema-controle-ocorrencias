@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, ReactElement } from 'react';
 import MainLayout from '../components/MainLayout';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import { useData } from '../contexts/DataProvider'; // Importar useData
 
 // Os componentes de widget permanecem os mesmos
 import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget';
@@ -74,6 +75,7 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
 
 function DashboardPage(): ReactElement {
   const { addNotification } = useNotification();
+  const { refetch: refetchGlobalData } = useData(); // Obter a função refetch do DataProvider
   
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);
@@ -98,7 +100,7 @@ function DashboardPage(): ReactElement {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, refetchGlobalData]); // Adicionar refetchGlobalData como dependência
 
   // Renderiza conteúdo dentro do MainLayout para usar sidebar, header e chat
   return (

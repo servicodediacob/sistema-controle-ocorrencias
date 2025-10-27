@@ -10,6 +10,7 @@ interface DataContextType {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  triggerDataRefetch: () => void; // Nova função para forçar re-fetch
 }
 
 const DataContext = createContext<DataContextType>({
@@ -18,6 +19,7 @@ const DataContext = createContext<DataContextType>({
   loading: true,
   error: null,
   refetch: () => {},
+  triggerDataRefetch: () => {},
 });
 
 export const useData = () => useContext(DataContext);
@@ -27,25 +29,20 @@ interface DataProviderProps {
 }
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth(); // << OBTENDO O ESTADO DE AUTENTICAÇÃO
+  const { user, loading: authLoading } = useAuth();
 
   const [cidades, setCidades] = useState<ICidade[]>([]);
   const [naturezas, setNaturezas] = useState<IDataApoio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [triggerRefetch, setTriggerRefetch] = useState(0); // Estado para forçar re-fetch
 
   const fetchData = useCallback(async () => {
-    // << CONDIÇÃO DE GUARDA: Só executa se a autenticação estiver concluída e houver um usuário >>
-    if (authLoading || !user) {
-      // Se não há usuário ou a autenticação está em progresso, não faz nada.
-      // Se não houver usuário no final, o loading será definido como false no 'finally'.
-      if (!authLoading && !user) {
-          setLoading(false);
-      }
+    if (authLoading) {
       return;
     }
 
-    setLoading(true); // Garante que o loading seja ativado antes da busca
+    setLoading(true);
     try {
       const [cidadesResponse, naturezasResponse] = await Promise.all([
         getCidades(),
@@ -71,13 +68,17 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, triggerRefetch]); // Adiciona triggerRefetch como dependência
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const value = { cidades, naturezas, loading, error, refetch: fetchData };
+  const triggerDataRefetch = useCallback(() => {
+    setTriggerRefetch(prev => prev + 1);
+  }, []);
+
+  const value = { cidades, naturezas, loading, error, refetch: fetchData, triggerDataRefetch };
 
   return (
     <DataContext.Provider value={value}>
