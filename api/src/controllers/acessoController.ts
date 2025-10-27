@@ -13,18 +13,18 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
   const { nome, email, senha, obm_id } = req.body;
 
   if (!nome || !email || !senha || !obm_id) {
-    res.status(400).json({ message: 'Todos os campos são obrigatórios: nome, email, senha e OBM.' });
+    res.status(400).json({ message: 'Todos os campos sao obrigatorios: nome, email, senha e OBM.' });
     return;
   }
 
   try {
-    // O Prisma pode verificar em múltiplas tabelas de forma mais complexa,
-    // mas para este caso, duas consultas separadas são claras e eficientes.
+    // O Prisma pode verificar em multiplas tabelas de forma mais complexa,
+    // mas para este caso, duas consultas separadas sao claras e eficientes.
     const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
     const solicitacaoExistente = await prisma.solicitacaoAcesso.findUnique({ where: { email } });
 
     if (usuarioExistente || solicitacaoExistente) {
-      res.status(409).json({ message: 'Este endereço de e-mail já está em uso ou aguardando aprovação.' });
+      res.status(409).json({ message: 'Este endereco de e-mail ja esta em uso ou aguardando aprovacao.' });
       return;
     }
 
@@ -42,14 +42,14 @@ export const solicitarAcesso = async (req: Request, res: Response): Promise<void
       select: { id: true, nome: true, email: true, data_solicitacao: true },
     });
 
-    logger.info({ solicitacao: novaSolicitacao }, 'Nova solicitação de acesso recebida.');
+    logger.info({ solicitacao: novaSolicitacao }, 'Nova solicitacao de acesso recebida.');
     res.status(201).json({
-      message: 'Solicitação de acesso enviada com sucesso! Aguarde a aprovação de um administrador.',
+      message: 'Solicitacao de acesso enviada com sucesso! Aguarde a aprovacao de um administrador.',
       solicitacao: novaSolicitacao,
     });
 
   } catch (error) {
-    logger.error({ err: error }, 'Erro ao criar solicitação de acesso.');
+    logger.error({ err: error }, 'Erro ao criar solicitacao de acesso.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -65,7 +65,7 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
       },
     });
 
-    // Formata a resposta para manter a compatibilidade com o frontend, se necessário
+    // Formata a resposta para manter a compatibilidade com o frontend, se necessario
     const resultadoFormatado = solicitacoes.map(s => ({
       ...s,
       obm_nome: s.obm.nome,
@@ -73,16 +73,16 @@ export const listarSolicitacoes = async (_req: Request, res: Response): Promise<
 
     res.status(200).json(resultadoFormatado);
   } catch (error) {
-    logger.error({ err: error }, 'Erro ao listar solicitações de acesso.');
+    logger.error({ err: error }, 'Erro ao listar solicitacoes de acesso.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-// Solicitação de acesso via Google (gera senha aleatória para cumprir o schema atual)
+// Solicitacao de acesso via Google (gera senha aleatoria para cumprir o schema atual)
 export const solicitarAcessoGoogle = async (req: Request, res: Response): Promise<void> => {
   const { nome, email, obm_id } = req.body as { nome?: string; email?: string; obm_id?: number };
   if (!nome || !email || !obm_id) {
-    res.status(400).json({ message: 'Campos obrigatórios: nome, email, obm_id.' });
+    res.status(400).json({ message: 'Campos obrigatorios: nome, email, obm_id.' });
     return;
   }
   try {
@@ -103,9 +103,9 @@ export const solicitarAcessoGoogle = async (req: Request, res: Response): Promis
 
     try { notifyAdmins('acesso:solicitacao-nova', { id: novaSolicitacao.id, nome, email }); } catch {}
 
-    res.status(201).json({ message: 'Solicitação enviada! Aguarde aprovação de um administrador.', solicitacao: novaSolicitacao });
+    res.status(201).json({ message: 'Solicitacao enviada! Aguarde aprovacao de um administrador.', solicitacao: novaSolicitacao });
   } catch (error) {
-    logger.error({ err: error }, 'Erro ao criar solicitação de acesso (google).');
+    logger.error({ err: error }, 'Erro ao criar solicitacao de acesso (google).');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -116,7 +116,7 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
   const aprovador_id = req.usuario?.id;
 
   if (!acao || !['aprovar', 'recusar'].includes(acao)) {
-    res.status(400).json({ message: "A ação é obrigatória e deve ser 'aprovar' ou 'recusar'." });
+    res.status(400).json({ message: "A acao e obrigatoria e deve ser 'aprovar' ou 'recusar'." });
     return;
   }
 
@@ -126,13 +126,13 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
     });
 
     if (!solicitacao) {
-      res.status(404).json({ message: 'Solicitação não encontrada ou já processada.' });
+      res.status(404).json({ message: 'Solicitacao nao encontrada ou ja processada.' });
       return;
     }
 
     if (acao === 'aprovar') {
-      // Usamos uma transação para garantir que ambas as operações (criar usuário e atualizar solicitação)
-      // sejam concluídas com sucesso. Se uma falhar, a outra é revertida.
+      // Usamos uma transacao para garantir que ambas as operacoes (criar usuario e atualizar solicitacao)
+      // sejam concluidas com sucesso. Se uma falhar, a outra e revertida.
       await prisma.$transaction(async (tx) => {
         await tx.usuario.create({
           data: {
@@ -154,8 +154,8 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
         });
       });
 
-      logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Usuário ${solicitacao.nome} aprovado e criado.`);
-      res.status(200).json({ message: `Usuário ${solicitacao.nome} aprovado e criado com sucesso.` });
+      logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Usuario ${solicitacao.nome} aprovado e criado.`);
+      res.status(200).json({ message: `Usuario ${solicitacao.nome} aprovado e criado com sucesso.` });
 
     } else { // acao === 'recusar'
       await prisma.solicitacaoAcesso.update({
@@ -167,15 +167,15 @@ export const gerenciarSolicitacao = async (req: RequestWithUser, res: Response):
         },
       });
 
-      logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Solicitação de ${solicitacao.nome} recusada.`);
-      res.status(200).json({ message: `Solicitação de ${solicitacao.nome} recusada.` });
+      logger.info({ aprovadorId: aprovador_id, solicitacaoId: id }, `Solicitacao de ${solicitacao.nome} recusada.`);
+      res.status(200).json({ message: `Solicitacao de ${solicitacao.nome} recusada.` });
     }
 
   } catch (error) {
-    // O Prisma já faz o rollback da transação automaticamente em caso de erro.
-    logger.error({ err: error, solicitacaoId: id }, 'Erro ao gerenciar solicitação.');
+    // O Prisma ja faz o rollback da transacao automaticamente em caso de erro.
+    logger.error({ err: error, solicitacaoId: id }, 'Erro ao gerenciar solicitacao.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
-// FORÇAR PUSH ENV.LOCAL-- revertido
+// FORCAR PUSH ENV.LOCAL-- revertido
