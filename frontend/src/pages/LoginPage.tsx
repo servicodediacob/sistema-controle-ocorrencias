@@ -11,6 +11,7 @@ import { authGoogle, solicitarAcessoGoogle, getCidades, ICidade } from '../servi
 import { useNotification } from '../contexts/NotificationContext';
 
 import { z } from 'zod';
+import { isAxiosError } from 'axios';
 
 import LoadingOverlay from '../components/LoadingOverlay'; // 1. Importar o overlay
 
@@ -20,9 +21,9 @@ import LoadingOverlay from '../components/LoadingOverlay'; // 1. Importar o over
 
 const loginSchema = z.object({
 
-  email: z.string().email({ message: "Por favor, insira um email válido." }),
+  email: z.string().email({ message: "Por favor, insira um email valido." }),
 
-  senha: z.string().min(6, { message: "A senha deve ter no mínimo 6 caracteres." }),
+  senha: z.string().min(6, { message: "A senha deve ter no minimo 6 caracteres." }),
 
 });
 
@@ -185,6 +186,8 @@ function LoginPage(): ReactElement {
   const isFormInvalid = Object.keys(errors).length > 0;
 
   const isSignInInProgress = useRef(false);
+  const isGsiInitialized = useRef(false);
+  const [isGsiReady, setIsGsiReady] = useState(false);
 
 
 
@@ -204,9 +207,17 @@ function LoginPage(): ReactElement {
 
     const initializeGsi = () => {
 
-      if (!window.google) {
+      if (isGsiInitialized.current) {
 
-        console.error("Objeto 'google' não encontrado no window.");
+        setIsGsiReady(true);
+
+        return;
+
+      }
+
+      if (!window.google?.accounts?.id) {
+
+        console.error("Objeto 'google' nao encontrado no window.");
 
         return;
 
@@ -224,7 +235,7 @@ function LoginPage(): ReactElement {
 
             isSignInInProgress.current = false;
 
-            setLoading(true); // 2. Ativar loading no callback do Google
+            setLoading(true);
 
             try {
 
@@ -248,13 +259,13 @@ function LoginPage(): ReactElement {
 
             } catch (error) {
 
-              console.error("Erro na autenticação com o backend:", error);
+              console.error('Erro na autenticacao com o backend:', error);
 
-              addNotification('Falha na verificação com o servidor.', 'error');
+              addNotification('Falha na verificacao com o servidor.', 'error');
 
             } finally {
 
-              setLoading(false); // 3. Desativar loading no final
+              setLoading(false);
 
             }
 
@@ -262,11 +273,17 @@ function LoginPage(): ReactElement {
 
         });
 
+        isGsiInitialized.current = true; // Set to true after successful initialization
+
+        setIsGsiReady(true); // Set GSI ready after initialization
+
       } catch (error) {
 
-        console.error("Falha ao inicializar o Google Sign-In:", error);
+        console.error('Falha ao inicializar o Google Sign-In:', error);
 
-        addNotification('Não foi possível iniciar o serviço de login do Google.', 'error');
+        addNotification('Nao foi possivel iniciar o servico de login do Google.', 'error'); // Corrected
+
+        setIsGsiReady(false); // GSI failed to initialize
 
       }
 
@@ -274,31 +291,49 @@ function LoginPage(): ReactElement {
 
 
 
-    if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+    const scriptSrc = 'https://accounts.google.com/gsi/client';
+    const listeners: { element: HTMLScriptElement; type: 'load' | 'error'; handler: EventListener }[] = [];
+        const loadHandler: EventListener = () => {
+    
+          initializeGsi();
+    
+          setIsGsiReady(true); // Also set ready on script load
+    
+        };
+    
+        const errorHandler: EventListener = () => {
+    
+          addNotification('Falha ao carregar script do Google.', 'error');
+    
+          setIsGsiReady(false); // GSI script failed to load
+    
+        };
 
-      const script = document.createElement('script');
+    const existingScript = document.querySelector(`script[src="${scriptSrc}"]`) as HTMLScriptElement | null;
 
-      script.src = 'https://accounts.google.com/gsi/client';
-
-      script.async = true;
-
-      script.defer = true;
-
-      script.onload = initializeGsi;
-
-      script.onerror = () => {
-
-        addNotification('Falha ao carregar script do Google.', 'error');
-
-      };
-
-      document.head.appendChild(script);
-
+    if (existingScript) {
+      if (window.google?.accounts?.id) {
+        initializeGsi();
+      } else {
+        existingScript.addEventListener('load', loadHandler, { once: true });
+        listeners.push({ element: existingScript, type: 'load', handler: loadHandler });
+      }
     } else {
-
-      initializeGsi();
-
+      const script = document.createElement('script');
+      script.src = scriptSrc;
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', loadHandler, { once: true });
+      script.addEventListener('error', errorHandler);
+      listeners.push({ element: script, type: 'load', handler: loadHandler });
+      listeners.push({ element: script, type: 'error', handler: errorHandler });
+      document.head.appendChild(script);
     }
+
+    return () => {
+      listeners.forEach(({ element, type, handler }) => element.removeEventListener(type, handler));
+    };
+
 
   }, [addNotification, loginWithJwt, navigate]);
 
@@ -306,9 +341,9 @@ function LoginPage(): ReactElement {
 
   const handleGoogleSignIn = () => {
 
-    if (isSignInInProgress.current || !window.google?.accounts?.id) {
+    if (isSignInInProgress.current || !isGsiReady) { // Use isGsiReady here
 
-      addNotification('Serviço de login não está pronto. Tente novamente.', 'warning');
+      addNotification('Servico de login nao esta pronto. Tente novamente.', 'warning'); // Corrected
 
       return;
 
@@ -330,7 +365,7 @@ function LoginPage(): ReactElement {
 
           isSignInInProgress.current = false;
 
-          setLoading(false); // Desativar se o prompt não for exibido
+          setLoading(false); // Desativar se o prompt nao for exibido
 
         }
 
@@ -364,7 +399,7 @@ function LoginPage(): ReactElement {
 
         <h2 className="mb-6 text-center text-2xl font-medium text-gray-200">
 
-          Controle de Ocorrências
+          Controle de Ocorrencias
 
         </h2>
 
@@ -514,7 +549,7 @@ function LoginPage(): ReactElement {
 
           <div className="w-full max-w-md rounded-lg bg-gray-800 p-6">
 
-            <h3 className="mb-4 text-lg font-semibold text-white">Selecionar OBM para solicitação</h3>
+            <h3 className="mb-4 text-lg font-semibold text-white">Selecionar OBM para solicitacao</h3>
 
             <p className="mb-4 text-sm text-gray-300">{pendingGoogleProfile.nome} ({pendingGoogleProfile.email})</p>
 
@@ -534,19 +569,35 @@ function LoginPage(): ReactElement {
 
                 if(!selectedObm){ addNotification('Selecione sua OBM.', 'warning'); return; }
 
-                try{
+                setLoading(true); // Set loading here, before try block
 
-                  setLoading(true);
+                try{
 
                   await solicitarAcessoGoogle({ nome: pendingGoogleProfile.nome, email: pendingGoogleProfile.email, obm_id: parseInt(selectedObm) });
 
-                  addNotification('Solicitação enviada! Aguarde aprovação.', 'success');
+                  addNotification('Solicitacao enviada! Aguarde aprovacao.', 'success');
 
                   setPendingGoogleProfile(null);
 
-                }catch(e){ addNotification('Falha ao enviar solicitação.', 'error'); } finally { setLoading(false); }
+                }catch(e){
 
-              }} className="rounded-md bg-teal-600 px-4 py-2 text-white">Enviar Solicitação</button>
+                  if (isAxiosError(e) && e.response?.status === 409) {
+
+                    addNotification('Ja existe um usuario ou solicitacao pendente para este email.', 'warning');
+
+                  } else {
+
+                    addNotification('Falha ao enviar solicitacao. Tente novamente.', 'error');
+
+                  }
+
+                } finally {
+
+                  setLoading(false);
+
+                }
+
+              }} className="rounded-md bg-teal-600 px-4 py-2 text-white">Enviar Solicitacao</button>
 
             </div>
 

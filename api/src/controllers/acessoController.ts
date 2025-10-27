@@ -89,7 +89,7 @@ export const solicitarAcessoGoogle = async (req: Request, res: Response): Promis
     const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
     const solicitacaoExistente = await prisma.solicitacaoAcesso.findUnique({ where: { email } });
     if (usuarioExistente || solicitacaoExistente) {
-      res.status(409).json({ message: 'Já existe usuário ou solicitação pendente para este email.' });
+      res.status(409).json({ message: 'Ja existe usuario ou solicitacao pendente para este email.', code: 'SOLICITACAO_EXISTENTE' });
       return;
     }
     const senhaRandom = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
