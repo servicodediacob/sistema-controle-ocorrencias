@@ -68,6 +68,7 @@ model Usuario {
   supervisor_plantao     SupervisorPlantao?
   estatisticas_diarias   EstatisticaDiaria[]
   obitos_registros       ObitoRegistro[]
+  auditoria_logs         AuditoriaLog[] // Added this line
 
   @@map("usuarios")
 }
@@ -183,4 +184,17 @@ model ObitoRegistro {
   usuario  Usuario?           @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
 
   @@map("obitos_registros")
+}
+
+model AuditoriaLog {
+  id           Int       @id @default(autoincrement())
+  usuario_id   Int?
+  usuario_nome String
+  acao         String
+  detalhes     Json
+  criado_em    DateTime  @default(now()) @db.Timestamptz()
+
+  usuario Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("auditoria_logs")
 }
