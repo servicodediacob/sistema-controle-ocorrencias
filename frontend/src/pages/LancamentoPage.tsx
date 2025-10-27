@@ -57,7 +57,7 @@ const ORDEM_E_ABREVIACOES_COLUNAS = [
 
 
 function LancamentoPage() {
-  const { cidades, naturezas, loading: loadingDataApoio } = useData();
+  const { cidades, naturezas, loading: loadingDataApoio, triggerDataRefetch } = useData();
   const { addNotification } = useNotification();
   const { user: usuarioLogado } = useAuth();
 
