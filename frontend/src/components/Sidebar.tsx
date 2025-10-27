@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           className={`flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-gray-700 ${isCollapsed ? 'justify-center' : ''}`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <UserCircle size={24} />
             {!isCollapsed && <span className="font-semibold truncate">{user?.nome || 'Usuário'}</span>}
           </div>
