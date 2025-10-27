@@ -75,7 +75,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
               onClick={onEdit}
               className="mt-4 w-full rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
             >
-              Editar Lan?amento
+              Editar Lançamento
             </button>
           )}
         </div>

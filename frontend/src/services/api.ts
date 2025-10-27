@@ -34,10 +34,17 @@ export interface ISolicitacaoAcessoPayload { nome: string; email: string; senha:
 export interface ISolicitacao { id: number; nome: string; email: string; status: 'pendente' | 'aprovado' | 'recusado'; data_solicitacao: string; obm_nome: string; }
 export interface IAuditoriaLog { id: number; usuario_nome: string; acao: string; detalhes: Record<string, any>; criado_em: string; }
 export interface IPaginatedAuditoriaLogs { logs: IAuditoriaLog[]; pagination: { page: number; limit: number; total: number; totalPages: number; }; }
+
+// New interface for PendingObm
+export interface IPendingObm {
+  id: number;
+  cidade_nome: string;
+  crbm_nome: string;
+}
 interface ApiError { message: string; }
 
 // --- Configuração do Axios (sem alterações) ---
-// Constr�i a baseURL de forma robusta a partir da vari�vel de ambiente
+// Constr�i a baseURL de forma robusta a partir da vari�vel de ambiente
 const rawBaseURL = import.meta.env.VITE_API_BASE_URL || '/';
 const baseURL = rawBaseURL.endsWith('/api') ? rawBaseURL : `${rawBaseURL.replace(/\/$/, '')}/api`;
 export const api = axios.create({ baseURL });
@@ -88,6 +95,9 @@ const apiService = {
   deleteNatureza: (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`),
   alterarPropriaSenha: (payload: { senhaAtual: string; novaSenha: string }): Promise<{ message: string }> => api.put('/perfil/alterar-senha', payload),
   getAuditoriaLogs: (page = 1, limit = 20): Promise<IPaginatedAuditoriaLogs> => api.get('/auditoria', { params: { page, limit } }),
+
+  // New service for pending OBMs
+  getObmsPendentesPorData: (data: string): Promise<IPendingObm[]> => api.get('/obms/pendentes-por-data', { params: { data } }),
   // ======================= INÍCIO DA CORREÇÃO =======================
   // Adicionando a função que faltava ao objeto de serviço.
   // Esta função é usada pelo 'ocorrenciaDetalhadaService.ts'
@@ -107,7 +117,9 @@ export const {
   limparTodosOsDadosDoDia, getRelatorioCompleto,
   getObitosPorData, criarObitoRegistro, atualizarObitoRegistro, deletarObitoRegistro, limparRegistrosDoDia,
   createUnidade, updateUnidade, deleteUnidade, createNatureza, updateNatureza, deleteNatureza,
-  alterarPropriaSenha, getAuditoriaLogs,
+  alterarPropriaSenha,   getAuditoriaLogs,
+  // New export
+  getObmsPendentesPorData,
   // ======================= INÍCIO DA CORREÇÃO =======================
   // Exportando a função corrigida para que outros arquivos possam importá-la
   getOcorrenciasDetalhadas

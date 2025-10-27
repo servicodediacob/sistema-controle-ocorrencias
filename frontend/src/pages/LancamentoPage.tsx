@@ -31,6 +31,8 @@ import Spinner from '../components/Spinner';
 import OcorrenciaDetalhadaModal from '../components/OcorrenciaDetalhadaModal';
 import ViewOcorrenciaDetalhadaModal from '../components/ViewOcorrenciaDetalhadaModal';
 import Icon from '../components/Icon';
+import CidadesPendentesModal from '../components/CidadesPendentesModal'; // New import
+import OcorrenciaDetalhadaCards from '../components/OcorrenciaDetalhadaCards'; // New component for detailed occurrence cards
 import { offlineSyncService, PendingLancamento } from '../services/offlineSyncService'; // Importar serviço offline
 
 // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
@@ -77,6 +79,17 @@ function LancamentoPage() {
 
   const [isOnline, setIsOnline] = useState(navigator.onLine); // Estado para status online/offline
   const [pendingOfflineLancamentos, setPendingOfflineLancamentos] = useState<PendingLancamento[]>([]); // Estado para lançamentos pendentes
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640); // New state for mobile view
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
   // 2. MAPEAMENTO: Transforma os dados da API na estrutura que a tabela precisa,
@@ -382,6 +395,7 @@ function LancamentoPage() {
   }, [dadosTabela]);
 
   const cidadesPendentes = cidades.length - cidadesComDados.size;
+  const [isCidadesPendentesModalOpen, setIsCidadesPendentesModalOpen] = useState(false);
 
   if (loadingDataApoio) {
     return (
@@ -442,15 +456,18 @@ function LancamentoPage() {
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-lg border border-border bg-surface p-4 text-center">
           <h3 className="text-sm text-text">Total de Cidades</h3>
           <p className="text-2xl font-bold text-text-strong">{cidades.length}</p>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <button
+          onClick={() => setIsCidadesPendentesModalOpen(true)}
+          className="rounded-lg border border-border bg-surface p-4 cursor-pointer hover:bg-surface-hover transition-colors"
+        >
           <h3 className="text-sm text-text">Cidades Pendentes</h3>
           <p className={`text-2xl font-bold ${cidadesPendentes > 0 ? 'text-orange-500' : 'text-green-500'}`}>{cidadesPendentes}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
+        </button>
+        <div className="rounded-lg border border-border bg-surface p-4 text-center">
           <h3 className="text-sm text-text">Total Geral (Lote)</h3>
           <p className="text-2xl font-bold text-teal-400">{totalGeralLote}</p>
         </div>
@@ -498,42 +515,52 @@ function LancamentoPage() {
           {loadingPagina ? (
             <div className="flex justify-center p-10"><Spinner text="Carregando ocorrências detalhadas..." /></div>
           ) : (
-            <table className="min-w-full w-full border-collapse text-sm">
-              <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
-                <tr>
-                  <th className="p-3 text-left">Horário</th>
-                  <th className="p-3 text-left">Natureza</th>
-                  <th className="p-3 text-left">Cidade</th>
-                  <th className="p-3 text-left">Resumo</th>
-                  <th className="p-3 text-center">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ocorrenciasDetalhadas.length > 0 ? ocorrenciasDetalhadas.map(item => (
-                  <tr key={item.id} className="border-b border-border hover:bg-border/50">
-                    <td className="p-3 text-left whitespace-nowrap">{item.horario_ocorrencia?.substring(0, 5) || '--:--'}</td>
-                    <td className="p-3 text-left">{item.natureza_nome}</td>
-                    <td className="p-3 text-left">{item.cidade_nome}</td>
-                    <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
-                    <td className="p-3 text-center">
-                      <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-blue-400 hover:text-blue-300">
-                          <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={20} />
-                        </button>
-                        <button onClick={() => { setOcorrenciaParaEditar(item); setIsDetalheModalOpen(true); }} title="Editar" className="text-yellow-400 hover:text-yellow-300">
-                          <Icon path="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" size={20} />
-                        </button>
-                        <button onClick={() => handleDeleteDetalhada(item.id)} title="Excluir" className="text-red-500 hover:text-red-400">
-                          <Icon path="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" size={20} />
-                        </button>
-                      </div>
-                    </td>
+            isMobile ? (
+              <OcorrenciaDetalhadaCards
+                ocorrencias={ocorrenciasDetalhadas}
+                setOcorrenciaParaVisualizar={setOcorrenciaParaVisualizar}
+                setOcorrenciaParaEditar={setOcorrenciaParaEditar}
+                setIsDetalheModalOpen={setIsDetalheModalOpen}
+                handleDeleteDetalhada={handleDeleteDetalhada}
+              />
+            ) : (
+              <table className="min-w-full w-full border-collapse text-sm">
+                <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
+                  <tr>
+                    <th className="p-3 text-left">Horário</th>
+                    <th className="p-3 text-left">Natureza</th>
+                    <th className="p-3 text-left">Cidade</th>
+                    <th className="p-3 text-left">Resumo</th>
+                    <th className="p-3 text-center">Ações</th>
                   </tr>
-                )) : (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ocorrenciasDetalhadas.length > 0 ? ocorrenciasDetalhadas.map(item => (
+                    <tr key={item.id} className="border-b border-border hover:bg-border/50">
+                      <td className="p-3 text-left whitespace-nowrap">{item.horario_ocorrencia?.substring(0, 5) || '--:--'}</td>
+                      <td className="p-3 text-left">{item.natureza_nome}</td>
+                      <td className="p-3 text-left">{item.cidade_nome}</td>
+                      <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
+                      <td className="p-3 text-center">
+                        <div className="flex justify-center items-center gap-2">
+                          <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-blue-400 hover:text-blue-300">
+                            <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={20} />
+                          </button>
+                          <button onClick={() => { setOcorrenciaParaEditar(item); setIsDetalheModalOpen(true); }} title="Editar" className="text-yellow-400 hover:text-yellow-300">
+                            <Icon path="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" size={20} />
+                          </button>
+                          <button onClick={() => handleDeleteDetalhada(item.id)} title="Excluir" className="text-red-500 hover:text-red-400">
+                            <Icon path="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" size={20} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )
           )}
         </div>
       </div>
@@ -562,6 +589,13 @@ function LancamentoPage() {
         <ViewOcorrenciaDetalhadaModal
           onClose={() => setOcorrenciaParaVisualizar(null)}
           ocorrencia={ocorrenciaParaVisualizar}
+        />
+      )}
+
+      {isCidadesPendentesModalOpen && (
+        <CidadesPendentesModal
+          onClose={() => setIsCidadesPendentesModalOpen(false)}
+          dataRegistro={dataRegistro}
         />
       )}
     </MainLayout>

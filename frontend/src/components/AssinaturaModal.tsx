@@ -59,14 +59,14 @@ const AssinaturaModal: React.FC<AssinaturaModalProps> = ({ isOpen, onClose, onCo
         <div className="mt-8 flex justify-end space-x-4">
           <button
             onClick={onClose}
-            className="rounded-md px-6 py-2 font-semibold text-text-strong transition hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="rounded-md border border-border bg-transparent px-6 py-2 font-semibold text-text-strong transition hover:bg-border/50 focus:outline-none focus:ring-2 focus:ring-border focus:ring-offset-2 focus:ring-offset-surface"
           >
             Cancelar
           </button>
           <button
             onClick={handleConfirm}
             disabled={!nome || !funcao}
-            className="rounded-md bg-primary px-6 py-2 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-teal-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             Confirmar e Baixar
           </button>

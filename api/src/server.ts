@@ -27,6 +27,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 // import relatorioRoutes from './routes/relatorioRoutes'; // Removido
 import auditoriaRoutes from './routes/auditoriaRoutes';
 import estatisticasRoutes from './routes/estatisticasRoutes';
+import obmRoutes from './routes/obmRoutes'; // New import
 import diagRoutes from './routes/diagRoutes';
 import externalRoutes from './routes/externalRoutes';
 import { initializeSocket } from './services/socketService';
@@ -96,6 +97,7 @@ app.use('/api/dashboard', dashboardRoutes);
 // app.use('/api', relatorioRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api', estatisticasRoutes);
+app.use('/api/obms', obmRoutes); // New app.use
 app.use('/api', dadosRoutes);
 
 server.listen(PORT, () => {
