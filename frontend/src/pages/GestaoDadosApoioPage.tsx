@@ -10,6 +10,8 @@ import { useNotification } from '../contexts/NotificationContext';
 import MainLayout from '../components/MainLayout';
 import { useData } from '../contexts/DataProvider';
 import Spinner from '../components/Spinner';
+import ObmCards from '../components/ObmCards'; // New component for OBM cards
+import NaturezaCards from '../components/NaturezaCards'; // New component for Natureza cards
 
 // ... (Componente DataModal não precisa de alterações) ...
 type DataType = 'obm' | 'natureza';
@@ -168,6 +170,17 @@ function GestaoDadosApoioPage(): ReactElement {
   const { addNotification } = useNotification();
   const { refetch: refetchDataApoio } = useData();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640); // New state for mobile view
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -254,10 +267,16 @@ function GestaoDadosApoioPage(): ReactElement {
     }, {});
   }, [obms]);
 
-  const renderTable = () => {
+  const renderContent = () => {
+    if (loading) {
+      return <Spinner text="Carregando dados..." />;
+    }
+
     if (activeTab === 'natureza') {
-      // A tabela de naturezas não precisa de agrupamento, então a mantemos simples
-      return (
+      return isMobile ? (
+        <NaturezaCards naturezas={naturezas} handleOpenModal={handleOpenModal} handleDelete={handleDelete} />
+      ) : (
+        // Existing Natureza table
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-gray-200 dark:bg-gray-800">
@@ -286,8 +305,11 @@ function GestaoDadosApoioPage(): ReactElement {
       );
     }
 
-    // Renderização da tabela de OBMs com células mescladas
-    return (
+    // activeTab === 'obm'
+    return isMobile ? (
+      <ObmCards obmsAgrupadas={obmsAgrupadas} handleOpenModal={handleOpenModal} handleDelete={handleDelete} />
+    ) : (
+      // Existing OBM table
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-gray-200 dark:bg-gray-800">
@@ -340,7 +362,7 @@ function GestaoDadosApoioPage(): ReactElement {
             Adicionar Nov{activeTab === 'obm' ? 'a OBM' : 'a Natureza'}
           </button>
         </div>
-        {loading ? <Spinner text="Carregando dados..." /> : renderTable()}
+        {loading ? <Spinner text="Carregando dados..." /> : renderContent()}
       </div>
 
       {isModalOpen && (
