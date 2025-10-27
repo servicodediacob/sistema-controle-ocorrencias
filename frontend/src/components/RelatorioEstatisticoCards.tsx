@@ -50,7 +50,7 @@ const RelatorioEstatisticoCards: React.FC<RelatorioEstatisticoCardsProps> = ({ g
         }, criarTotaisIniciais());
 
         return (
-          <div key={grupo} className="rounded-lg border-2 border-primary-dark bg-surface-dark shadow-lg">
+          <div key={grupo} className="rounded-lg border border-primary-dark bg-surface-dark shadow-lg">
             <button
               className="flex w-full items-center justify-between p-4 text-xl font-bold text-primary-light"
               onClick={() => toggleGroup(grupo)}
@@ -66,7 +66,7 @@ const RelatorioEstatisticoCards: React.FC<RelatorioEstatisticoCardsProps> = ({ g
                 {subgrupos.map((row) => {
                   const subgrupoKey = `${grupo}-${row.subgrupo}`;
                   return (
-                    <div key={subgrupoKey} className="rounded-md bg-background border border-border">
+                    <div key={subgrupoKey} className="rounded-md bg-surface border border-border">
                       <button
                         className="flex w-full items-center justify-between p-3 text-md font-medium text-text-strong"
                         onClick={() => toggleSubgroup(subgrupoKey)}
@@ -75,7 +75,7 @@ const RelatorioEstatisticoCards: React.FC<RelatorioEstatisticoCardsProps> = ({ g
                         {openSubgroups[subgrupoKey] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                       </button>
                       {openSubgroups[subgrupoKey] && (
-                        <div className="border-t border-border p-3 text-sm text-text grid grid-cols-2 gap-2">
+                        <div className="border-t border-border p-3 text-sm text-text grid grid-cols-2 gap-2 bg-background">
                           <div className="col-span-2 font-semibold text-text-strong">Dados Estatísticos:</div>
                           <div><span className="font-medium">Diurno:</span> {row.diurno}</div>
                           <div><span className="font-medium">Noturno:</span> {row.noturno}</div>
@@ -95,7 +95,7 @@ const RelatorioEstatisticoCards: React.FC<RelatorioEstatisticoCardsProps> = ({ g
         );
       })}
       {/* Total Geral Card */}
-      <div className="rounded-lg border-2 border-primary-dark bg-surface-dark shadow-lg mt-6">
+      <div className="rounded-lg border border-primary-dark bg-surface-dark shadow-lg mt-6">
         <button
           className="flex w-full items-center justify-between p-4 text-xl font-bold text-primary-light"
           onClick={() => toggleGroup('TOTAL_GERAL')} // Using a unique key for the total group
@@ -108,7 +108,7 @@ const RelatorioEstatisticoCards: React.FC<RelatorioEstatisticoCardsProps> = ({ g
         </button>
         {openGroups['TOTAL_GERAL'] && (
           <div className="border-t border-border p-4 space-y-3">
-            <div className="rounded-md bg-background border border-border">
+            <div className="rounded-md bg-surface border border-border">
               <div className="p-3 text-sm text-text grid grid-cols-2 gap-2">
                 <div className="col-span-2 font-semibold text-text-strong">Dados Consolidados:</div>
                 <div><span className="font-medium">Diurno:</span> {totals.diurno}</div>

@@ -162,11 +162,11 @@ function RelatorioPage() {
           <label htmlFor="data-fim" className="text-sm text-text">Data de Fim</label>
           <input id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
         </div>
-        <div className="flex flex-wrap gap-4 mt-4 sm:mt-0"> {/* New div for buttons */}
-          <button onClick={handleGenerateReport} disabled={loading} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
+        <div className="flex flex-nowrap gap-4 mt-4 sm:mt-0 w-full justify-center sm:w-auto"> {/* New div for buttons */}
+          <button onClick={handleGenerateReport} disabled={loading} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto">
             {loading ? 'Gerando...' : 'Gerar Relatório'}
           </button>
-          <button onClick={handleDownloadPdf} disabled={loading} className="rounded-md bg-red-700 px-6 py-3 font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60">
+          <button onClick={handleDownloadPdf} disabled={loading} className="rounded-md bg-red-700 px-6 py-3 font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto">
             Baixar PDF
           </button>
         </div>
