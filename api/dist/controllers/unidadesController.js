@@ -49,6 +49,17 @@ const criarUnidade = async (req, res) => {
         return;
     }
     try {
+        const existingObm = await prisma_1.prisma.$queryRaw `
+      SELECT id, nome, crbm_id FROM "obms" WHERE nome = ${nome}
+    `;
+        if (existingObm.length > 0) {
+            const obm = existingObm[0];
+            const crbm = await prisma_1.prisma.cRBM.findUnique({ where: { id: obm.crbm_id } });
+            res.status(409).json({
+                message: `A OBM "${nome}" já existe e está associada ao CRBM "${crbm?.nome || 'desconhecido'}".`,
+            });
+            return;
+        }
         const novaUnidade = await prisma_1.prisma.oBM.create({
             data: {
                 nome: nome,
@@ -59,12 +70,6 @@ const criarUnidade = async (req, res) => {
         res.status(201).json(novaUnidade);
     }
     catch (error) {
-        // O Prisma fornece códigos de erro específicos para diferentes violações de constraints.
-        // P2002 é o código para violação de constraint de unicidade (unique).
-        if (isPrismaKnownError(error) && error.code === 'P2002') {
-            res.status(409).json({ message: `A OBM "${nome}" já existe.` });
-            return;
-        }
         logger_1.default.error({ err: error, body: req.body }, 'Erro ao criar unidade (OBM).');
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }

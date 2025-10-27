@@ -1,0 +1,11 @@
+
+@keyframes pulse-bright {
+  0%, 100% {
+    background-color: #f59e0b; /* amber-500 */
+    box-shadow: 0 0 8px #f59e0b;
+  }
+  50% {
+    background-color: #fbbF24; /* amber-400 */
+    box-shadow: 0 0 16px #fbbF24;
+  }
+}

@@ -52,6 +52,9 @@ const getRelatorioCompleto = async (req, res) => {
             },
             orderBy: { data_ocorrencia: 'desc' },
         });
+        // --- DEBUG: Verificando dados brutos de óbitos ---
+        console.log('--- Dados Brutos de Óbitos ---');
+        console.dir(obitos, { depth: null });
         // Processamento e Agregação dos Dados (em memória)
         const relatorioMap = new Map();
         const todasNaturezas = await prisma_1.prisma.naturezaOcorrencia.findMany({
@@ -94,11 +97,27 @@ const getRelatorioCompleto = async (req, res) => {
                 return indexA - indexB;
             return a.subgrupo.localeCompare(b.subgrupo);
         });
-        res.status(200).json({
+        const totalGeralEstatisticas = estatisticasFinais.reduce((acc, curr) => acc + curr.total_geral, 0);
+        const totalObitos = obitos.reduce((acc, curr) => acc + (curr.quantidade_vitimas || 0), 0);
+        // --- DEBUG: Verificando o total calculado ---
+        console.log('--- Total de Óbitos Calculado ---');
+        console.log(totalObitos);
+        // Assumindo que req.user é populado pelo middleware de autenticação
+        const usuarioNome = req.user?.nome || 'Usuário Desconhecido';
+        const responseData = {
             estatisticas: estatisticasFinais,
+            totalGeralEstatisticas,
             obitos: obitos.map(o => ({ ...o, natureza_nome: o.natureza.subgrupo, obm_nome: o.obm?.nome })),
+            totalObitos,
             destaques: detalhadas.map(d => ({ ...d, natureza_descricao: d.natureza.subgrupo, obm_nome: d.cidade.nome, crbm_nome: d.cidade.crbm.nome })),
-        });
+            usuarioNome,
+            dataInicio: dataInicioDate.toISOString().split('T')[0],
+            dataFim: dataFimDate.toISOString().split('T')[0],
+        };
+        // --- DEBUG: Verificando o objeto de resposta final ---
+        console.log('--- Objeto de Resposta Final ---');
+        console.dir(responseData, { depth: null });
+        res.status(200).json(responseData);
     }
     catch (error) {
         if (error?.name === 'BadRequestError') {

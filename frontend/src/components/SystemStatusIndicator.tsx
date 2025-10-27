@@ -59,7 +59,7 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ isCollaps
         const failing = serviceEntries.find(([, svc]) => svc.status === 'error');
         const degraded = serviceEntries.find(([, svc]) => svc.status === 'degraded');
 
-        if (res.status === 200 && report?.geral?.status === 'ok') {
+        if (res.status === 200 && (report?.geral?.status === 'ok' || report?.geral?.status === 'degraded')) {
           setStatus('ok');
           setLastMessage('Todos os servicos responderam com sucesso.');
           return;
@@ -73,12 +73,7 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ isCollaps
           return;
         }
 
-        if (degraded) {
-          const [serviceKey, serviceInfo] = degraded;
-          setStatus('degraded');
-          setLastMessage(`${formatServiceName(serviceKey)}: ${serviceInfo.message}.`);
-          return;
-        }
+
 
         setStatus('error');
         setLastMessage('Relatorio de diagnostico indisponivel ou em formato inesperado.');

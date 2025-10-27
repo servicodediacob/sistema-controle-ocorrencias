@@ -12,12 +12,14 @@ const obitosRegistrosController_1 = require("../controllers/obitosRegistrosContr
 const relatorioController_1 = require("../controllers/relatorioController");
 const dashboardController_1 = require("../controllers/dashboardController");
 const router = (0, express_1.Router)();
+// --- Rotas de Naturezas (Públicas) ---
+router.get('/naturezas', dadosController_1.getNaturezas);
+router.post('/naturezas/por-nomes', dadosController_1.getNaturezasPorNomes);
 // Aplica proteção a todas as rotas deste arquivo
 router.use(authMiddleware_1.proteger);
-// --- Rotas de Naturezas ---
-router.route('/naturezas').get(dadosController_1.getNaturezas).post(roleMiddleware_1.isAdmin, dadosController_1.criarNatureza);
+// --- Rotas de Naturezas (Protegidas) ---
+router.post('/naturezas', roleMiddleware_1.isAdmin, dadosController_1.criarNatureza);
 router.route('/naturezas/:id').put(roleMiddleware_1.isAdmin, dadosController_1.atualizarNatureza).delete(roleMiddleware_1.isAdmin, dadosController_1.excluirNatureza);
-router.post('/naturezas/por-nomes', dadosController_1.getNaturezasPorNomes); // <-- ROTA ADICIONADA
 // --- Rotas de Unidades (OBMs) e CRBMs ---
 router.route('/unidades').get(unidadesController_1.getUnidades).post(roleMiddleware_1.isAdmin, unidadesController_1.criarUnidade);
 router.route('/unidades/:id').put(roleMiddleware_1.isAdmin, unidadesController_1.atualizarUnidade).delete(roleMiddleware_1.isAdmin, unidadesController_1.excluirUnidade);

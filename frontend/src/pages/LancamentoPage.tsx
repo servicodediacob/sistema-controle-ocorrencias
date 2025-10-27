@@ -155,8 +155,10 @@ function LancamentoPage() {
       return Array.from(mergedDataMap.values());
     }, [cidades, naturezas]);
   const fetchDados = useCallback(async () => {
-    if (!dataRegistro || cidades.length === 0 || naturezas.length === 0) return;
-    if (!usuarioLogado) return;
+    if (!usuarioLogado || cidades.length === 0 || naturezas.length === 0) {
+      return;
+    }
+
     setLoadingPagina(true);
     try {
       const [dadosLoteApi, dadosDetalhados] = await Promise.all([
@@ -167,7 +169,7 @@ function LancamentoPage() {
       console.log('[fetchDados] dadosDetalhados:', dadosDetalhados);
 
       // Carregar lançamentos pendentes para a data atual
-      const lancamentosPendentesParaData = (await offlineSyncService.getPendingLancamentos(usuarioLogado?.id)).filter(
+      const lancamentosPendentesParaData = (await offlineSyncService.getPendingLancamentos(usuarioLogado.id)).filter(
         p => p.data_registro === dataRegistro
       );
       console.log('[fetchDados] lancamentosPendentesParaData:', lancamentosPendentesParaData);
@@ -183,17 +185,26 @@ function LancamentoPage() {
       setDadosTabela(mergedDadosLote);
       setOcorrenciasDetalhadas(Array.isArray(dadosDetalhados) ? dadosDetalhados : []);
     } catch (error) {
+      console.error('[fetchDados] Falha ao carregar dados:', error);
       addNotification('Falha ao carregar os dados da página.', 'error');
     } finally {
       setLoadingPagina(false);
     }
-  }, [dataRegistro, addNotification, mergeLancamentos, cidades, naturezas, usuarioLogado?.id]);
+  }, [dataRegistro, addNotification, mergeLancamentos, cidades, naturezas, usuarioLogado]);
+
+  const dadosApoioProntos = Boolean(
+    usuarioLogado &&
+    !loadingDataApoio &&
+    cidades.length > 0 &&
+    naturezas.length > 0
+  );
 
   useEffect(() => {
-    if (!loadingDataApoio) {
-      fetchDados();
+    if (!dadosApoioProntos) {
+      return;
     }
-  }, [fetchDados, loadingDataApoio]);
+    fetchDados();
+  }, [dadosApoioProntos, fetchDados]);
 
   // Efeito para gerenciar o status online/offline
   useEffect(() => {

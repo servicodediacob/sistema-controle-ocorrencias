@@ -23,3 +23,13 @@
   border-color: #34d399; /* Tailwind's emerald-400 */
   box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.5); /* A subtle glow */
 }
+
+.highlight-lancamento {
+  animation: pulse-bright 2s infinite;
+  color: white !important;
+  font-weight: bold;
+}
+
+.highlight-lancamento svg {
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+}

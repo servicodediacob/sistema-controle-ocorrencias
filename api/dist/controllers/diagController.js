@@ -90,71 +90,81 @@ const checkSisgpoStatus = async () => {
     }
 };
 const runDiagnostics = async (_req, res) => {
-    logger_1.default.info('Iniciando diagnostico geral do sistema...');
-    const report = {
-        geral: {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-        },
-        servicos: {
-            database: { status: 'degraded', message: 'Verificacao nao executada' },
-            auth: { status: 'degraded', message: 'Verificacao nao executada' },
-            sisgpo: { status: 'degraded', message: 'Verificacao nao executada' },
-        },
-    };
-    // 1. Diagnostico do banco de dados
+    const timestamp = new Date().toISOString();
+    // 1. Verifica conexão com o banco de dados (consulta simples)
+    let database;
     try {
-        const [, duration] = await timePromise(db_1.default.query('SELECT NOW()'));
-        report.servicos.database = {
+        const [, durationMs] = await timePromise(db_1.default.query('SELECT 1'));
+        database = {
             status: 'ok',
-            message: 'Conexao bem-sucedida.',
-            durationMs: duration,
+            message: 'Consulta básica ao banco executada com sucesso.',
+            durationMs,
         };
     }
     catch (err) {
-        report.servicos.database = {
+        const failure = err;
+        logger_1.default.error({ err: failure?.error ?? err }, '[Diag] Falha ao consultar o banco de dados.');
+        database = {
             status: 'error',
-            message: 'Falha na conexao com o banco de dados.',
-            durationMs: err.duration,
-            details: err.error instanceof Error ? err.error.message : 'Erro desconhecido.',
+            message: 'Falha ao executar consulta básica no banco de dados.',
+            durationMs: failure?.duration,
+            details: stringifyDetails(failure?.error),
         };
-        report.geral.status = 'error';
-        logger_1.default.error({ err: err.error }, 'Diagnostico falhou na verificacao do banco de dados.');
     }
-    // 2. Diagnostico do sistema de autenticacao (JWT)
-    try {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            throw new Error('A variavel de ambiente JWT_SECRET nao esta definida.');
+    // 2. Valida configuração de autenticação (JWT secret)
+    let auth;
+    const authStart = process.hrtime();
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+        auth = {
+            status: 'error',
+            message: 'JWT_SECRET não configurado.',
+            durationMs: toDurationMs(process.hrtime(authStart)),
+        };
+    }
+    else {
+        try {
+            const token = jsonwebtoken_1.default.sign({ ping: true }, jwtSecret, { expiresIn: '1m' });
+            jsonwebtoken_1.default.verify(token, jwtSecret);
+            auth = {
+                status: 'ok',
+                message: 'Segredo JWT válido.',
+                durationMs: toDurationMs(process.hrtime(authStart)),
+            };
         }
-        const testPayload = { id: 'test' };
-        const testToken = jsonwebtoken_1.default.sign(testPayload, secret, { expiresIn: '1s' });
-        jsonwebtoken_1.default.verify(testToken, secret);
-        report.servicos.auth = {
-            status: 'ok',
-            message: 'Segredo JWT esta configurado e funcional.',
-        };
+        catch (error) {
+            logger_1.default.error({ err: error }, '[Diag] Falha ao validar JWT_SECRET.');
+            auth = {
+                status: 'error',
+                message: 'Falha ao validar JWT_SECRET.',
+                durationMs: toDurationMs(process.hrtime(authStart)),
+                details: stringifyDetails(error instanceof Error ? error.message : error),
+            };
+        }
     }
-    catch (error) {
-        report.servicos.auth = {
-            status: 'error',
-            message: 'Falha no sistema de autenticacao.',
-            details: error.message,
-        };
-        report.geral.status = 'error';
-        logger_1.default.error({ err: error }, 'Diagnostico falhou na verificacao do JWT.');
+    // 3. Consulta serviço externo SISGPO (se configurado)
+    const sisgpo = await checkSisgpoStatus();
+    const services = {
+        database,
+        auth,
+        sisgpo,
+    };
+    const serviceStatuses = Object.values(services).map((svc) => svc.status);
+    let geralStatus = 'ok';
+    if (serviceStatuses.includes('error')) {
+        geralStatus = 'error';
     }
-    // 3. Diagnostico do SISGPO
-    const sisgpoCheck = await checkSisgpoStatus();
-    report.servicos.sisgpo = sisgpoCheck;
-    if (sisgpoCheck.status === 'error') {
-        report.geral.status = 'error';
+    else if (serviceStatuses.includes('degraded')) {
+        geralStatus = 'degraded';
     }
-    else if (sisgpoCheck.status === 'degraded' && report.geral.status === 'ok') {
-        report.geral.status = 'degraded';
-    }
-    const httpStatus = report.geral.status === 'error' ? 503 : 200;
-    logger_1.default.info(`Diagnostico concluido com status: ${report.geral.status}`);
-    res.status(httpStatus).json(report);
+    const report = {
+        geral: {
+            status: geralStatus,
+            timestamp,
+        },
+        servicos: services,
+    };
+    const statusCode = geralStatus === 'error' ? 500 : 200;
+    res.status(statusCode).json(report);
 };
 exports.runDiagnostics = runDiagnostics;

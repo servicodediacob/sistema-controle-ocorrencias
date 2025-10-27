@@ -17,8 +17,8 @@ interface SidebarProps {
   closeMobileMenu: () => void;
 }
 
-const NavItem: React.FC<{ to: string; icon: React.ReactNode; label: string; isCollapsed: boolean; onClick: () => void; }> = ({ to, icon, label, isCollapsed, onClick }) => {
-  const navLinkClasses = "flex items-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700";
+const NavItem: React.FC<{ to: string; icon: React.ReactNode; label: string; isCollapsed: boolean; onClick: () => void; isHighlighted?: boolean; }> = ({ to, icon, label, isCollapsed, onClick, isHighlighted }) => {
+  const navLinkClasses = `flex items-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700 ${isHighlighted ? 'highlight-lancamento' : ''}`;
   const activeClasses = "bg-blue-700 text-white";
 
   return (
@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
         <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatório Estatístico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatório de Óbitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
-        <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lançar Ocorrências" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lançar Ocorrências" isCollapsed={isCollapsed} onClick={closeMobileMenu} isHighlighted={true} />
 
         {(user?.role === 'admin' || user?.perfil === 'admin') && (
           <>

@@ -5,6 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.io = void 0;
 require("dotenv/config");
+// Tratamento de Erros Globais (deve vir antes de qualquer outro código)
+process.on('uncaughtException', (error) => {
+    console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', error);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION! 💥 Shutting down...', reason);
+    process.exit(1);
+});
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
@@ -37,6 +46,8 @@ const PORT = process.env.PORT || 3001;
 const defaultAllowedOrigins = [
     'https://sisgpo.vercel.app',
     'https://sistema-controle-ocorrencias-fronte.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
 ];
 const rawAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? '';
 const envAllowedOrigins = rawAllowedOrigins
