@@ -210,14 +210,14 @@ function LancamentoModal({
             );
           })}
         </form>
-        <div className="flex flex-shrink-0 items-center justify-end gap-4 border-t border-gray-700 p-6">
-          <button type="button" onClick={limparFormulario} className="mr-auto rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700">
+        <div className="flex flex-shrink-0 items-center justify-between flex-wrap gap-4 border-t border-gray-700 p-6">
+          <button type="button" onClick={limparFormulario} className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 w-full sm:w-auto">
             Limpar Formulário
           </button>
-          <button type="button" onClick={onClose} className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500">
+          <button type="button" onClick={onClose} className="rounded-md bg-gray-600 px-6 py-3 font-semibold text-white transition hover:bg-gray-500 w-full sm:w-auto">
             Cancelar
           </button>
-          <button type="submit" form="lancamento-form" className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
+          <button type="submit" form="lancamento-form" className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 w-full sm:w-auto">
             {isEditing ? 'Salvar Alterações' : 'Enviar Dados'}
           </button>
         </div>
