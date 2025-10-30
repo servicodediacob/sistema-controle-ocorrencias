@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthProvider';
+import { useAuth } from './contexts/AuthProvider';
 import { offlineSyncService } from './services/offlineSyncService';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -15,7 +15,7 @@ import PerfilPage from './pages/PerfilPage';
 import AuditoriaPage from './pages/AuditoriaPage';
 import OcorrenciaPage from './pages/OcorrenciaPage';
 import RelatorioObitosPage from './pages/RelatorioObitosPage';
-import GestaoOcorrenciasPage from './pages/GestaoOcorrenciasPage';
+
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
@@ -81,9 +81,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <AppContent />
     </Router>
   );
 };
