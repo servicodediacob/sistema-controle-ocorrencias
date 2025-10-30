@@ -17,9 +17,22 @@ interface ChatMessage {
   recipientId: number;
   text: string;
   timestamp: string;
+  status: 'enviado' | 'visualizado';
+  seenAt: string | null;
 }
 
 type Conversations = Record<number, ChatMessage[]>;
+
+type StoredChatMessage = Partial<ChatMessage> & {
+  senderId: number;
+  senderName: string;
+  recipientId: number;
+  text: string;
+  timestamp: string;
+};
+
+type SocketMessagePayload = Omit<ChatMessage, 'status' | 'seenAt'> &
+  Partial<Pick<ChatMessage, 'status' | 'seenAt'>>;
 
 interface LoggedInUser {
   id: number;
@@ -39,6 +52,7 @@ interface IChatContext {
   unreadCounts: Record<number, number>;
   totalUnread: number;
   markConversationAsRead: (userId: number) => void;
+  markMessagesAsSeen: (partnerId: number) => void;
 }
 
 const ChatContext = createContext<IChatContext | null>(null);
@@ -61,6 +75,33 @@ const dedupeUsers = (users: LoggedInUser[]): LoggedInUser[] => {
   return Array.from(byId.values());
 };
 
+const normalizeChatMessage = (message: StoredChatMessage): ChatMessage => ({
+  senderId: message.senderId,
+  senderName: message.senderName,
+  recipientId: message.recipientId,
+  text: message.text,
+  timestamp: message.timestamp,
+  status: message.status ?? 'enviado',
+  seenAt: message.seenAt ?? null,
+});
+
+const normalizeConversations = (raw: unknown): Conversations => {
+  if (!raw || typeof raw !== 'object') {
+    return {};
+  }
+
+  const normalized: Conversations = {};
+  Object.entries(raw as Record<string, StoredChatMessage[]>).forEach(([key, messages]) => {
+    const partnerId = Number(key);
+    if (Number.isNaN(partnerId) || !Array.isArray(messages)) {
+      return;
+    }
+    normalized[partnerId] = messages.map((message) => normalizeChatMessage(message));
+  });
+
+  return normalized;
+};
+
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { usuario } = useAuth();
   const { socket } = useSocket();
@@ -69,7 +110,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [conversations, setConversations] = useState<Conversations>(() => {
     try {
       const savedConversations = sessionStorage.getItem('chatConversations');
-      return savedConversations ? JSON.parse(savedConversations) : {};
+      if (!savedConversations) {
+        return {};
+      }
+      return normalizeConversations(JSON.parse(savedConversations));
     } catch (error) {
       console.error('Failed to parse conversations from sessionStorage', error);
       return {};
@@ -146,6 +190,47 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, []);
 
+  const markMessagesAsSeen = useCallback(
+    (partnerId: number) => {
+      if (!usuario || !socket) return;
+
+      let didUpdate = false;
+      const seenAtTimestamp = new Date().toISOString();
+
+      setConversations((prev) => {
+        const conversation = prev[partnerId];
+        if (!conversation) {
+          return prev;
+        }
+
+        const updatedConversation = conversation.map((msg) => {
+          if (msg.recipientId === usuario.id && msg.status === 'enviado') {
+            didUpdate = true;
+            return { ...msg, status: 'visualizado', seenAt: seenAtTimestamp };
+          }
+          return msg;
+        });
+
+        if (!didUpdate) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [partnerId]: updatedConversation,
+        };
+      });
+
+      if (!didUpdate) {
+        return;
+      }
+
+      socket.emit('mark-as-seen', { partnerId, readerId: usuario.id });
+      markConversationAsRead(partnerId);
+    },
+    [socket, usuario, markConversationAsRead],
+  );
+
   const sendMessage = useCallback(
     (recipientId: number, text: string) => {
       if (!socket) {
@@ -184,12 +269,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setOnlineUsers(sanitized);
     };
 
-    const handleNewMessage = (message: ChatMessage) => {
+    const handleNewMessage = (message: SocketMessagePayload) => {
       const partnerId = message.senderId === usuario.id ? message.recipientId : message.senderId;
+      const normalizedMessage = normalizeChatMessage(message);
 
       setConversations((prev) => ({
         ...prev,
-        [partnerId]: [...(prev[partnerId] || []), message],
+        [partnerId]: [...(prev[partnerId] || []), normalizedMessage],
       }));
 
       setOpenChats((prev) => {
@@ -241,9 +327,52 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addNotification(`Primeiro login Google: ${payload?.email || ''}`, 'warning');
       }
     };
+
+    const handleMessagesSeen = ({
+      partnerId,
+      readerId,
+      seenAt,
+    }: {
+      partnerId: number;
+      readerId: number;
+      seenAt?: string;
+    }) => {
+      if (usuario?.id !== partnerId) {
+        return;
+      }
+
+      const seenTimestamp = seenAt ?? new Date().toISOString();
+
+      setConversations((prev) => {
+        const conversation = prev[readerId];
+        if (!conversation) {
+          return prev;
+        }
+
+        let didUpdate = false;
+        const updatedConversation = conversation.map((msg) => {
+          if (msg.recipientId === readerId && msg.status === 'enviado') {
+            didUpdate = true;
+            return { ...msg, status: 'visualizado', seenAt: seenTimestamp };
+          }
+          return msg;
+        });
+
+        if (!didUpdate) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [readerId]: updatedConversation,
+        };
+      });
+    };
+
     socket.on('acesso:solicitacao-nova', handleNewAccess);
     socket.on('acesso:google-primeiro-login', handleFirstGoogle);
     socket.on('new-private-message', handleNewMessage);
+    socket.on('messages-seen', handleMessagesSeen);
 
     socket.emit('request-logged-in-users');
 
@@ -252,6 +381,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('new-private-message', handleNewMessage);
       socket.off('acesso:solicitacao-nova', handleNewAccess);
       socket.off('acesso:google-primeiro-login', handleFirstGoogle);
+      socket.off('messages-seen', handleMessagesSeen);
     };
   }, [socket, usuario, addNotification]);
 
@@ -267,6 +397,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         unreadCounts,
         totalUnread,
         markConversationAsRead,
+        markMessagesAsSeen,
       }}
     >
       {children}

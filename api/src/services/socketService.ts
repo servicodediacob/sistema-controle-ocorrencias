@@ -93,6 +93,8 @@ export const onSocketConnection = (io: Server) => {
             recipientId,
             text: text.trim(),
             timestamp,
+            status: 'enviado' as const,
+            seenAt: null,
           };
 
           // Entrega ao(s) socket(s) do destinatário, se online
@@ -113,6 +115,56 @@ export const onSocketConnection = (io: Server) => {
           ack?.({ ok: true });
         } catch (err) {
           logger.error({ err }, '[Socket.IO] Erro em send-private-message');
+          ack?.({ ok: false, error: 'internal_error' });
+        }
+      },
+    );
+
+    socket.on(
+      'mark-as-seen',
+      (
+        payload: { partnerId: number; readerId: number },
+        ack?: (result: { ok: boolean; error?: string }) => void,
+      ) => {
+        try {
+          const reader = socketToUser.get(socket.id);
+          if (!reader) {
+            ack?.({ ok: false, error: 'not_authenticated' });
+            return;
+          }
+
+          const { partnerId, readerId } = payload || ({} as any);
+
+          if (!partnerId || !readerId) {
+            ack?.({ ok: false, error: 'invalid_payload' });
+            return;
+          }
+
+          if (reader.id !== readerId) {
+            ack?.({ ok: false, error: 'forbidden' });
+            return;
+          }
+
+          const seenAt = new Date().toISOString();
+          const responsePayload = { partnerId, readerId, seenAt };
+
+          const partnerSockets = userSockets.get(partnerId);
+          if (partnerSockets && partnerSockets.size > 0) {
+            partnerSockets.forEach((sid) => io.to(sid).emit('messages-seen', responsePayload));
+          }
+
+          const readerSockets = userSockets.get(readerId);
+          if (readerSockets && readerSockets.size > 0) {
+            readerSockets.forEach((sid) => {
+              if (sid !== socket.id) {
+                io.to(sid).emit('messages-seen', responsePayload);
+              }
+            });
+          }
+
+          ack?.({ ok: true });
+        } catch (err) {
+          logger.error({ err }, '[Socket.IO] Erro em mark-as-seen');
           ack?.({ ok: false, error: 'internal_error' });
         }
       },

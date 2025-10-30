@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChat } from '../contexts/ChatProvider';
 import { useAuth } from '../contexts/AuthProvider';
+import { formatTimestamp } from '../utils/date';
 import './PrivateChatWindow.css'; // Importa o novo CSS
 
 interface PrivateChatWindowProps {
@@ -11,7 +12,7 @@ interface PrivateChatWindowProps {
 
 function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   const { usuario } = useAuth();
-  const { conversations, sendMessage, closeChat, onlineUsers, markConversationAsRead } = useChat();
+  const { conversations, sendMessage, closeChat, onlineUsers, markMessagesAsSeen } = useChat();
   const [isVisible, setIsVisible] = useState(false);
   
   const [newMessage, setNewMessage] = useState('');
@@ -33,19 +34,19 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const acknowledgeMessages = useCallback(() => {
-    markConversationAsRead(partnerId);
-  }, [markConversationAsRead, partnerId]);
+  const markAsSeen = useCallback(() => {
+    markMessagesAsSeen(partnerId);
+  }, [markMessagesAsSeen, partnerId]);
 
   useEffect(() => {
-    acknowledgeMessages();
-  }, [acknowledgeMessages]);
+    markAsSeen();
+  }, [markAsSeen]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
       sendMessage(partnerId, newMessage);
-      acknowledgeMessages();
+      markAsSeen();
       setNewMessage('');
     }
   };
@@ -53,8 +54,8 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   return (
     <div
       className={`chat-window ${isVisible ? 'visible' : ''} flex flex-col bg-surface border border-border shadow-2xl rounded-lg`}
-      onMouseEnter={acknowledgeMessages}
-      onFocusCapture={acknowledgeMessages}
+      onMouseEnter={markAsSeen}
+      onFocusCapture={markAsSeen}
     >
       {/* Cabeçalho da Janela de Chat */}
       <div className="flex items-center justify-between flex-shrink-0 border-b border-border p-2">
@@ -65,7 +66,7 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
         </div>
         <button 
           onClick={() => {
-            acknowledgeMessages();
+            markAsSeen();
             closeChat(partnerId);
           }} 
           className="flex items-center justify-center h-8 w-8 rounded-full text-text hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-text-strong"
@@ -81,8 +82,16 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
           const isMe = msg.senderId === usuario?.id;
           return (
             <div key={index} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[85%] rounded-lg px-3 py-2 ${isMe ? 'bg-teal-600 text-white' : 'bg-gray-600 text-white'}`}>
+              <div className={`max-w-[85%] rounded-lg px-3 py-2 ${isMe ? 'bg-teal-600 text-white' : (msg.status === 'visualizado' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-white')}`}>
                 <p className="text-sm text-white break-words">{msg.text}</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                <span>{formatTimestamp(msg.timestamp)}</span>
+                {isMe && (
+                  <span title={msg.seenAt ? new Date(msg.seenAt).toLocaleString('pt-BR') : ''}>
+                    {msg.status === 'visualizado' ? 'Visualizado' : 'Enviado'}
+                  </span>
+                )}
               </div>
             </div>
           );
