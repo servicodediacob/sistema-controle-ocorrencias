@@ -1,6 +1,6 @@
 // Caminho: frontend/src/components/PrivateChatWindow.tsx
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChat } from '../contexts/ChatProvider';
 import { useAuth } from '../contexts/AuthProvider';
 import './PrivateChatWindow.css'; // Importa o novo CSS
@@ -11,7 +11,7 @@ interface PrivateChatWindowProps {
 
 function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   const { usuario } = useAuth();
-  const { conversations, sendMessage, closeChat, onlineUsers } = useChat();
+  const { conversations, sendMessage, closeChat, onlineUsers, markConversationAsRead } = useChat();
   const [isVisible, setIsVisible] = useState(false);
   
   const [newMessage, setNewMessage] = useState('');
@@ -33,16 +33,29 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const acknowledgeMessages = useCallback(() => {
+    markConversationAsRead(partnerId);
+  }, [markConversationAsRead, partnerId]);
+
+  useEffect(() => {
+    acknowledgeMessages();
+  }, [acknowledgeMessages]);
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
       sendMessage(partnerId, newMessage);
+      acknowledgeMessages();
       setNewMessage('');
     }
   };
 
   return (
-    <div className={`chat-window ${isVisible ? 'visible' : ''} flex flex-col bg-surface border border-border shadow-2xl rounded-lg`}>
+    <div
+      className={`chat-window ${isVisible ? 'visible' : ''} flex flex-col bg-surface border border-border shadow-2xl rounded-lg`}
+      onMouseEnter={acknowledgeMessages}
+      onFocusCapture={acknowledgeMessages}
+    >
       {/* Cabeçalho da Janela de Chat */}
       <div className="flex items-center justify-between flex-shrink-0 border-b border-border p-2">
         <div className="flex items-center gap-2 pl-2">
@@ -51,7 +64,10 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
           <h3 className="font-semibold text-text-strong truncate text-sm">{partnerName}</h3>
         </div>
         <button 
-          onClick={() => closeChat(partnerId)} 
+          onClick={() => {
+            acknowledgeMessages();
+            closeChat(partnerId);
+          }} 
           className="flex items-center justify-center h-8 w-8 rounded-full text-text hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-text-strong"
           title="Fechar conversa"
         >

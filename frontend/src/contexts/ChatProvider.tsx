@@ -5,6 +5,7 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
 } from 'react';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthProvider';
@@ -35,6 +36,9 @@ interface IChatContext {
   openChatWith: (userId: number) => void;
   closeChat: (userId: number) => void;
   sendMessage: (recipientId: number, text: string) => void;
+  unreadCounts: Record<number, number>;
+  totalUnread: number;
+  markConversationAsRead: (userId: number) => void;
 }
 
 const ChatContext = createContext<IChatContext | null>(null);
@@ -97,16 +101,49 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [openChats]);
   const [onlineUsers, setOnlineUsers] = useState<LoggedInUser[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<number, number>>(() => {
+    try {
+      const stored = sessionStorage.getItem('chatUnreadCounts');
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Failed to parse unread counts from sessionStorage', error);
+      return {};
+    }
+  });
 
-  const openChatWith = useCallback(
-    (userId: number) => {
-      setOpenChats((prev) => (prev.includes(userId) ? prev : [...prev, userId]));
-    },
-    [],
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('chatUnreadCounts', JSON.stringify(unreadCounts));
+    } catch (error) {
+      console.error('Failed to save unread counts to sessionStorage', error);
+    }
+  }, [unreadCounts]);
+
+  const totalUnread = useMemo(
+    () => Object.values(unreadCounts).reduce((sum, count) => sum + count, 0),
+    [unreadCounts],
   );
+
+  const openChatWith = useCallback((userId: number) => {
+    setOpenChats((prev) => {
+      const withoutUser = prev.filter((id) => id !== userId);
+      return [userId, ...withoutUser];
+    });
+  }, []);
 
   const closeChat = useCallback((userId: number) => {
     setOpenChats((prev) => prev.filter((id) => id !== userId));
+  }, []);
+
+  const markConversationAsRead = useCallback((userId: number) => {
+    setUnreadCounts((prev) => {
+      if (!prev[userId]) {
+        return prev;
+      }
+      const updated = { ...prev };
+      delete updated[userId];
+      return updated;
+    });
   }, []);
 
   const sendMessage = useCallback(
@@ -155,9 +192,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         [partnerId]: [...(prev[partnerId] || []), message],
       }));
 
-      openChatWith(partnerId);
+      setOpenChats((prev) => {
+        if (prev.length === 0) {
+          return [partnerId];
+        }
+        if (prev[0] === partnerId) {
+          return prev;
+        }
+        if (prev.includes(partnerId)) {
+          const withoutPartner = prev.filter((id) => id !== partnerId);
+          return [...withoutPartner, partnerId];
+        }
+        return [...prev, partnerId];
+      });
 
       if (message.recipientId === usuario.id && message.senderId !== usuario.id) {
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [partnerId]: (prev[partnerId] || 0) + 1,
+        }));
         addNotification(`Nova mensagem de ${message.senderName}`, 'info');
         try {
           const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -200,7 +253,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('acesso:solicitacao-nova', handleNewAccess);
       socket.off('acesso:google-primeiro-login', handleFirstGoogle);
     };
-  }, [socket, usuario, addNotification, openChatWith]);
+  }, [socket, usuario, addNotification]);
 
   return (
     <ChatContext.Provider
@@ -211,6 +264,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         openChatWith,
         closeChat,
         sendMessage,
+        unreadCounts,
+        totalUnread,
+        markConversationAsRead,
       }}
     >
       {children}
