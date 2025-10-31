@@ -1,6 +1,7 @@
 // Caminho: frontend/src/pages/RelatorioPage.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { getPlantaoRange } from '../utils/date';
 import { IRelatorioRow, IObitoRegistro, IDestaqueRelatorio, IDataApoio, getNaturezas } from '../services/api';
 import { getRelatorioCompleto } from '../services/relatorioService';
 import RelatorioObitosTable from '../components/RelatorioObitosTable';
@@ -16,9 +17,9 @@ import AssinaturaModal from '../components/AssinaturaModal'; // Importar o modal
 import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
 
 function RelatorioPage() {
-  const today = new Date().toISOString().split('T')[0];
-  const [dataInicio, setDataInicio] = useState(today);
-  const [dataFim, setDataFim] = useState(today);
+  const { inicioISO, fimISO } = getPlantaoRange();
+  const [dataInicio, setDataInicio] = useState(inicioISO);
+  const [dataFim, setDataFim] = useState(fimISO);
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotification();
   const { user: usuarioLogado } = useAuth();
@@ -156,11 +157,21 @@ function RelatorioPage() {
       <div className="mb-8 flex flex-wrap items-center justify-center gap-4 rounded-lg bg-surface border border-border p-6">
         <div className="flex flex-col gap-2 w-full sm:w-auto">
           <label htmlFor="data-inicio" className="text-sm text-text">Data de Início</label>
-          <input id="data-inicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
+          <input id="data-inicio" type="datetime-local" value={dataInicio} onChange={e => {
+            const newStart = new Date(e.target.value);
+            const newEnd = new Date(newStart);
+            newEnd.setDate(newEnd.getDate() + 1);
+            const formatLocalDateTime = (date: Date) => {
+              const pad = (n: number) => n.toString().padStart(2, '0');
+              return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+            };
+            setDataInicio(e.target.value);
+            setDataFim(formatLocalDateTime(newEnd));
+          }} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
         </div>
         <div className="flex flex-col gap-2 w-full sm:w-auto">
           <label htmlFor="data-fim" className="text-sm text-text">Data de Fim</label>
-          <input id="data-fim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
+          <input id="data-fim" type="datetime-local" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rounded-md border border-border bg-background p-2.5 text-text-strong" />
         </div>
         <div className="flex flex-nowrap gap-4 mt-4 sm:mt-0 w-full justify-center sm:w-auto"> {/* New div for buttons */}
           <button onClick={handleGenerateReport} disabled={loading} className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto">

@@ -23,8 +23,14 @@ interface LancamentoModalProps {
   onSave: (formData: IEstatisticaLotePayload) => void;
   itemParaEditar: { cidade: ICidade; dados: Record<string, number> } | null;
   obmsComDados: Set<number>;
-  dataFinal?: string;
+
 }
+
+const formatNowForInput = () => {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+};
 
 function LancamentoModal({
   cidades,
@@ -33,7 +39,6 @@ function LancamentoModal({
   onSave,
   itemParaEditar,
   obmsComDados,
-  dataFinal,
 }: LancamentoModalProps) {
   const { addNotification } = useNotification();
   const { usuario } = useAuth();
@@ -58,7 +63,12 @@ function LancamentoModal({
   };
   // ======================= FIM DA CORREÇÃO =======================
 
-  const [dataLancamento, setDataLancamento] = useState<string>(dataFinal || new Date().toISOString().slice(0, 16));
+  const [dataLancamento, setDataLancamento] = useState<string>(() => {
+    if (isEditing && itemParaEditar) {
+      return (itemParaEditar.dados as any)?.data_registro ?? formatNowForInput();
+    }
+    return formatNowForInput();
+  });
   
   const [obmId, setObmId] = useState<number | ''>(() => {
     if (isEditing) return itemParaEditar.cidade.id;
@@ -76,12 +86,15 @@ function LancamentoModal({
   }, [quantidades]);
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing && itemParaEditar) {
       setObmId(itemParaEditar.cidade.id);
+      setDataLancamento((itemParaEditar.dados as any)?.data_registro ?? formatNowForInput());
     } else if (usuario?.role === 'user' && usuario.obm_id) {
       setObmId(usuario.obm_id);
+      setDataLancamento(formatNowForInput());
     } else {
       setObmId('');
+      setDataLancamento(formatNowForInput());
     }
     setQuantidades(getInitialQuantidades());
   }, [itemParaEditar, usuario, isEditing, naturezas]);

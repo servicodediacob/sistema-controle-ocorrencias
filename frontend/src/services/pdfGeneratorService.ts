@@ -24,7 +24,17 @@ export const gerarPDFRelatorioCompleto = (
 ) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const dataFormatada = new Date().toLocaleDateString('pt-BR');
-  const periodo = `${new Date(dataInicio).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} a ${new Date(dataFim).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`;
+  const formatHeaderDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+  };
+
+  const periodo = `${formatHeaderDate(dataInicio)} – ${formatHeaderDate(dataFim)}`;
 
   // --- Cabeçalho ---
   doc.setFontSize(18);

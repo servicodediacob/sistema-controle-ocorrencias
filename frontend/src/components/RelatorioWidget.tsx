@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // ======================= INÍCIO DA CORREÇÃO =======================
+import { getPlantaoRange } from '../utils/date';
 import { IRelatorioRow, IDataApoio, getNaturezas } from '../services/api';
 // A função de busca agora vem do seu próprio serviço
 import { getRelatorioCompleto } from '../services/relatorioService';
@@ -123,9 +124,9 @@ function RelatorioWidget() {
     if (reportData.length === 0) setLoading(true);
     try {
       // ======================= INÍCIO DA CORREÇÃO =======================
-      const hojeIso = new Date().toISOString().split('T')[0];
+      const { inicioISO, fimISO } = getPlantaoRange();
       const [relatorioData, naturezasData] = await Promise.all([
-        getRelatorioCompleto(hojeIso, hojeIso),
+        getRelatorioCompleto(inicioISO, fimISO),
         getNaturezas().catch((error): IDataApoio[] => {
           console.error('[RelatorioWidget] Falha ao buscar naturezas:', error);
           return [];

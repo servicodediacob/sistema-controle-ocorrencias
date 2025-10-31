@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactElement } from 'react';
 import MainLayout from '../components/MainLayout';
+import { getPlantaoRange } from '../utils/date';
 import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataProvider'; // Importar useData
@@ -84,9 +85,10 @@ function DashboardPage(): ReactElement {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      const { inicioISO, fimISO } = getPlantaoRange();
       const [statsData, plantaoInfo] = await Promise.all([
-        getDashboardStats(),
-        getPlantao()
+        getDashboardStats(inicioISO, fimISO),
+        getPlantao(inicioISO, fimISO)
       ]);
       setStats(statsData);
       setPlantaoData(plantaoInfo);
