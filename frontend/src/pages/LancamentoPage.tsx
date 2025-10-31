@@ -7,8 +7,8 @@ import { useAuth } from '../contexts/AuthProvider';
 import {
   ICidade,
   IEstatisticaAgrupada,
-  getEstatisticasAgrupadasPorData,
-  limparTodosOsDadosDoDia,
+  getEstatisticasAgrupadasPorIntervalo as getEstatisticasAgrupadasPorData,
+  limparDadosPorIntervalo as limparTodosOsDadosDoDia,
   registrarEstatisticasLote,
   IEstatisticaLotePayload,
   extractErrorMessage,
@@ -19,7 +19,7 @@ import {
   criarOcorrenciaDetalhada,
   atualizarOcorrenciaDetalhada,
   deletarOcorrenciaDetalhada,
-  getOcorrenciasDetalhadas,
+  getOcorrenciasDetalhadasPorIntervalo as getOcorrenciasDetalhadas,
   IOcorrenciaDetalhadaPayload,
   IOcorrenciaDetalhada,
 } from '../services/ocorrenciaDetalhadaService';
@@ -68,7 +68,32 @@ function LancamentoPage() {
 
   const [dadosTabela, setDadosTabela] = useState<IEstatisticaAgrupada[]>([]);
   const [ocorrenciasDetalhadas, setOcorrenciasDetalhadas] = useState<IOcorrenciaDetalhada[]>([]);
-  const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0]);
+  const getInitialDates = () => {
+    const formatLocalDateTime = (date: Date) => {
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(6, 30, 0, 0);
+
+    // Se agora for antes das 6:30, o plantão é do dia anterior
+    if (now.getHours() < 6 || (now.getHours() === 6 && now.getMinutes() < 30)) {
+      start.setDate(start.getDate() - 1);
+    }
+
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    return {
+      dataHoraInicial: formatLocalDateTime(start),
+      dataHoraFinal: formatLocalDateTime(end),
+    };
+  };
+
+  const [dataHoraInicial, setDataHoraInicial] = useState(getInitialDates().dataHoraInicial);
+  const [dataHoraFinal, setDataHoraFinal] = useState(getInitialDates().dataHoraFinal);
   const [loadingPagina, setLoadingPagina] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
@@ -78,7 +103,7 @@ function LancamentoPage() {
   const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
   const [isOnline, setIsOnline] = useState(navigator.onLine); // Estado para status online/offline
-  const [pendingOfflineLancamentos, setPendingOfflineLancamentos] = useState<PendingLancamento[]>([]); // Estado para lançamentos pendentes
+
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640); // New state for mobile view
 
@@ -120,53 +145,7 @@ function LancamentoPage() {
     });
   }, [naturezas]);
 
-  // Função auxiliar para mesclar dados da API com lançamentos pendentes offline
-      const mergeLancamentos = useCallback(( 
-        apiData: IEstatisticaAgrupada[],
-        pendingData: PendingLancamento[],
-        allCidades: ICidade[],
-        allNaturezas: IDataApoio[]
-      ): IEstatisticaAgrupada[] => {
-        const mergedDataMap = new Map<string, IEstatisticaAgrupada>();  
-      // Popular com dados existentes da API
-      apiData.forEach(item => {
-        const key = `${item.cidade_nome}|${item.natureza_nome}`; // Chave única para mesclagem
-        mergedDataMap.set(key, { ...item });
-      });
-  
-      // Mesclar dados pendentes offline
-      pendingData.forEach(pending => {
-        const cidade = allCidades.find(c => c.id === pending.obm_id);
-        // Assumindo que cada payload de estatística tem apenas uma natureza para simplificar
-        const naturezaPayload = pending.estatisticas[0]; 
-        const natureza = allNaturezas.find(n => n.id === naturezaPayload.natureza_id);
-  
-        if (cidade && natureza) {
-          const newEntry: IEstatisticaAgrupada = {
-            crbm_nome: cidade.crbm_nome,
-            cidade_nome: cidade.cidade_nome,
-            natureza_id: natureza.id,
-            natureza_grupo: natureza.grupo,
-            natureza_nome: natureza.nome || natureza.subgrupo || '',
-            natureza_abreviacao: natureza.abreviacao || null,
-            quantidade: naturezaPayload.quantidade,
-          };
-  
-          const key = `${newEntry.cidade_nome}|${newEntry.natureza_nome}`;
-          if (mergedDataMap.has(key)) {
-            // Se já existe, adiciona a quantidade
-            const existing = mergedDataMap.get(key)!;
-            existing.quantidade += newEntry.quantidade;
-            mergedDataMap.set(key, existing);
-          } else {
-            // Caso contrário, adiciona como nova entrada
-            mergedDataMap.set(key, newEntry);
-          }
-        }
-      });
-      console.log('[mergeLancamentos] Output - mergedDataMap:', mergedDataMap);
-      return Array.from(mergedDataMap.values());
-    }, [cidades, naturezas]);
+
   const fetchDados = useCallback(async () => {
     if (!usuarioLogado || cidades.length === 0 || naturezas.length === 0) {
       return;
@@ -175,27 +154,10 @@ function LancamentoPage() {
     setLoadingPagina(true);
     try {
       const [dadosLoteApi, dadosDetalhados] = await Promise.all([
-        getEstatisticasAgrupadasPorData(dataRegistro),
-        getOcorrenciasDetalhadas(dataRegistro)
+        getEstatisticasAgrupadasPorData(dataHoraInicial, dataHoraFinal),
+        getOcorrenciasDetalhadas(dataHoraInicial, dataHoraFinal)
       ]);
-      console.log('[fetchDados] dadosLoteApi:', dadosLoteApi);
-      console.log('[fetchDados] dadosDetalhados:', dadosDetalhados);
-
-      // Carregar lançamentos pendentes para a data atual
-      const lancamentosPendentesParaData = (await offlineSyncService.getPendingLancamentos(usuarioLogado.id)).filter(
-        p => p.data_registro === dataRegistro
-      );
-      console.log('[fetchDados] lancamentosPendentesParaData:', lancamentosPendentesParaData);
-
-      const mergedDadosLote = mergeLancamentos(
-        Array.isArray(dadosLoteApi) ? dadosLoteApi : [],
-        lancamentosPendentesParaData,
-        cidades,
-        naturezas
-      );
-      console.log('[fetchDados] mergedDadosLote:', mergedDadosLote);
-
-      setDadosTabela(mergedDadosLote);
+      setDadosTabela(Array.isArray(dadosLoteApi) ? dadosLoteApi : []);
       setOcorrenciasDetalhadas(Array.isArray(dadosDetalhados) ? dadosDetalhados : []);
     } catch (error) {
       console.error('[fetchDados] Falha ao carregar dados:', error);
@@ -203,7 +165,7 @@ function LancamentoPage() {
     } finally {
       setLoadingPagina(false);
     }
-  }, [dataRegistro, addNotification, mergeLancamentos, cidades, naturezas, usuarioLogado]);
+  }, [dataHoraInicial, dataHoraFinal, addNotification, cidades, naturezas, usuarioLogado]);
 
   const dadosApoioProntos = Boolean(
     usuarioLogado &&
@@ -233,28 +195,7 @@ function LancamentoPage() {
     };
   }, []);
 
-  // Efeito para carregar lançamentos pendentes ao montar
-  useEffect(() => {
-    if (usuarioLogado) {
-      offlineSyncService.getPendingLancamentos(usuarioLogado.id).then(setPendingOfflineLancamentos);
-    }
-  }, [usuarioLogado]);
 
-  // Função para sincronizar lançamentos offline
-  const syncOfflineLancamentos = useCallback(async () => {
-    if (!isOnline || !usuarioLogado || pendingOfflineLancamentos.length === 0) {
-      return;
-    }
-
-    addNotification('Tentando sincronizar lançamentos offline...', 'info');
-    const { success } = await offlineSyncService.syncPendingLancamentos(usuarioLogado.id);
-
-    if (success) {
-      addNotification('Lançamentos offline sincronizados com sucesso!', 'success');
-      setPendingOfflineLancamentos(await offlineSyncService.getPendingLancamentos(usuarioLogado.id)); // Refresh list
-      fetchDados(); // Re-fetch main data to update totals
-    }
-  }, [isOnline, pendingOfflineLancamentos, addNotification, fetchDados, usuarioLogado]);
 
 
 
@@ -267,33 +208,11 @@ function LancamentoPage() {
   }, [dadosTabela, cidades]);
 
   const handleSaveLote = async (payload: IEstatisticaLotePayload) => {
-    if (!isOnline) {
-      try {
-        if (!usuarioLogado) {
-          addNotification('Você precisa estar logado para salvar dados offline.', 'error');
-          return;
-        }
-        await offlineSyncService.savePendingLancamento(payload, usuarioLogado.id);
-        setPendingOfflineLancamentos(await offlineSyncService.getPendingLancamentos(usuarioLogado.id));
-        addNotification('Lançamento salvo offline. Sincronizará quando a conexão for restabelecida.', 'info');
-        setIsModalOpen(false);
-        setItemParaEditar(null);
-        return;
-      } catch (error) {
-        addNotification('Falha ao salvar lançamento offline.', 'error');
-        return;
-      }
-    }
-
     try {
       const response = await registrarEstatisticasLote(payload);
       addNotification(response.message, 'success');
       setIsModalOpen(false);
       setItemParaEditar(null);
-      const novaData = payload.data_registro;
-      if (novaData !== dataRegistro) {
-        setDataRegistro(novaData);
-      }
       fetchDados(); // Sempre busca tudo de novo para garantir a consistência
       triggerDataRefetch(); // Notifica outros componentes que os dados foram atualizados
     } catch (error) {
@@ -312,10 +231,6 @@ function LancamentoPage() {
       }
       setIsDetalheModalOpen(false);
       setOcorrenciaParaEditar(null);
-      const novaData = (payload as any).data_ocorrencia;
-      if (novaData) {
-        setDataRegistro(novaData);
-      }
       fetchDados();
       triggerDataRefetch(); // Notifica outros componentes que os dados foram atualizados
     } catch (error) {
@@ -340,11 +255,11 @@ function LancamentoPage() {
       addNotification('Ação restrita a administradores.', 'error');
       return;
     }
-    const dataFormatada = new Date(dataRegistro).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+    const dataFormatada = new Date(dataHoraFinal).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do dia ${dataFormatada}?`)) {
       try {
         setLoadingPagina(true);
-        const response = await limparTodosOsDadosDoDia(dataRegistro);
+        const response = await limparTodosOsDadosDoDia(dataHoraFinal);
         addNotification(response.message, 'success');
         fetchDados();
       } catch (error) {
@@ -412,14 +327,38 @@ function LancamentoPage() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-surface p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="data-registro" className="text-sm text-text">
-              Data de Visualização
+            <label htmlFor="data-hora-inicial" className="text-sm text-text">
+              Data/Horário Inicial
             </label>
             <input
-              id="data-registro"
-              type="date"
-              value={dataRegistro}
-              onChange={e => setDataRegistro(e.target.value)}
+              id="data-hora-inicial"
+              type="datetime-local"
+              value={dataHoraInicial}
+              onChange={e => {
+                const newStart = new Date(e.target.value);
+                const newEnd = new Date(newStart);
+                newEnd.setDate(newEnd.getDate() + 1);
+
+                const formatLocalDateTime = (date: Date) => {
+                  const pad = (n: number) => n.toString().padStart(2, '0');
+                  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                };
+
+                setDataHoraInicial(e.target.value);
+                setDataHoraFinal(formatLocalDateTime(newEnd));
+              }}
+              className="rounded-md border border-border bg-background p-3 text-text-strong"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="data-hora-final" className="text-sm text-text">
+              Data/Horário Final
+            </label>
+            <input
+              id="data-hora-final"
+              type="datetime-local"
+              value={dataHoraFinal}
+              onChange={e => setDataHoraFinal(e.target.value)}
               className="rounded-md border border-border bg-background p-3 text-text-strong"
             />
           </div>
@@ -473,22 +412,7 @@ function LancamentoPage() {
         </div>
       </div>
 
-      {pendingOfflineLancamentos.length > 0 && (
-        <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg flex items-center justify-between">
-          <span>Você tem {pendingOfflineLancamentos.length} lançamento(s) pendente(s) de sincronização.</span>
-          {isOnline && (
-            <button
-              onClick={syncOfflineLancamentos}
-              className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
-            >
-              Sincronizar Agora
-            </button>
-          )}
-          {!isOnline && (
-            <span className="ml-4 text-sm">Aguardando conexão...</span>
-          )}
-        </div>
-      )}
+
 
       <h2 className="text-2xl font-bold text-text-strong mb-4">Lançamentos em Lote (Estatísticas)</h2>
       
@@ -573,7 +497,7 @@ function LancamentoPage() {
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
           itemParaEditar={itemParaEditar}
           obmsComDados={obmsComDados}
-          dataInicial={dataRegistro}
+          dataFinal={dataHoraFinal}
         />
       )}
 
@@ -595,7 +519,8 @@ function LancamentoPage() {
       {isCidadesPendentesModalOpen && (
         <CidadesPendentesModal
           onClose={() => setIsCidadesPendentesModalOpen(false)}
-          dataRegistro={dataRegistro}
+          dataHoraInicial={dataHoraInicial}
+          dataHoraFinal={dataHoraFinal}
         />
       )}
     </MainLayout>

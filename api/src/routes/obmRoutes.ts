@@ -2,10 +2,10 @@
 
 import { Router } from 'express';
 import { proteger, RequestWithUser } from '../middleware/authMiddleware';
-import { getObmsPendentesPorData } from '../controllers/obmController';
+import { getObmsPendentesPorIntervalo as getObmsPendentesPorData } from '../controllers/obmController';
 
 const router = Router();
 
-router.get('/pendentes-por-data', proteger, (req, res) => getObmsPendentesPorData(req as RequestWithUser, res));
+router.get('/pendentes-por-intervalo', proteger, (req, res) => getObmsPendentesPorData(req as RequestWithUser, res));
 
 export default router;

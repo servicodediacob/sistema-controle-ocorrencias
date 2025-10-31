@@ -21,8 +21,8 @@ import {
 
 import {
   registrarEstatisticasLote,
-  getEstatisticasAgrupadasPorData,
-  limparTodosOsDadosDoDia
+  getEstatisticasAgrupadasPorIntervalo as getEstatisticasAgrupadasPorData,
+  limparDadosPorIntervalo as limparTodosOsDadosDoDia
 } from '../controllers/estatisticasController';
 
 import { 
@@ -57,7 +57,7 @@ router.route('/usuarios/:id').put(isAdmin, atualizarUsuario).delete(isAdmin, exc
 
 // --- Rotas de Estatísticas ---
 router.post('/estatisticas/lote', registrarEstatisticasLote);
-router.get('/estatisticas/por-data', getEstatisticasAgrupadasPorData);
+router.get('/estatisticas/por-intervalo', getEstatisticasAgrupadasPorData);
 
 // --- Rotas de Óbitos ---
 router.route('/obitos-registros').get(getObitosPorData).post(criarObitoRegistro).delete(isAdmin, limparRegistrosPorData);
@@ -68,6 +68,6 @@ router.get('/relatorio-completo', getRelatorioCompleto);
 router.get('/dashboard/stats', getDashboardStats); // <-- ROTA ADICIONADA
 
 // --- Rota de Limpeza ---
-router.delete('/limpeza/dia-completo', isAdmin, limparTodosOsDadosDoDia);
+router.delete('/limpeza/intervalo', isAdmin, limparTodosOsDadosDoDia);
 
 export default router;

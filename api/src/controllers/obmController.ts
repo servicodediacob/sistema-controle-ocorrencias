@@ -5,15 +5,18 @@ import { RequestWithUser } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import logger from '../config/logger';
 
-export const getObmsPendentesPorData = async (req: RequestWithUser, res: Response): Promise<void> => {
-  const { data } = req.query;
+export const getObmsPendentesPorIntervalo = async (req: RequestWithUser, res: Response): Promise<void> => {
+  const { dataInicio, dataFim } = req.query;
 
-  if (!data || typeof data !== 'string') {
-    res.status(400).json({ message: 'A data é obrigatória.' });
+  if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+    res.status(400).json({ message: 'As datas de início e fim são obrigatórias.' });
     return;
   }
 
   try {
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
+
     // Encontrar todas as OBMs
     const todasObms = await prisma.oBM.findMany({
       select: {
@@ -31,7 +34,8 @@ export const getObmsPendentesPorData = async (req: RequestWithUser, res: Respons
     const obmsComEstatisticas = await prisma.estatisticaDiaria.findMany({
       where: {
         data_registro: {
-          equals: new Date(data + 'T00:00:00.000Z'), // Ensure comparison is for the start of the day in UTC
+          gte: inicio,
+          lte: fim,
         },
       },
       select: {
@@ -52,7 +56,7 @@ export const getObmsPendentesPorData = async (req: RequestWithUser, res: Respons
     })));
 
   } catch (error) {
-    logger.error({ err: error, data }, 'Erro ao buscar OBMs pendentes por data.');
+    logger.error({ err: error, dataInicio, dataFim }, 'Erro ao buscar OBMs pendentes por data.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

@@ -3,8 +3,8 @@
 import { Router } from 'express';
 import { 
   registrarEstatisticasLote, 
-  getEstatisticasAgrupadasPorData, 
-  limparTodosOsDadosDoDia,
+  getEstatisticasAgrupadasPorIntervalo as getEstatisticasAgrupadasPorData, 
+  limparDadosPorIntervalo as limparTodosOsDadosDoDia,
   getSisgpoDashboard 
 } from '../controllers/estatisticasController';
 
@@ -16,11 +16,10 @@ const router = Router();
 
 // --- Rotas existentes ---
 router.post('/estatisticas/lote', proteger, registrarEstatisticasLote);
-router.get('/estatisticas/por-data', proteger, getEstatisticasAgrupadasPorData);
-router.delete('/estatisticas/limpar-dia', proteger, roleMiddleware(['ADMIN']), limparTodosOsDadosDoDia);
+router.get('/estatisticas/por-intervalo', proteger, getEstatisticasAgrupadasPorData);
+router.delete('/limpeza/intervalo', proteger, roleMiddleware(['ADMIN']), limparTodosOsDadosDoDia);
 
 // --- Nova rota para a integração ---
 router.get('/estatisticas-externas/dashboard', getSisgpoDashboard);
 
 export default router;
-

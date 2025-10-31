@@ -75,30 +75,28 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
 };
 
 
-export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res: Response) => {
-  const { data_ocorrencia } = req.query;
+export const getOcorrenciasDetalhadasPorIntervalo = async (req: RequestWithUser, res: Response) => {
+  const { dataInicio, dataFim } = req.query;
 
-  if (!data_ocorrencia || typeof data_ocorrencia !== 'string') {
-    return res.status(400).json({ message: 'O parâmetro "data_ocorrencia" é obrigatório.' });
+  if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+    return res.status(400).json({ message: 'Os parâmetros "dataInicio" e "dataFim" são obrigatórios.' });
   }
 
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    const dataInicio = new Date(data_ocorrencia + 'T00:00:00.000Z');
-    const dataFim = new Date(data_ocorrencia + 'T23:59:59.999Z');
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
 
     const ocorrencias = await prisma.ocorrenciaDetalhada.findMany({
       where: {
         data_ocorrencia: {
-          gte: dataInicio,
-          lte: dataFim,
+          gte: inicio,
+          lte: fim,
         },
         deletado_em: null,
       },
       include: { natureza: true, cidade: true },
       orderBy: [{ horario_ocorrencia: 'asc' }, { id: 'asc' }],
     });
-    // ======================= FIM DA CORREÇÃO =======================
 
     const resultadoFormatado = ocorrencias.map(od => ({
       ...od,
@@ -112,7 +110,7 @@ export const getOcorrenciasDetalhadasPorData = async (req: RequestWithUser, res:
 
     return res.status(200).json(resultadoFormatado);
   } catch (error) {
-    logger.error({ err: error, data: data_ocorrencia }, 'Erro ao buscar ocorrências detalhadas.');
+    logger.error({ err: error, dataInicio, dataFim }, 'Erro ao buscar ocorrências detalhadas.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -168,13 +166,13 @@ export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Resp
     });
 
     if (resultado.count === 0) {
-      return res.status(404).json({ message: 'Ocorr�ncia detalhada n�o encontrada.' });
+      return res.status(404).json({ message: 'Ocorr�ncia detalhada n�o encontrada.' });
     }
 
-    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorr�ncia detalhada marcada como exclu�da.');
+    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorr�ncia detalhada marcada como exclu�da.');
     return res.status(204).send();
   } catch (error) {
-    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorr�ncia detalhada.');
+    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorr�ncia detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

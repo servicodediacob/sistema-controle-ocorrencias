@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 // A importação de 'ICidade' foi removida, pois não é usada diretamente aqui.
-import { getEstatisticasAgrupadasPorData, IEstatisticaAgrupada } from '../services/api';
+import { getEstatisticasAgrupadasPorIntervalo as getEstatisticasAgrupadasPorData, IEstatisticaAgrupada } from '../services/api';
 import { useData } from '../contexts/DataProvider';
 import { useNotification } from '../contexts/NotificationContext';
 import LancamentoTabela from './LancamentoTabela';
@@ -40,7 +40,12 @@ function LancamentoWidget() {
   const fetchDadosTabela = useCallback(async () => {
     setLoading(true);
     try {
-      const dados = await getEstatisticasAgrupadasPorData(dataRegistro);
+      const dataInicio = new Date(dataRegistro);
+      dataInicio.setHours(0, 0, 0, 0);
+      const dataFim = new Date(dataRegistro);
+      dataFim.setHours(23, 59, 59, 999);
+
+      const dados = await getEstatisticasAgrupadasPorData(dataInicio.toISOString(), dataFim.toISOString());
       setDadosTabela(dados);
     } catch (error) {
       addNotification('Falha ao carregar lançamentos do dia para o widget.', 'error');

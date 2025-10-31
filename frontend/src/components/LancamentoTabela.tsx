@@ -375,7 +375,13 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
                     <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-blue-900/30 p-3 font-bold">{totalLinha}</td>
                     {showActions && (
                       <td className="sticky right-0 z-20 whitespace-nowrap border-l border-border p-3 relative">
-                        <button onClick={() => onEdit(cidade, dadosParaEdicao)} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">Editar</button>
+                        {podeEditar ? (
+                          <button onClick={() => onEdit(cidade, dadosParaEdicao)} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-yellow-500 px-3 py-1 text-sm font-semibold text-black transition hover:bg-yellow-400">
+                            Editar
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500">—</span>
+                        )}
                       </td>
                     )}
                   </tr>

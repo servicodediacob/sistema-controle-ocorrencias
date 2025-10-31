@@ -49,10 +49,10 @@ export const criarOcorrenciaDetalhada = async (payload: IOcorrenciaDetalhadaPayl
   }
 };
 
-export const getOcorrenciasDetalhadas = async (data: string): Promise<IOcorrenciaDetalhada[]> => {
+export const getOcorrenciasDetalhadasPorIntervalo = async (dataInicio: string, dataFim: string): Promise<IOcorrenciaDetalhada[]> => {
   try {
-    const response = await api.get('/ocorrencias-detalhadas', {
-      params: { data_ocorrencia: data }
+    const response = await api.get('/ocorrencias-detalhadas/por-intervalo', {
+      params: { dataInicio, dataFim }
     });
     return response as unknown as IOcorrenciaDetalhada[];
   } catch (error) {

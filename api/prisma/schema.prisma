@@ -70,6 +70,9 @@ model Usuario {
   obitos_registros       ObitoRegistro[]
   auditoria_logs         AuditoriaLog[] // Added this line
 
+  sentMessages     ChatMessage[] @relation("sentMessages")
+  receivedMessages ChatMessage[] @relation("receivedMessages")
+
   @@map("usuarios")
 }
 
@@ -197,4 +200,19 @@ model AuditoriaLog {
   usuario Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
 
   @@map("auditoria_logs")
+}
+
+model ChatMessage {
+  id          Int         @id @default(autoincrement())
+  text        String
+  createdAt   DateTime    @default(now()) @db.Timestamptz()
+  senderId    Int
+  recipientId Int
+  status      String      @default("enviado") // enviado, visualizado
+  seenAt      DateTime?   @db.Timestamptz()
+
+  sender      Usuario     @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   Usuario     @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
 }

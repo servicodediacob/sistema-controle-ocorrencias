@@ -79,8 +79,8 @@ const apiService = {
   updateUsuario: (id: number, data: Partial<IUser>): Promise<{ message: string; usuario: IUser }> => api.put(`/usuarios/${id}`, data),
   deleteUsuario: (id: number): Promise<{ message: string }> => api.delete(`/usuarios/${id}`),
   registrarEstatisticasLote: (payload: IEstatisticaLotePayload): Promise<{ message: string }> => api.post('/estatisticas/lote', payload),
-  getEstatisticasAgrupadasPorData: (data: string): Promise<IEstatisticaAgrupada[]> => api.get('/estatisticas/por-data', { params: { data } }),
-  limparTodosOsDadosDoDia: (data: string): Promise<{ message: string }> => api.delete('/limpeza/dia-completo', { params: { data } }),
+  getEstatisticasAgrupadasPorIntervalo: (dataInicio: string, dataFim: string): Promise<IEstatisticaAgrupada[]> => api.get('/estatisticas/por-intervalo', { params: { dataInicio, dataFim } }),
+  limparDadosPorIntervalo: (dataInicio: string, dataFim: string): Promise<{ message: string }> => api.delete('/limpeza/intervalo', { params: { dataInicio, dataFim } }),
   getRelatorioCompleto: (data_inicio: string, data_fim: string): Promise<IRelatorioCompleto> => api.get('/relatorio-completo', { params: { data_inicio, data_fim } }),
   getObitosPorData: (data: string): Promise<IObitoRegistro[]> => api.get('/obitos-registros', { params: { data } }),
   criarObitoRegistro: (payload: IObitoRegistroPayload): Promise<IObitoRegistro> => api.post('/obitos-registros', payload),
@@ -97,11 +97,11 @@ const apiService = {
   getAuditoriaLogs: (page = 1, limit = 20): Promise<IPaginatedAuditoriaLogs> => api.get('/auditoria', { params: { page, limit } }),
 
   // New service for pending OBMs
-  getObmsPendentesPorData: (data: string): Promise<IPendingObm[]> => api.get('/obms/pendentes-por-data', { params: { data } }),
+  getObmsPendentesPorIntervalo: (dataInicio: string, dataFim: string): Promise<IPendingObm[]> => api.get('/obms/pendentes-por-intervalo', { params: { dataInicio, dataFim } }),
   // ======================= INÍCIO DA CORREÇÃO =======================
   // Adicionando a função que faltava ao objeto de serviço.
   // Esta função é usada pelo 'ocorrenciaDetalhadaService.ts'
-  getOcorrenciasDetalhadas: (data: string): Promise<IOcorrenciaDetalhada[]> => api.get('/ocorrencias-detalhadas', { params: { data_ocorrencia: data } }),
+  getOcorrenciasDetalhadasPorIntervalo: (dataInicio: string, dataFim: string): Promise<IOcorrenciaDetalhada[]> => api.get('/ocorrencias-detalhadas/por-intervalo', { params: { dataInicio, dataFim } }),
   // ======================= FIM DA CORREÇÃO =======================
 };
 
@@ -113,16 +113,16 @@ export const {
   criarOcorrencia, getOcorrencias, updateOcorrencia, deleteOcorrencia, setOcorrenciaDestaque,
   getDashboardStats, getPlantao, getSupervisores, setSupervisorPlantao,
   getUsuarios, criarUsuario, updateUsuario, deleteUsuario,
-  registrarEstatisticasLote, getEstatisticasAgrupadasPorData,
-  limparTodosOsDadosDoDia, getRelatorioCompleto,
+  registrarEstatisticasLote, getEstatisticasAgrupadasPorIntervalo,
+  limparDadosPorIntervalo, getRelatorioCompleto,
   getObitosPorData, criarObitoRegistro, atualizarObitoRegistro, deletarObitoRegistro, limparRegistrosDoDia,
   createUnidade, updateUnidade, deleteUnidade, createNatureza, updateNatureza, deleteNatureza,
   alterarPropriaSenha,   getAuditoriaLogs,
   // New export
-  getObmsPendentesPorData,
+  getObmsPendentesPorIntervalo,
   // ======================= INÍCIO DA CORREÇÃO =======================
   // Exportando a função corrigida para que outros arquivos possam importá-la
-  getOcorrenciasDetalhadas
+  getOcorrenciasDetalhadasPorIntervalo
   // ======================= FIM DA CORREÇÃO =======================
 } = apiService;
 

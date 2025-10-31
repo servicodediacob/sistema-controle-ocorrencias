@@ -81,7 +81,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <UserCircle size={24} />
-            {!isCollapsed && <span className="font-semibold truncate">{user?.nome || 'Usuário'}</span>}
+            {!isCollapsed && (
+              <div className="flex flex-col leading-tight truncate">
+                <span className="font-semibold truncate">{user?.nome ?? 'Usuário'}</span>
+                <span className="text-xs text-gray-400 truncate">{user?.obm_nome ?? 'OBM não informada'}</span>
+              </div>
+            )}
           </div>
           {!isCollapsed && (isUserMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
         </button>

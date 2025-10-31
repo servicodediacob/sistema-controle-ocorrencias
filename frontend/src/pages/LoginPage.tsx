@@ -360,53 +360,115 @@ function LoginPage(): ReactElement {
 
 
 
-  const handleGoogleSignIn = () => {
+    const handleGoogleSignIn = () => {
 
-    if (isSignInInProgress.current) {
 
-      return;
 
-    }
+      if (isSignInInProgress.current) {
 
-    if (!isGsiReady) {
 
-      addNotification('Servico de login ainda esta carregando. Tente novamente.', 'warning');
 
-      return;
+        return;
 
-    }
 
-    isSignInInProgress.current = true;
 
-    setLoading(true);
+      }
 
-    try {
 
-      window.google?.accounts?.id?.prompt((notification: any) => {
 
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      if (!isGsiReady) {
 
-          isSignInInProgress.current = false;
 
-          setLoading(false);
 
-        }
+        addNotification('Servico de login ainda esta carregando. Tente novamente.', 'warning');
 
-      });
 
-    } catch (error) {
 
-      isSignInInProgress.current = false;
+        return;
 
-      setLoading(false);
 
-      console.error('Erro ao exibir o prompt do Google:', error);
 
-      addNotification('Nao foi possivel iniciar o login com Google. Tente novamente.', 'error');
+      }
 
-    }
 
-  };
+
+      isSignInInProgress.current = true;
+
+
+
+      try {
+
+
+
+        window.google?.accounts?.id?.prompt((notification: any) => {
+
+
+
+          if (notification.isDisplayMoment()) {
+
+
+
+            setLoading(false);
+
+
+
+          } else if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+
+
+
+            isSignInInProgress.current = false;
+
+
+
+            setLoading(false);
+
+
+
+          } else if (notification.isDismissedMoment()) {
+
+
+
+            isSignInInProgress.current = false;
+
+
+
+            setLoading(false);
+
+
+
+          }
+
+
+
+        });
+
+
+
+      } catch (error) {
+
+
+
+        isSignInInProgress.current = false;
+
+
+
+        setLoading(false);
+
+
+
+        console.error('Erro ao exibir o prompt do Google:', error);
+
+
+
+        addNotification('Nao foi possivel iniciar o login com Google. Tente novamente.', 'error');
+
+
+
+      }
+
+
+
+    };
 
 
 

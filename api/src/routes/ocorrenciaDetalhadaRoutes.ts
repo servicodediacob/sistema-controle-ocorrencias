@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { proteger } from '../middleware/authMiddleware';
 import { 
   criarOcorrenciaDetalhada, 
-  getOcorrenciasDetalhadasPorData,
+  getOcorrenciasDetalhadasPorIntervalo as getOcorrenciasDetalhadasPorData,
   atualizarOcorrenciaDetalhada,
   deletarOcorrenciaDetalhada
 } from '../controllers/ocorrenciaDetalhadaController';
@@ -14,7 +14,8 @@ router.use(proteger);
 
 router.route('/')
   .post(criarOcorrenciaDetalhada)
-  .get(getOcorrenciasDetalhadasPorData);
+
+router.get('/por-intervalo', getOcorrenciasDetalhadasPorData);
 
 router.route('/:id')
   .put(atualizarOcorrenciaDetalhada)

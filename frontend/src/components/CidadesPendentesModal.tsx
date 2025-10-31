@@ -1,13 +1,14 @@
 // frontend/src/components/CidadesPendentesModal.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getObmsPendentesPorData } from '../services/api'; // Assuming this will be added to api.ts
+import { getObmsPendentesPorIntervalo as getObmsPendentesPorData } from '../services/api'; // Assuming this will be added to api.ts
 import { useNotification } from '../contexts/NotificationContext';
 import Spinner from './Spinner';
 
 interface CidadesPendentesModalProps {
   onClose: () => void;
-  dataRegistro: string;
+  dataHoraInicial: string;
+  dataHoraFinal: string;
 }
 
 interface PendingObm {
@@ -18,7 +19,7 @@ interface PendingObm {
 
 import { ChevronDown, ChevronUp } from 'lucide-react'; // Import icons
 
-const CidadesPendentesModal: React.FC<CidadesPendentesModalProps> = ({ onClose, dataRegistro }) => {
+const CidadesPendentesModal: React.FC<CidadesPendentesModalProps> = ({ onClose, dataHoraInicial, dataHoraFinal }) => {
   const [pendingObms, setPendingObms] = useState<IPendingObm[]>([]);
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotification();
@@ -28,7 +29,7 @@ const CidadesPendentesModal: React.FC<CidadesPendentesModalProps> = ({ onClose, 
     const fetchPendingObms = async () => {
       setLoading(true);
       try {
-        const response = await getObmsPendentesPorData(dataRegistro);
+        const response = await getObmsPendentesPorData(dataHoraInicial, dataHoraFinal);
         setPendingObms(response);
       } catch (error) {
         addNotification('Falha ao carregar cidades pendentes.', 'error');
@@ -39,7 +40,7 @@ const CidadesPendentesModal: React.FC<CidadesPendentesModalProps> = ({ onClose, 
     };
 
     fetchPendingObms();
-  }, [dataRegistro, addNotification]);
+  }, [dataHoraInicial, dataHoraFinal, addNotification]);
 
   const groupedObms = useMemo(() => {
     return pendingObms.reduce((acc: Record<string, IPendingObm[]>, obm) => {
@@ -58,7 +59,7 @@ const CidadesPendentesModal: React.FC<CidadesPendentesModalProps> = ({ onClose, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-lg bg-surface border border-border p-6 text-text shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="mb-6 text-xl font-semibold text-text-strong">Cidades Pendentes ({dataRegistro})</h2>
+        <h2 className="mb-6 text-xl font-semibold text-text-strong">Cidades Pendentes ({new Date(dataHoraInicial).toLocaleDateString('pt-BR')} - {new Date(dataHoraFinal).toLocaleDateString('pt-BR')})</h2>
 
         {loading ? (
           <div className="flex justify-center p-4">

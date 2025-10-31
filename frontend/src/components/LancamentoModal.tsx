@@ -23,7 +23,7 @@ interface LancamentoModalProps {
   onSave: (formData: IEstatisticaLotePayload) => void;
   itemParaEditar: { cidade: ICidade; dados: Record<string, number> } | null;
   obmsComDados: Set<number>;
-  dataInicial?: string;
+  dataFinal?: string;
 }
 
 function LancamentoModal({
@@ -33,7 +33,7 @@ function LancamentoModal({
   onSave,
   itemParaEditar,
   obmsComDados,
-  dataInicial,
+  dataFinal,
 }: LancamentoModalProps) {
   const { addNotification } = useNotification();
   const { usuario } = useAuth();
@@ -58,7 +58,7 @@ function LancamentoModal({
   };
   // ======================= FIM DA CORREÇÃO =======================
 
-  const [dataRegistro, setDataRegistro] = useState<string>(dataInicial || new Date().toISOString().split('T')[0]);
+  const [dataLancamento, setDataLancamento] = useState<string>(dataFinal || new Date().toISOString().slice(0, 16));
   
   const [obmId, setObmId] = useState<number | ''>(() => {
     if (isEditing) return itemParaEditar.cidade.id;
@@ -109,7 +109,7 @@ function LancamentoModal({
       .filter(stat => Number.isFinite(stat.quantidade) && !Number.isNaN(stat.natureza_id));
 
     const payload: IEstatisticaLotePayload = {
-      data_registro: dataRegistro,
+      data_registro: dataLancamento,
       obm_id: obmId,
       estatisticas: estatisticas,
     };
@@ -166,8 +166,8 @@ function LancamentoModal({
             <div className="flex min-w-[250px] flex-1 flex-col gap-2">
               <label htmlFor="data_registro" className="text-sm text-gray-400">Data do Registro</label>
               <input
-                id="data_registro" name="data_registro" type="date"
-                value={dataRegistro} onChange={e => setDataRegistro(e.target.value)} required
+                id="data_lancamento" name="data_lancamento" type="datetime-local"
+                value={dataLancamento} onChange={e => setDataLancamento(e.target.value)} required
                 className="rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>

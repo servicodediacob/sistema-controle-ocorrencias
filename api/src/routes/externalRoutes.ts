@@ -7,7 +7,7 @@ import { checkHealth } from '@/controllers/healthController';
 import { getPlantao } from '@/controllers/plantaoController';
 import { getRelatorioCompleto } from '@/controllers/relatorioController';
 import {
-  getEstatisticasAgrupadasPorData,
+  getEstatisticasAgrupadasPorIntervalo as getEstatisticasAgrupadasPorData,
   getEspelhoBase,
 } from '@/controllers/estatisticasController';
 import verifySsoJwt from '@/middleware/verifySsoJwt';
@@ -23,10 +23,16 @@ router.get('/external/dashboard', verifySsoJwt, getDashboardDataForSso);
 router.get('/external/dashboard/stats', verifySsoJwt, getDashboardStats);
 router.get('/external/plantao', verifySsoJwt, getPlantao);
 router.get('/external/relatorio-completo', verifySsoJwt, getRelatorioCompleto);
-router.get('/external/estatisticas-por-data', verifySsoJwt, (req, res) => {
-  if (!req.query.data) {
-    req.query.data = new Date().toISOString().split('T')[0];
-  }
+router.get('/external/estatisticas-por-intervalo', verifySsoJwt, (req, res) => {
+  const data = req.query.data ? new Date(req.query.data as string) : new Date();
+  const dataInicio = new Date(data);
+  dataInicio.setHours(0, 0, 0, 0);
+  const dataFim = new Date(data);
+  dataFim.setHours(23, 59, 59, 999);
+
+  req.query.dataInicio = dataInicio.toISOString();
+  req.query.dataFim = dataFim.toISOString();
+
   return getEstatisticasAgrupadasPorData(req as any, res);
 });
 router.get('/external/espelho-base', verifySsoJwt, getEspelhoBase);

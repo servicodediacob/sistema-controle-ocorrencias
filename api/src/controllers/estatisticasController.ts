@@ -149,22 +149,19 @@ export const registrarEstatisticasLote = async (req: RequestWithUser, res: Respo
   }
 };
 
-export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
-  const { data } = req.query;
-  if (!data || typeof data !== 'string') {
-    return res.status(400).json({ message: 'A data é obrigatória.' });
+export const getEstatisticasAgrupadasPorIntervalo = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
+  const { dataInicio, dataFim } = req.query;
+  if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+    return res.status(400).json({ message: 'As datas de início e fim são obrigatórias.' });
   }
 
   try {
-    const base = parseDateParam(data, 'data');
-    const dataInicio = new Date(base);
-    dataInicio.setHours(0, 0, 0, 0);
-    const dataFim = new Date(base);
-    dataFim.setHours(23, 59, 59, 999);
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
 
     const estatisticas = await prisma.estatisticaDiaria.findMany({
       where: { 
-        data_registro: { gte: dataInicio, lte: dataFim },
+        data_registro: { gte: inicio, lte: fim },
         deletado_em: null,
       },
       include: {
@@ -216,42 +213,42 @@ export const getEstatisticasAgrupadasPorData = async (req: RequestWithUser, res:
   }
 };
 
-export const limparTodosOsDadosDoDia = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
-  const { data } = req.query;
+export const limparDadosPorIntervalo = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
+  const { dataInicio, dataFim } = req.query;
   const usuario = req.usuario;
 
   if (!usuario || usuario.role !== 'admin') {
     return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem executar esta ação.' });
   }
 
-  if (!data || typeof data !== 'string') {
-    return res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
+  if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+    return res.status(400).json({ message: 'As datas de início e fim são obrigatórias para limpar os registros.' });
   }
 
-  const dataInicio = new Date(data + 'T00:00:00.000Z');
-  const dataFim = new Date(data + 'T23:59:59.999Z');
+  const inicio = new Date(dataInicio);
+  const fim = new Date(dataFim);
 
   try {
     const now = new Date();
     const [loteResult, detalhadasResult, obitosResult] = await prisma.$transaction([
       prisma.estatisticaDiaria.updateMany({ 
-        where: { data_registro: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        where: { data_registro: { gte: inicio, lte: fim }, deletado_em: null },
         data: { deletado_em: now }
       }),
       prisma.ocorrenciaDetalhada.updateMany({ 
-        where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        where: { data_ocorrencia: { gte: inicio, lte: fim }, deletado_em: null },
         data: { deletado_em: now }
       }),
       prisma.obitoRegistro.updateMany({ 
-        where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+        where: { data_ocorrencia: { gte: inicio, lte: fim }, deletado_em: null },
         data: { deletado_em: now }
       }),
     ]);
 
     const totalLimpado = loteResult.count + detalhadasResult.count + obitosResult.count;
-    logger.info({ data, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
+    logger.info({ dataInicio, dataFim, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
     
-    return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });
+    return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o período.` });
 
   } catch (error) {
     logger.error({ err: error, query: req.query }, 'Erro ao limpar todos os dados do dia.');
