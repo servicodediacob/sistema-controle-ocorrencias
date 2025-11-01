@@ -15,6 +15,7 @@ import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
 import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
 
 import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
+import ConfirmarLimpezaModal from '../components/ConfirmarLimpezaModal';
 import { registrarGeracaoRelatorio } from '../services/auditoriaService';
 import AssinaturaModal from '../components/AssinaturaModal';
 
@@ -318,7 +319,6 @@ function RelatorioPage() {
 }
 
 export default RelatorioPage;
-
 
 
 
