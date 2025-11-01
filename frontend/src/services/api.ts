@@ -32,7 +32,7 @@ export interface IObitoRegistroPayload { data_ocorrencia: string; natureza_id: n
 export interface IObitoRegistro { id: number; data_ocorrencia: string; natureza_id: number; natureza_nome: string; numero_ocorrencia: string; obm_id: number; obm_nome: string; quantidade_vitimas: number; }
 export interface ISolicitacaoAcessoPayload { nome: string; email: string; senha: string; obm_id: number; }
 export interface ISolicitacao { id: number; nome: string; email: string; status: 'pendente' | 'aprovado' | 'recusado'; data_solicitacao: string; obm_nome: string; }
-export interface IAuditoriaLog { id: number; usuario_nome: string; acao: string; detalhes: Record<string, any>; criado_em: string; }
+export interface IAuditoriaLog { id: number; usuario_nome: string; obm_nome: string; acao: string; detalhes: Record<string, any>; criado_em: string; }
 export interface IPaginatedAuditoriaLogs { logs: IAuditoriaLog[]; pagination: { page: number; limit: number; total: number; totalPages: number; }; }
 
 // New interface for PendingObm

@@ -54,9 +54,21 @@ export const listarLogs = async (req: RequestWithUser, res: Response): Promise<v
 
   try {
     const logsQuery = `
-      SELECT id, usuario_nome, acao, detalhes, criado_em 
-      FROM auditoria_logs
-      ORDER BY criado_em DESC
+      SELECT
+        al.id,
+        al.usuario_nome,
+        o.nome as obm_nome,
+        al.acao,
+        al.detalhes,
+        al.criado_em
+      FROM
+        auditoria_logs al
+      LEFT JOIN
+        usuarios u ON al.usuario_id = u.id
+      LEFT JOIN
+        obms o ON u.obm_id = o.id
+      ORDER BY
+        al.criado_em DESC
       LIMIT $1 OFFSET $2;
     `;
     

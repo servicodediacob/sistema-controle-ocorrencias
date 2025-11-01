@@ -66,6 +66,7 @@ function AuditoriaPage(): ReactElement {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Data/Hora</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Usuário</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">OBM</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Ação</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text">Detalhes</th>
                 </tr>
@@ -77,6 +78,7 @@ function AuditoriaPage(): ReactElement {
                       {new Date(log.criado_em).toLocaleString('pt-BR')}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-text-strong">{log.usuario_nome}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-text">{log.obm_nome || 'N/A'}</td>
                     <td className="whitespace-nowrap px-6 py-4 font-mono text-yellow-400">{log.acao}</td>
                     <td className="px-6 py-4">
                       <JsonViewer data={log.detalhes} />
@@ -84,7 +86,7 @@ function AuditoriaPage(): ReactElement {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-500">
+                    <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
                       Nenhum log de auditoria encontrado.
                     </td>
                   </tr>
