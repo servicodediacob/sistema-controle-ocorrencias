@@ -4,6 +4,7 @@ import { RequestWithUser } from '@/middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
 import { parseDateParam } from '@/utils/date';
+import { excluirRegistrosAntigos } from '@/services/cleanupService';
 
 // ... (interface e criarOcorrenciaDetalhada permanecem iguais)
 interface OcorrenciaDetalhadaPayload {
@@ -21,6 +22,7 @@ interface OcorrenciaDetalhadaPayload {
 }
 
 export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
+  await excluirRegistrosAntigos();
   const payload: OcorrenciaDetalhadaPayload = req.body;
   const usuario_id = req.usuario?.id;
 

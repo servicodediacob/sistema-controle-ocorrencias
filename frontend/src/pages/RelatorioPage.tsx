@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getPlantaoRange } from '../utils/date';
 import { IRelatorioRow, IObitoRegistro, IDestaqueRelatorio, IDataApoio, getNaturezas } from '../services/api';
-import { getRelatorioCompleto } from '../services/relatorioService';
+import { getRelatorioCompleto, limparDadosPorIntervalo } from '../services/relatorioService';
 import RelatorioObitosTable from '../components/RelatorioObitosTable';
 import RelatorioDestaquesTable from '../components/RelatorioDestaquesTable';
 import { useNotification } from '../contexts/NotificationContext';
@@ -13,8 +13,9 @@ import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
 import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
 import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
-import AssinaturaModal from '../components/AssinaturaModal'; // Importar o modal
+
 import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
+import ConfirmarLimpezaModal from '../components/ConfirmarLimpezaModal';
 
 function RelatorioPage() {
   const { inicioISO, fimISO } = getPlantaoRange();
@@ -38,7 +39,7 @@ function RelatorioPage() {
   const [estatisticas, setEstatisticas] = useState<IRelatorioRow[]>([]);
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
   const [destaques, setDestaques] = useState<IDestaqueRelatorio[]>([]);
-  const [isAssinaturaModalOpen, setAssinaturaModalOpen] = useState(false); // Estado para o modal
+  const [isConfirmandoLimpeza, setIsConfirmandoLimpeza] = useState(false);
 
   const handleGenerateReport = useCallback(async () => {
     try {
@@ -79,24 +80,41 @@ function RelatorioPage() {
     handleGenerateReport();
   }, [handleGenerateReport]);
 
-  // Abre o modal
+  // Abre o modal de confirmação
   const handleDownloadPdf = () => {
     if (estatisticas.length === 0 && obitos.length === 0 && destaques.length === 0) {
       addNotification('Não há dados para gerar o PDF.', 'warning');
       return;
     }
-    setAssinaturaModalOpen(true);
+    setIsConfirmandoLimpeza(true);
   };
 
-  // Chamado pelo modal para gerar o PDF
-  const handleConfirmarAssinatura = (nome: string, funcao: string) => {
-    gerarPDFRelatorioCompleto(
-      { estatisticas, obitos, destaques },
-      dataInicio,
-      dataFim,
-      { nome, funcao }
-    );
-    setAssinaturaModalOpen(false);
+  // Chamado pelo modal para gerar o PDF e limpar os dados
+  const handleGerarRelatorioELimpar = async () => {
+    try {
+      setLoading(true);
+      // 1. Gerar PDF
+      gerarPDFRelatorioCompleto(
+        { estatisticas, obitos, destaques },
+        dataInicio,
+        dataFim,
+        { nome: usuarioLogado?.nome || '', funcao: usuarioLogado?.role || '' }
+      );
+
+      // 2. Limpar dados
+      await limparDadosPorIntervalo(dataInicio, dataFim);
+
+      addNotification('Relatório gerado e dados limpos com sucesso!', 'success');
+
+      // 3. Atualizar a UI
+      await handleGenerateReport();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao gerar relatório e limpar dados.';
+      addNotification(message, 'error');
+    } finally {
+      setLoading(false);
+      setIsConfirmandoLimpeza(false);
+    }
   };
 
   const groupedData = estatisticas.reduce((acc, row) => {
@@ -261,11 +279,11 @@ function RelatorioPage() {
         </div>
       )}
 
-      <AssinaturaModal
-        isOpen={isAssinaturaModalOpen}
-        onClose={() => setAssinaturaModalOpen(false)}
-        onConfirm={handleConfirmarAssinatura}
-        defaultNome={usuarioLogado?.nome}
+      <ConfirmarLimpezaModal
+        isOpen={isConfirmandoLimpeza}
+        onClose={() => setIsConfirmandoLimpeza(false)}
+        onConfirm={handleGerarRelatorioELimpar}
+        loading={loading}
       />
     </MainLayout>
   );

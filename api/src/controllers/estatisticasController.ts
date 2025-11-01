@@ -7,6 +7,7 @@ import logger from '../config/logger'; // Corrigido para caminho relativo
 import { parseDateParam } from '../utils/date'; // Corrigido para caminho relativo
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { excluirRegistrosAntigos } from '../services/cleanupService';
 
 // Segredos para a integração (use variáveis de ambiente em produção)
 const SHARED_SECRET = process.env.SSO_SHARED_SECRET || 'seu-segredo-compartilhado';
@@ -32,6 +33,7 @@ interface EstatisticaPayload {
 // --- SUAS FUNÇÕES EXISTENTES (Sem alterações na lógica interna) ---
 
 export const registrarEstatisticasLote = async (req: RequestWithUser, res: Response): Promise<Response | void> => {
+  await excluirRegistrosAntigos();
   const { data_registro, obm_id, estatisticas } = req.body as EstatisticaPayload;
   const usuario = req.usuario;
 

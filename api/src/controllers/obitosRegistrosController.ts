@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { RequestWithUser } from '@/middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
+import { excluirRegistrosAntigos } from '@/services/cleanupService';
 
 interface ObitoRegistroPayload {
   data_ocorrencia: string;
@@ -47,6 +48,7 @@ export const getObitosPorData = async (req: RequestWithUser, res: Response) => {
 };
 
 export const criarObitoRegistro = async (req: RequestWithUser, res: Response) => {
+  await excluirRegistrosAntigos();
   const payload = req.body as ObitoRegistroPayload;
   const usuario_id = req.usuario?.id;
 
@@ -101,10 +103,10 @@ export const deletarObitoRegistro = async (req: RequestWithUser, res: Response) 
         });
 
         if (resultado.count === 0) {
-            return res.status(404).json({ message: 'Registro de Óbito não encontrado.' });
+            return res.status(404).json({ message: 'Registro de ï¿½bito nï¿½o encontrado.' });
         }
 
-        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de Óbito marcado como excluído.');
+        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de ï¿½bito marcado como excluï¿½do.');
         return res.status(204).send();
     } catch (error) {
         logger.error({ err: error, params: req.params }, 'Erro ao deletar registro de Ã³bito.');

@@ -14,3 +14,14 @@ export const getRelatorioCompleto = async (
     throw new Error(extractErrorMessage(error));
   }
 };
+
+export const limparDadosPorIntervalo = async (
+  data_inicio: string,
+  data_fim: string
+): Promise<void> => {
+  try {
+    await api.delete('/limpeza/intervalo', { params: { dataInicio: data_inicio, dataFim: data_fim } });
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
