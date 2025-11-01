@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChat } from '../contexts/ChatProvider';
 import { useAuth } from '../contexts/AuthProvider';
 import { formatTimestamp } from '../utils/date';
+import { registrarAberturaChat, registrarFechamentoChat, registrarMensagemChat } from '../services/auditoriaService';
 import './PrivateChatWindow.css'; // Importa o novo CSS
 
 interface PrivateChatWindowProps {
@@ -29,6 +30,12 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (usuario) {
+      registrarAberturaChat(usuario.id, partnerId);
+    }
+  }, [usuario, partnerId]);
+
   // Efeito para rolar para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,6 +52,9 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
+      if (usuario) {
+        registrarMensagemChat(usuario.id, partnerId, newMessage);
+      }
       sendMessage(partnerId, newMessage);
       markAsSeen();
       setNewMessage('');
@@ -66,6 +76,9 @@ function PrivateChatWindow({ partnerId }: PrivateChatWindowProps) {
         </div>
         <button 
           onClick={() => {
+            if (usuario) {
+              registrarFechamentoChat(usuario.id, partnerId);
+            }
             markAsSeen();
             closeChat(partnerId);
           }} 

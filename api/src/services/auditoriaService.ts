@@ -4,6 +4,8 @@ import db from '@/db';
 import logger from '@/config/logger';
 import { RequestWithUser } from '@/middleware/authMiddleware';
 
+import { prisma } from '../lib/prisma'; // Import prisma
+
 /**
  * Registra uma ação de auditoria no banco de dados.
  * @param req - O objeto de requisição, que deve conter as informações do usuário autenticado.
@@ -15,13 +17,20 @@ export const registrarAcao = async (
   acao: string,
   detalhes: Record<string, any> = {}
 ): Promise<void> => {
-  // Se não houver um usuário na requisição (ex: um script rodando sem autenticação), não faz nada.
-  if (!req.usuario) {
-    logger.warn({ acao, detalhes }, 'Tentativa de registrar ação de auditoria sem usuário autenticado.');
-    return;
-  }
+  let usuario_id: number | null = null;
+  let usuario_nome: string | null = 'N/A';
 
-  const { id: usuario_id, nome: usuario_nome } = req.usuario;
+  if (req.usuario) {
+    usuario_id = req.usuario.id;
+    usuario_nome = req.usuario.nome;
+  } else if (detalhes.email) {
+    // If user is not in request (e.g. failed login), try to find user by email
+    const usuario = await prisma.usuario.findUnique({ where: { email: detalhes.email } });
+    if (usuario) {
+      usuario_id = usuario.id;
+      usuario_nome = usuario.nome;
+    }
+  }
 
   try {
     const query = `

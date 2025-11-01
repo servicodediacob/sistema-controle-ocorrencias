@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
 import { parseDateParam } from '@/utils/date';
 import { excluirRegistrosAntigos } from '@/services/cleanupService';
+import { registrarAcao } from '@/services/auditoriaService';
 
 // ... (interface e criarOcorrenciaDetalhada permanecem iguais)
 interface OcorrenciaDetalhadaPayload {
@@ -67,6 +68,8 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
       return ocorrenciaCriada;
     });
     
+    await registrarAcao(req, 'CRIAR_OCORRENCIA_DETALHADA', { ocorrencia: novaOcorrencia });
+
     logger.info({ ocorrenciaId: novaOcorrencia.id, usuarioId: usuario_id }, 'Ocorrência detalhada criada e definida como destaque.');
     return res.status(201).json(novaOcorrencia);
 
@@ -132,6 +135,8 @@ export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Re
       return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
     }
 
+    const ocorrenciaAntes = await prisma.ocorrenciaDetalhada.findUnique({ where: { id: Number(id) } });
+
     const ocorrenciaAtualizada = await prisma.ocorrenciaDetalhada.update({
       where: { id: Number(id) },
       data: {
@@ -151,6 +156,9 @@ export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Re
         usuario_id: req.usuario?.id,
       },
     });
+
+    await registrarAcao(req, 'ATUALIZAR_OCORRENCIA_DETALHADA', { antes: ocorrenciaAntes, depois: ocorrenciaAtualizada });
+
     logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada atualizada.');
     return res.status(200).json(ocorrenciaAtualizada);
   } catch (error) {
@@ -162,20 +170,23 @@ export const atualizarOcorrenciaDetalhada = async (req: RequestWithUser, res: Re
 export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Response) => {
   const { id } = req.params;
   try {
+    const ocorrenciaAntes = await prisma.ocorrenciaDetalhada.findUnique({ where: { id: Number(id) } });
+
     const resultado = await prisma.ocorrenciaDetalhada.updateMany({
       where: { id: Number(id), deletado_em: null },
       data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
     });
 
     if (resultado.count === 0) {
-      return res.status(404).json({ message: 'Ocorr�ncia detalhada n�o encontrada.' });
+      return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
     }
 
-    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorr�ncia detalhada marcada como exclu�da.');
+    await registrarAcao(req, 'DELETAR_OCORRENCIA_DETALHADA', { ocorrencia: ocorrenciaAntes });
+
+    logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada marcada como excluída.');
     return res.status(204).send();
   } catch (error) {
-    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorr�ncia detalhada.');
+    logger.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
-

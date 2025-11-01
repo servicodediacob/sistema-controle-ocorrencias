@@ -34,7 +34,19 @@ type LoginFormInputs = z.infer<typeof loginSchema>;
 
 type FormErrors = { [key in keyof LoginFormInputs]?: string };
 
+const MIN_LOADING_DURATION_MS = 600;
 
+const ensureMinimumLoadingDuration = async (startedAt: number) => {
+
+  const elapsed = Date.now() - startedAt;
+
+  if (elapsed < MIN_LOADING_DURATION_MS) {
+
+    await new Promise(resolve => setTimeout(resolve, MIN_LOADING_DURATION_MS - elapsed));
+
+  }
+
+};
 
 declare global { interface Window { google?: any } }
 
@@ -58,13 +70,13 @@ function LoginPage(): ReactElement {
 
   const [apiError, setApiError] = useState('');
 
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
 
 
 
-  const { user, login, loginWithJwt } = useAuth();
+  const { user, login, loginWithJwt, loading: authLoading } = useAuth();
 
   const { addNotification } = useNotification();
 
@@ -74,17 +86,21 @@ function LoginPage(): ReactElement {
 
   const [pendingGoogleProfile, setPendingGoogleProfile] = useState<{ nome: string; email: string } | null>(null);
 
+  const isLoading = isSubmitting || authLoading;
+
+  const hasAttemptedLoginRef = useRef(false);
+
 
 
   useEffect(() => {
 
-    if (user) {
+    if (user && !authLoading && !isSubmitting && !hasAttemptedLoginRef.current) {
 
       navigate('/');
 
     }
 
-  }, [user, navigate]);
+  }, [user, authLoading, isSubmitting, navigate]);
 
 
 
@@ -158,13 +174,29 @@ function LoginPage(): ReactElement {
 
     if (!validateForm()) return;
 
+    hasAttemptedLoginRef.current = true;
 
+    setIsSubmitting(true);
 
-    setLoading(true);
+    const overlayStartedAt = Date.now();
+
+    const finalize = async () => {
+
+      await ensureMinimumLoadingDuration(overlayStartedAt);
+
+      setIsSubmitting(false);
+
+    };
+
+    let shouldResetOverlay = true;
 
     try {
 
       await login(formData);
+
+      shouldResetOverlay = false;
+
+      await finalize();
 
       navigate('/');
 
@@ -176,7 +208,11 @@ function LoginPage(): ReactElement {
 
     } finally {
 
-      setLoading(false);
+      if (shouldResetOverlay) {
+
+        await finalize();
+
+      }
 
     }
 
@@ -238,7 +274,22 @@ function LoginPage(): ReactElement {
 
             isSignInInProgress.current = false;
 
-            setLoading(true);
+
+            hasAttemptedLoginRef.current = true;
+
+            setIsSubmitting(true);
+
+            const overlayStartedAt = Date.now();
+
+            const finalize = async () => {
+
+              await ensureMinimumLoadingDuration(overlayStartedAt);
+
+              setIsSubmitting(false);
+
+            };
+
+            let shouldResetOverlay = true;
 
             try {
 
@@ -247,6 +298,10 @@ function LoginPage(): ReactElement {
               if (result.token) {
 
                 loginWithJwt(result.token);
+
+                shouldResetOverlay = false;
+
+                await finalize();
 
                 navigate('/');
 
@@ -268,7 +323,11 @@ function LoginPage(): ReactElement {
 
             } finally {
 
-              setLoading(false);
+              if (shouldResetOverlay) {
+
+                await finalize();
+
+              }
 
             }
 
@@ -408,7 +467,7 @@ function LoginPage(): ReactElement {
 
 
 
-            setLoading(false);
+                setIsSubmitting(false);
 
 
 
@@ -420,7 +479,7 @@ function LoginPage(): ReactElement {
 
 
 
-            setLoading(false);
+                setIsSubmitting(false);
 
 
 
@@ -432,7 +491,7 @@ function LoginPage(): ReactElement {
 
 
 
-            setLoading(false);
+                setIsSubmitting(false);
 
 
 
@@ -452,7 +511,7 @@ function LoginPage(): ReactElement {
 
 
 
-        setLoading(false);
+        setIsSubmitting(false);
 
 
 
@@ -478,7 +537,7 @@ function LoginPage(): ReactElement {
 
       {/* 5. Renderizar o overlay de carregamento */}
 
-      <LoadingOverlay visible={loading} text="Entrando..." />
+      <LoadingOverlay visible={isLoading} text="Entrando..." />
 
 
 
@@ -500,7 +559,7 @@ function LoginPage(): ReactElement {
 
               type="email" name="email" placeholder="Email"
 
-              value={formData.email} onChange={handleChange} required disabled={loading}
+              value={formData.email} onChange={handleChange} required disabled={isLoading}
 
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
 
@@ -520,7 +579,7 @@ function LoginPage(): ReactElement {
 
               name="senha" placeholder="Senha"
 
-              value={formData.senha} onChange={handleChange} required disabled={loading}
+              value={formData.senha} onChange={handleChange} required disabled={isLoading}
 
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
 
@@ -562,7 +621,7 @@ function LoginPage(): ReactElement {
 
           <button
 
-            type="submit" disabled={loading || isFormInvalid}
+            type="submit" disabled={isLoading || isFormInvalid}
 
             className="mt-2 flex items-center justify-center rounded-md bg-blue-700 p-3 text-lg font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-70"
 
@@ -594,7 +653,7 @@ function LoginPage(): ReactElement {
 
         {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
 
-          <button onClick={handleGoogleSignIn} disabled={loading || !isGsiReady} className="mb-4 flex w-full items-center justify-center gap-3 rounded-md bg-white p-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70">
+          <button onClick={handleGoogleSignIn} disabled={isLoading || !isGsiReady} className="mb-4 flex w-full items-center justify-center gap-3 rounded-md bg-white p-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70">
 
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
 
@@ -656,7 +715,7 @@ function LoginPage(): ReactElement {
 
                 if(!selectedObm){ addNotification('Selecione sua OBM.', 'warning'); return; }
 
-                setLoading(true);
+                setIsSubmitting(true);
 
                 try {
 
@@ -698,7 +757,7 @@ function LoginPage(): ReactElement {
 
                 } finally {
 
-                  setLoading(false);
+                  setIsSubmitting(false);
 
                 }
 
@@ -721,3 +780,5 @@ function LoginPage(): ReactElement {
 
 
 export default LoginPage;
+
+

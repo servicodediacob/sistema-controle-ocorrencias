@@ -5,7 +5,7 @@ process.env.PORT = '0';
 
 import fs from 'fs';
 import path from 'path';
-import server from '../server';
+import { server } from '../server';
 import db from '../db';
 import bcrypt from 'bcryptjs'; // Importamos o bcryptjs
 

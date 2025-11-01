@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<IUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('@siscob:token');
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
     setLoading(false);
+    setIsBootstrapping(false);
   }, []);
 
   const login = useCallback(async (credentials: { email: string; senha: string }) => {
@@ -86,7 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={{ user, usuario: user, token, loading, login, loginWithJwt, logout }}>
-      {!loading && children}
+      {isBootstrapping ? null : children}
     </AuthContext.Provider>
   );
 };

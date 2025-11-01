@@ -8,6 +8,7 @@ import { parseDateParam } from '../utils/date'; // Corrigido para caminho relati
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { excluirRegistrosAntigos } from '../services/cleanupService';
+import { registrarAcao } from '@/services/auditoriaService';
 
 // Segredos para a integração (use variáveis de ambiente em produção)
 const SHARED_SECRET = process.env.SSO_SHARED_SECRET || 'seu-segredo-compartilhado';
@@ -248,6 +249,18 @@ export const limparDadosPorIntervalo = async (req: RequestWithUser, res: Respons
     ]);
 
     const totalLimpado = loteResult.count + detalhadasResult.count + obitosResult.count;
+
+    await registrarAcao(req, 'LIMPAR_DADOS_POR_INTERVALO', { 
+      dataInicio, 
+      dataFim, 
+      total: totalLimpado,
+      detalhes: {
+        estatisticas: loteResult.count,
+        ocorrencias: detalhadasResult.count,
+        obitos: obitosResult.count
+      }
+    });
+
     logger.info({ dataInicio, dataFim, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
     
     return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o período.` });

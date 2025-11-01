@@ -17,6 +17,7 @@ import OcorrenciaPage from './pages/OcorrenciaPage';
 import RelatorioObitosPage from './pages/RelatorioObitosPage';
 
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
+import NavigationLogger from './components/NavigationLogger'; // Import the new component
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
   const { user } = useAuth();
@@ -81,6 +82,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Router>
+      <NavigationLogger />
       <AppContent />
     </Router>
   );

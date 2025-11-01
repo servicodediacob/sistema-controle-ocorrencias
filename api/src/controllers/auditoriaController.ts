@@ -1,9 +1,51 @@
 // Caminho: api/src/controllers/auditoriaController.ts
 
-import { Response } from 'express';
-import { RequestWithUser } from '@/middleware/authMiddleware';
+import { Request, Response } from 'express';
+import { registrarAcao } from '../services/auditoriaService';
+import { RequestWithUser } from '../middleware/authMiddleware';
 import db from '@/db';
 import logger from '@/config/logger';
+
+export const registrarNavegacao = async (req: Request, res: Response) => {
+  const { pathname, search } = req.body;
+  
+  // The user is available in req.usuario due to the `proteger` middleware
+  await registrarAcao(req as RequestWithUser, 'NAVEGACAO', { pathname, search });
+
+  res.sendStatus(204);
+};
+
+export const registrarMensagemChat = async (req: Request, res: Response) => {
+  const { partnerId, message } = req.body;
+  
+  await registrarAcao(req as RequestWithUser, 'CHAT_MENSAGEM', { partnerId, message });
+
+  res.sendStatus(204);
+};
+
+export const registrarFechamentoChat = async (req: Request, res: Response) => {
+  const { partnerId } = req.body;
+  
+  await registrarAcao(req as RequestWithUser, 'CHAT_FECHAMENTO', { partnerId });
+
+  res.sendStatus(204);
+};
+
+export const registrarAberturaChat = async (req: Request, res: Response) => {
+  const { partnerId } = req.body;
+  
+  await registrarAcao(req as RequestWithUser, 'CHAT_ABERTURA', { partnerId });
+
+  res.sendStatus(204);
+};
+
+export const registrarGeracaoRelatorio = async (req: Request, res: Response) => {
+  const { tipo, filtros, assinatura } = req.body;
+  
+  await registrarAcao(req as RequestWithUser, 'GERACAO_RELATORIO', { tipo, filtros, assinatura });
+
+  res.sendStatus(204);
+};
 
 export const listarLogs = async (req: RequestWithUser, res: Response): Promise<void> => {
   const page = parseInt(req.query.page as string) || 1;

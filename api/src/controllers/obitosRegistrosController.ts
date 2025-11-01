@@ -4,6 +4,7 @@ import { RequestWithUser } from '@/middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import logger from '@/config/logger';
 import { excluirRegistrosAntigos } from '@/services/cleanupService';
+import { registrarAcao } from '@/services/auditoriaService';
 
 interface ObitoRegistroPayload {
   data_ocorrencia: string;
@@ -63,6 +64,9 @@ export const criarObitoRegistro = async (req: RequestWithUser, res: Response) =>
         usuario_id: usuario_id,
       },
     });
+    
+    await registrarAcao(req, 'CRIAR_OBITO_REGISTRO', { registro: novoRegistro });
+
     logger.info({ registro: novoRegistro, usuarioId: usuario_id }, 'Novo registro de óbito criado.');
     return res.status(201).json(novoRegistro);
   } catch (error) {
@@ -75,6 +79,8 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
     const { id } = req.params;
     const payload = req.body as ObitoRegistroPayload;
     try {
+        const registroAntes = await prisma.obitoRegistro.findUnique({ where: { id: Number(id) } });
+
         const registroAtualizado = await prisma.obitoRegistro.update({
             where: { id: Number(id) },
             data: {
@@ -86,6 +92,9 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
               usuario_id: req.usuario?.id,
             }
         });
+
+        await registrarAcao(req, 'ATUALIZAR_OBITO_REGISTRO', { antes: registroAntes, depois: registroAtualizado });
+
         logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de óbito atualizado.');
         return res.status(200).json(registroAtualizado);
     } catch (error) {
@@ -97,16 +106,20 @@ export const atualizarObitoRegistro = async (req: RequestWithUser, res: Response
 export const deletarObitoRegistro = async (req: RequestWithUser, res: Response) => {
     const { id } = req.params;
     try {
+        const registroAntes = await prisma.obitoRegistro.findUnique({ where: { id: Number(id) } });
+
         const resultado = await prisma.obitoRegistro.updateMany({
             where: { id: Number(id), deletado_em: null },
             data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
         });
 
         if (resultado.count === 0) {
-            return res.status(404).json({ message: 'Registro de �bito n�o encontrado.' });
+            return res.status(404).json({ message: 'Registro de óbito não encontrado.' });
         }
 
-        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de �bito marcado como exclu�do.');
+        await registrarAcao(req, 'DELETAR_OBITO_REGISTRO', { registro: registroAntes });
+
+        logger.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de óbito marcado como excluído.');
         return res.status(204).send();
     } catch (error) {
         logger.error({ err: error, params: req.params }, 'Erro ao deletar registro de óbito.');
@@ -130,6 +143,9 @@ export const limparRegistrosPorData = async (req: RequestWithUser, res: Response
             },
             data: { deletado_em: new Date() }
         });
+
+        await registrarAcao(req, 'LIMPAR_REGISTROS_OBITO_POR_DATA', { data, count: result.count });
+
         logger.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de óbitos (soft) limpos por data.');
         return res.status(200).json({ message: `Operação concluída. ${result.count} registros de óbito foram marcados como excluídos para a data ${data}.` });
     } catch (error) {
@@ -137,4 +153,3 @@ export const limparRegistrosPorData = async (req: RequestWithUser, res: Response
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
-

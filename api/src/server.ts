@@ -104,4 +104,4 @@ server.listen(PORT, () => {
   console.log(`[API] Servidor rodando na porta ${PORT}`);
 });
 
-export { io };
+export { io, server };
