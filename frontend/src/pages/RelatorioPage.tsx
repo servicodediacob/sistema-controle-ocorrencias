@@ -16,6 +16,7 @@ import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisti
 
 import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
 import ConfirmarLimpezaModal from '../components/ConfirmarLimpezaModal';
+import AssinaturaModal from '../components/AssinaturaModal';
 
 function RelatorioPage() {
   const { inicioISO, fimISO } = getPlantaoRange();
@@ -40,6 +41,7 @@ function RelatorioPage() {
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
   const [destaques, setDestaques] = useState<IDestaqueRelatorio[]>([]);
   const [isConfirmandoLimpeza, setIsConfirmandoLimpeza] = useState(false);
+  const [isAssinaturaModalOpen, setIsAssinaturaModalOpen] = useState(false);
 
   const handleGenerateReport = useCallback(async () => {
     try {
@@ -89,8 +91,15 @@ function RelatorioPage() {
     setIsConfirmandoLimpeza(true);
   };
 
-  // Chamado pelo modal para gerar o PDF e limpar os dados
-  const handleGerarRelatorioELimpar = async () => {
+  // Chamado pelo modal de confirmacao para abrir o modal de assinatura
+  const handleConfirmarLimpeza = () => {
+    setIsConfirmandoLimpeza(false);
+    setIsAssinaturaModalOpen(true);
+  };
+
+  // Chamado pelo modal de assinatura para gerar o PDF e limpar os dados
+  const handleConfirmarAssinatura = async (nome: string, funcao: string) => {
+    let sucesso = false;
     try {
       setLoading(true);
       // 1. Gerar PDF
@@ -98,7 +107,7 @@ function RelatorioPage() {
         { estatisticas, obitos, destaques },
         dataInicio,
         dataFim,
-        { nome: usuarioLogado?.nome || '', funcao: usuarioLogado?.role || '' }
+        { nome, funcao }
       );
 
       // 2. Limpar dados
@@ -108,12 +117,15 @@ function RelatorioPage() {
 
       // 3. Atualizar a UI
       await handleGenerateReport();
+      sucesso = true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao gerar relatório e limpar dados.';
       addNotification(message, 'error');
     } finally {
       setLoading(false);
-      setIsConfirmandoLimpeza(false);
+      if (sucesso) {
+        setIsAssinaturaModalOpen(false);
+      }
     }
   };
 
@@ -282,7 +294,15 @@ function RelatorioPage() {
       <ConfirmarLimpezaModal
         isOpen={isConfirmandoLimpeza}
         onClose={() => setIsConfirmandoLimpeza(false)}
-        onConfirm={handleGerarRelatorioELimpar}
+        onConfirm={handleConfirmarLimpeza}
+        loading={loading}
+      />
+      <AssinaturaModal
+        isOpen={isAssinaturaModalOpen}
+        onClose={() => setIsAssinaturaModalOpen(false)}
+        onConfirm={handleConfirmarAssinatura}
+        defaultNome={usuarioLogado?.nome || ''}
+        defaultFuncao={usuarioLogado?.role || ''}
         loading={loading}
       />
     </MainLayout>

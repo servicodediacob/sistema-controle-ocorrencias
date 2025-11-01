@@ -1,22 +1,41 @@
 
 // Caminho: frontend/src/components/AssinaturaModal.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface AssinaturaModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (nome: string, funcao: string) => void;
   defaultNome?: string;
+  defaultFuncao?: string;
+  loading?: boolean;
 }
 
-const AssinaturaModal: React.FC<AssinaturaModalProps> = ({ isOpen, onClose, onConfirm, defaultNome }) => {
+const AssinaturaModal: React.FC<AssinaturaModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  defaultNome,
+  defaultFuncao,
+  loading = false,
+}) => {
   const [nome, setNome] = useState(defaultNome || '');
-  const [funcao, setFuncao] = useState('');
+  const [funcao, setFuncao] = useState(defaultFuncao || '');
+
+  useEffect(() => {
+    if (isOpen) {
+      setNome(defaultNome || '');
+      setFuncao(defaultFuncao || '');
+    }
+  }, [isOpen, defaultNome, defaultFuncao]);
 
   const handleConfirm = () => {
-    if (nome && funcao) {
-      onConfirm(nome, funcao);
+    const nomeLimpo = nome.trim();
+    const funcaoLimpa = funcao.trim();
+
+    if (nomeLimpo && funcaoLimpa) {
+      onConfirm(nomeLimpo, funcaoLimpa);
     }
   };
 
@@ -59,16 +78,17 @@ const AssinaturaModal: React.FC<AssinaturaModalProps> = ({ isOpen, onClose, onCo
         <div className="mt-8 flex justify-end space-x-4">
           <button
             onClick={onClose}
+            disabled={loading}
             className="rounded-md border border-border bg-transparent px-6 py-2 font-semibold text-text-strong transition hover:bg-border/50 focus:outline-none focus:ring-2 focus:ring-border focus:ring-offset-2 focus:ring-offset-surface"
           >
             Cancelar
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!nome || !funcao}
+            disabled={!nome.trim() || !funcao.trim() || loading}
             className="rounded-md bg-teal-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Confirmar e Baixar
+            {loading ? 'Processando...' : 'Confirmar e Baixar'}
           </button>
         </div>
       </div>
