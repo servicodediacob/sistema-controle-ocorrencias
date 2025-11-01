@@ -17,7 +17,7 @@ const router = Router();
 // --- Rotas existentes ---
 router.post('/estatisticas/lote', proteger, registrarEstatisticasLote);
 router.get('/estatisticas/por-intervalo', proteger, getEstatisticasAgrupadasPorData);
-router.delete('/limpeza/intervalo', proteger, roleMiddleware(['ADMIN']), limparTodosOsDadosDoDia);
+router.delete('/limpeza/intervalo', proteger, roleMiddleware(['admin']), limparTodosOsDadosDoDia);
 
 // --- Nova rota para a integração ---
 router.get('/estatisticas-externas/dashboard', getSisgpoDashboard);

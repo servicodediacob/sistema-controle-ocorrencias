@@ -255,11 +255,13 @@ function LancamentoPage() {
       addNotification('Ação restrita a administradores.', 'error');
       return;
     }
-    const dataFormatada = new Date(dataHoraFinal).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-    if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do dia ${dataFormatada}?`)) {
+    const inicio = new Date(dataHoraInicial);
+    const fim = new Date(dataHoraFinal);
+    const descricaoPeriodo = `${inicio.toLocaleString('pt-BR', { timeZone: 'UTC' })} até ${fim.toLocaleString('pt-BR', { timeZone: 'UTC' })}`;
+    if (window.confirm(`Tem certeza que deseja limpar TODOS os lançamentos (em lote e detalhados) do período ${descricaoPeriodo}?`)) {
       try {
         setLoadingPagina(true);
-        const response = await limparTodosOsDadosDoDia(dataHoraFinal);
+        const response = await limparTodosOsDadosDoDia(dataHoraInicial, dataHoraFinal);
         addNotification(response.message, 'success');
         fetchDados();
       } catch (error) {
