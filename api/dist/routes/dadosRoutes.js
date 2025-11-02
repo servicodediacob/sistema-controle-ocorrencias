@@ -29,7 +29,7 @@ router.route('/usuarios').get(roleMiddleware_1.isAdmin, usuarioController_1.list
 router.route('/usuarios/:id').put(roleMiddleware_1.isAdmin, usuarioController_1.atualizarUsuario).delete(roleMiddleware_1.isAdmin, usuarioController_1.excluirUsuario);
 // --- Rotas de Estatísticas ---
 router.post('/estatisticas/lote', estatisticasController_1.registrarEstatisticasLote);
-router.get('/estatisticas/por-data', estatisticasController_1.getEstatisticasAgrupadasPorData);
+router.get('/estatisticas/por-intervalo', estatisticasController_1.getEstatisticasAgrupadasPorIntervalo);
 // --- Rotas de Óbitos ---
 router.route('/obitos-registros').get(obitosRegistrosController_1.getObitosPorData).post(obitosRegistrosController_1.criarObitoRegistro).delete(roleMiddleware_1.isAdmin, obitosRegistrosController_1.limparRegistrosPorData);
 router.route('/obitos-registros/:id').put(obitosRegistrosController_1.atualizarObitoRegistro).delete(obitosRegistrosController_1.deletarObitoRegistro);
@@ -37,5 +37,5 @@ router.route('/obitos-registros/:id').put(obitosRegistrosController_1.atualizarO
 router.get('/relatorio-completo', relatorioController_1.getRelatorioCompleto);
 router.get('/dashboard/stats', dashboardController_1.getDashboardStats); // <-- ROTA ADICIONADA
 // --- Rota de Limpeza ---
-router.delete('/limpeza/dia-completo', roleMiddleware_1.isAdmin, estatisticasController_1.limparTodosOsDadosDoDia);
+router.delete('/limpeza/intervalo', roleMiddleware_1.isAdmin, estatisticasController_1.limparDadosPorIntervalo);
 exports.default = router;

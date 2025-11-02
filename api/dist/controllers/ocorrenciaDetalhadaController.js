@@ -3,10 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletarOcorrenciaDetalhada = exports.atualizarOcorrenciaDetalhada = exports.getOcorrenciasDetalhadasPorData = exports.criarOcorrenciaDetalhada = void 0;
+exports.deletarOcorrenciaDetalhada = exports.atualizarOcorrenciaDetalhada = exports.getOcorrenciasDetalhadasPorIntervalo = exports.criarOcorrenciaDetalhada = void 0;
 const prisma_1 = require("../lib/prisma");
 const logger_1 = __importDefault(require("../config/logger"));
+const cleanupService_1 = require("../services/cleanupService");
+const auditoriaService_1 = require("../services/auditoriaService");
 const criarOcorrenciaDetalhada = async (req, res) => {
+    await (0, cleanupService_1.excluirRegistrosAntigos)();
     const payload = req.body;
     const usuario_id = req.usuario?.id;
     try {
@@ -46,6 +49,7 @@ const criarOcorrenciaDetalhada = async (req, res) => {
             });
             return ocorrenciaCriada;
         });
+        await (0, auditoriaService_1.registrarAcao)(req, 'CRIAR_OCORRENCIA_DETALHADA', { ocorrencia: novaOcorrencia });
         logger_1.default.info({ ocorrenciaId: novaOcorrencia.id, usuarioId: usuario_id }, 'Ocorrência detalhada criada e definida como destaque.');
         return res.status(201).json(novaOcorrencia);
     }
@@ -55,27 +59,25 @@ const criarOcorrenciaDetalhada = async (req, res) => {
     }
 };
 exports.criarOcorrenciaDetalhada = criarOcorrenciaDetalhada;
-const getOcorrenciasDetalhadasPorData = async (req, res) => {
-    const { data_ocorrencia } = req.query;
-    if (!data_ocorrencia || typeof data_ocorrencia !== 'string') {
-        return res.status(400).json({ message: 'O parâmetro "data_ocorrencia" é obrigatório.' });
+const getOcorrenciasDetalhadasPorIntervalo = async (req, res) => {
+    const { dataInicio, dataFim } = req.query;
+    if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+        return res.status(400).json({ message: 'Os parâmetros "dataInicio" e "dataFim" são obrigatórios.' });
     }
     try {
-        // ======================= INÍCIO DA CORREÇÃO =======================
-        const dataInicio = new Date(data_ocorrencia + 'T00:00:00.000Z');
-        const dataFim = new Date(data_ocorrencia + 'T23:59:59.999Z');
+        const inicio = new Date(dataInicio);
+        const fim = new Date(dataFim);
         const ocorrencias = await prisma_1.prisma.ocorrenciaDetalhada.findMany({
             where: {
                 data_ocorrencia: {
-                    gte: dataInicio,
-                    lte: dataFim,
+                    gte: inicio,
+                    lte: fim,
                 },
                 deletado_em: null,
             },
             include: { natureza: true, cidade: true },
             orderBy: [{ horario_ocorrencia: 'asc' }, { id: 'asc' }],
         });
-        // ======================= FIM DA CORREÇÃO =======================
         const resultadoFormatado = ocorrencias.map(od => ({
             ...od,
             natureza_grupo: od.natureza.grupo,
@@ -88,11 +90,11 @@ const getOcorrenciasDetalhadasPorData = async (req, res) => {
         return res.status(200).json(resultadoFormatado);
     }
     catch (error) {
-        logger_1.default.error({ err: error, data: data_ocorrencia }, 'Erro ao buscar ocorrências detalhadas.');
+        logger_1.default.error({ err: error, dataInicio, dataFim }, 'Erro ao buscar ocorrências detalhadas.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
-exports.getOcorrenciasDetalhadasPorData = getOcorrenciasDetalhadasPorData;
+exports.getOcorrenciasDetalhadasPorIntervalo = getOcorrenciasDetalhadasPorIntervalo;
 // ... (resto do arquivo sem alterações)
 const atualizarOcorrenciaDetalhada = async (req, res) => {
     const { id } = req.params;
@@ -106,6 +108,7 @@ const atualizarOcorrenciaDetalhada = async (req, res) => {
         if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
             return res.status(400).json({ message: 'cidade_id inválido. Deve ser um inteiro.' });
         }
+        const ocorrenciaAntes = await prisma_1.prisma.ocorrenciaDetalhada.findUnique({ where: { id: Number(id) } });
         const ocorrenciaAtualizada = await prisma_1.prisma.ocorrenciaDetalhada.update({
             where: { id: Number(id) },
             data: {
@@ -125,6 +128,7 @@ const atualizarOcorrenciaDetalhada = async (req, res) => {
                 usuario_id: req.usuario?.id,
             },
         });
+        await (0, auditoriaService_1.registrarAcao)(req, 'ATUALIZAR_OCORRENCIA_DETALHADA', { antes: ocorrenciaAntes, depois: ocorrenciaAtualizada });
         logger_1.default.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada atualizada.');
         return res.status(200).json(ocorrenciaAtualizada);
     }
@@ -137,18 +141,20 @@ exports.atualizarOcorrenciaDetalhada = atualizarOcorrenciaDetalhada;
 const deletarOcorrenciaDetalhada = async (req, res) => {
     const { id } = req.params;
     try {
+        const ocorrenciaAntes = await prisma_1.prisma.ocorrenciaDetalhada.findUnique({ where: { id: Number(id) } });
         const resultado = await prisma_1.prisma.ocorrenciaDetalhada.updateMany({
             where: { id: Number(id), deletado_em: null },
             data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
         });
         if (resultado.count === 0) {
-            return res.status(404).json({ message: 'Ocorr�ncia detalhada n�o encontrada.' });
+            return res.status(404).json({ message: 'Ocorrência detalhada não encontrada.' });
         }
-        logger_1.default.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorr�ncia detalhada marcada como exclu�da.');
+        await (0, auditoriaService_1.registrarAcao)(req, 'DELETAR_OCORRENCIA_DETALHADA', { ocorrencia: ocorrenciaAntes });
+        logger_1.default.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada marcada como excluída.');
         return res.status(204).send();
     }
     catch (error) {
-        logger_1.default.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorr�ncia detalhada.');
+        logger_1.default.error({ err: error, ocorrenciaId: id }, 'Erro ao deletar ocorrência detalhada.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };

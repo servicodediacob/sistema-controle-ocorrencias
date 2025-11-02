@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.io = void 0;
+exports.server = exports.io = void 0;
 require("dotenv/config");
 // Tratamento de Erros Globais (deve vir antes de qualquer outro código)
 process.on('uncaughtException', (error) => {
@@ -30,11 +30,13 @@ const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 // import relatorioRoutes from './routes/relatorioRoutes'; // Removido
 const auditoriaRoutes_1 = __importDefault(require("./routes/auditoriaRoutes"));
 const estatisticasRoutes_1 = __importDefault(require("./routes/estatisticasRoutes"));
+const obmRoutes_1 = __importDefault(require("./routes/obmRoutes")); // New import
 const diagRoutes_1 = __importDefault(require("./routes/diagRoutes"));
 const externalRoutes_1 = __importDefault(require("./routes/externalRoutes"));
 const socketService_1 = require("./services/socketService");
 const app = (0, express_1.default)();
 const server = (0, http_1.createServer)(app);
+exports.server = server;
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: '*',
@@ -72,6 +74,23 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
+// Health endpoints used by uptime monitors to keep the instance warm.
+app.get('/', (_req, res) => {
+    res.send('OK');
+});
+app.get('/health', (_req, res) => {
+    res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+    });
+});
+app.head('/', (_req, res) => {
+    res.sendStatus(200);
+});
+app.head('/health', (_req, res) => {
+    res.sendStatus(200);
+});
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/diag', diagRoutes_1.default);
 app.use('/api/acesso', acessoRoutes_1.default);
@@ -85,6 +104,7 @@ app.use('/api/dashboard', dashboardRoutes_1.default);
 // app.use('/api', relatorioRoutes);
 app.use('/api/auditoria', auditoriaRoutes_1.default);
 app.use('/api', estatisticasRoutes_1.default);
+app.use('/api/obms', obmRoutes_1.default); // New app.use
 app.use('/api', dadosRoutes_1.default);
 server.listen(PORT, () => {
     console.log(`[API] Servidor rodando na porta ${PORT}`);

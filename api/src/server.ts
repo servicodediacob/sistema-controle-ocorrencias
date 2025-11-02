@@ -82,6 +82,27 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Health endpoints used by uptime monitors to keep the instance warm.
+app.get('/', (_req, res) => {
+  res.send('OK');
+});
+
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.head('/', (_req, res) => {
+  res.sendStatus(200);
+});
+
+app.head('/health', (_req, res) => {
+  res.sendStatus(200);
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/diag', diagRoutes);
 app.use('/api/acesso', acessoRoutes);

@@ -4,17 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEspelhoBase = exports.getSisgpoDashboard = exports.limparTodosOsDadosDoDia = exports.getEstatisticasAgrupadasPorData = exports.registrarEstatisticasLote = void 0;
+exports.getEspelhoBase = exports.getSisgpoDashboard = exports.limparDadosPorIntervalo = exports.getEstatisticasAgrupadasPorIntervalo = exports.registrarEstatisticasLote = void 0;
 const prisma_1 = require("../lib/prisma"); // Corrigido para caminho relativo
 const logger_1 = __importDefault(require("../config/logger")); // Corrigido para caminho relativo
 const date_1 = require("../utils/date"); // Corrigido para caminho relativo
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const axios_1 = __importDefault(require("axios"));
+const cleanupService_1 = require("../services/cleanupService");
+const auditoriaService_1 = require("../services/auditoriaService");
 // Segredos para a integração (use variáveis de ambiente em produção)
 const SHARED_SECRET = process.env.SSO_SHARED_SECRET || 'seu-segredo-compartilhado';
 const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
 // --- SUAS FUNÇÕES EXISTENTES (Sem alterações na lógica interna) ---
 const registrarEstatisticasLote = async (req, res) => {
+    await (0, cleanupService_1.excluirRegistrosAntigos)();
     const { data_registro, obm_id, estatisticas } = req.body;
     const usuario = req.usuario;
     if (!usuario) {
@@ -119,20 +122,17 @@ const registrarEstatisticasLote = async (req, res) => {
     }
 };
 exports.registrarEstatisticasLote = registrarEstatisticasLote;
-const getEstatisticasAgrupadasPorData = async (req, res) => {
-    const { data } = req.query;
-    if (!data || typeof data !== 'string') {
-        return res.status(400).json({ message: 'A data é obrigatória.' });
+const getEstatisticasAgrupadasPorIntervalo = async (req, res) => {
+    const { dataInicio, dataFim } = req.query;
+    if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+        return res.status(400).json({ message: 'As datas de início e fim são obrigatórias.' });
     }
     try {
-        const base = (0, date_1.parseDateParam)(data, 'data');
-        const dataInicio = new Date(base);
-        dataInicio.setHours(0, 0, 0, 0);
-        const dataFim = new Date(base);
-        dataFim.setHours(23, 59, 59, 999);
+        const inicio = new Date(dataInicio);
+        const fim = new Date(dataFim);
         const estatisticas = await prisma_1.prisma.estatisticaDiaria.findMany({
             where: {
-                data_registro: { gte: dataInicio, lte: dataFim },
+                data_registro: { gte: inicio, lte: fim },
                 deletado_em: null,
             },
             include: {
@@ -176,44 +176,54 @@ const getEstatisticasAgrupadasPorData = async (req, res) => {
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
-exports.getEstatisticasAgrupadasPorData = getEstatisticasAgrupadasPorData;
-const limparTodosOsDadosDoDia = async (req, res) => {
-    const { data } = req.query;
+exports.getEstatisticasAgrupadasPorIntervalo = getEstatisticasAgrupadasPorIntervalo;
+const limparDadosPorIntervalo = async (req, res) => {
+    const { dataInicio, dataFim } = req.query;
     const usuario = req.usuario;
     if (!usuario || usuario.role !== 'admin') {
         return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem executar esta ação.' });
     }
-    if (!data || typeof data !== 'string') {
-        return res.status(400).json({ message: 'A data é obrigatória para limpar os registros.' });
+    if (!dataInicio || typeof dataInicio !== 'string' || !dataFim || typeof dataFim !== 'string') {
+        return res.status(400).json({ message: 'As datas de início e fim são obrigatórias para limpar os registros.' });
     }
-    const dataInicio = new Date(data + 'T00:00:00.000Z');
-    const dataFim = new Date(data + 'T23:59:59.999Z');
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
     try {
         const now = new Date();
         const [loteResult, detalhadasResult, obitosResult] = await prisma_1.prisma.$transaction([
             prisma_1.prisma.estatisticaDiaria.updateMany({
-                where: { data_registro: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                where: { data_registro: { gte: inicio, lte: fim }, deletado_em: null },
                 data: { deletado_em: now }
             }),
             prisma_1.prisma.ocorrenciaDetalhada.updateMany({
-                where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                where: { data_ocorrencia: { gte: inicio, lte: fim }, deletado_em: null },
                 data: { deletado_em: now }
             }),
             prisma_1.prisma.obitoRegistro.updateMany({
-                where: { data_ocorrencia: { gte: dataInicio, lte: dataFim }, deletado_em: null },
+                where: { data_ocorrencia: { gte: inicio, lte: fim }, deletado_em: null },
                 data: { deletado_em: now }
             }),
         ]);
         const totalLimpado = loteResult.count + detalhadasResult.count + obitosResult.count;
-        logger_1.default.info({ data, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
-        return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o dia ${data}.` });
+        await (0, auditoriaService_1.registrarAcao)(req, 'LIMPAR_DADOS_POR_INTERVALO', {
+            dataInicio,
+            dataFim,
+            total: totalLimpado,
+            detalhes: {
+                estatisticas: loteResult.count,
+                ocorrencias: detalhadasResult.count,
+                obitos: obitosResult.count
+            }
+        });
+        logger_1.default.info({ dataInicio, dataFim, adminId: usuario.id, total: totalLimpado }, 'Limpeza de dados do dia executada.');
+        return res.status(200).json({ message: `Operação concluída. ${totalLimpado} registros de ocorrência foram excluídos para o período.` });
     }
     catch (error) {
         logger_1.default.error({ err: error, query: req.query }, 'Erro ao limpar todos os dados do dia.');
         return res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 };
-exports.limparTodosOsDadosDoDia = limparTodosOsDadosDoDia;
+exports.limparDadosPorIntervalo = limparDadosPorIntervalo;
 // --- NOVA FUNÇÃO PARA A INTEGRAÇÃO ---
 const getSisgpoDashboard = async (req, res) => {
     try {

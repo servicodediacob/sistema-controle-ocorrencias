@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.limparRegistrosPorData = exports.deletarObitoRegistro = exports.atualizarObitoRegistro = exports.criarObitoRegistro = exports.getObitosPorData = void 0;
 const prisma_1 = require("../lib/prisma");
 const logger_1 = __importDefault(require("../config/logger"));
+const cleanupService_1 = require("../services/cleanupService");
+const auditoriaService_1 = require("../services/auditoriaService");
 const getObitosPorData = async (req, res) => {
     const { data } = req.query;
     if (!data || typeof data !== 'string') {
@@ -39,6 +41,7 @@ const getObitosPorData = async (req, res) => {
 };
 exports.getObitosPorData = getObitosPorData;
 const criarObitoRegistro = async (req, res) => {
+    await (0, cleanupService_1.excluirRegistrosAntigos)();
     const payload = req.body;
     const usuario_id = req.usuario?.id;
     try {
@@ -52,6 +55,7 @@ const criarObitoRegistro = async (req, res) => {
                 usuario_id: usuario_id,
             },
         });
+        await (0, auditoriaService_1.registrarAcao)(req, 'CRIAR_OBITO_REGISTRO', { registro: novoRegistro });
         logger_1.default.info({ registro: novoRegistro, usuarioId: usuario_id }, 'Novo registro de óbito criado.');
         return res.status(201).json(novoRegistro);
     }
@@ -65,6 +69,7 @@ const atualizarObitoRegistro = async (req, res) => {
     const { id } = req.params;
     const payload = req.body;
     try {
+        const registroAntes = await prisma_1.prisma.obitoRegistro.findUnique({ where: { id: Number(id) } });
         const registroAtualizado = await prisma_1.prisma.obitoRegistro.update({
             where: { id: Number(id) },
             data: {
@@ -76,6 +81,7 @@ const atualizarObitoRegistro = async (req, res) => {
                 usuario_id: req.usuario?.id,
             }
         });
+        await (0, auditoriaService_1.registrarAcao)(req, 'ATUALIZAR_OBITO_REGISTRO', { antes: registroAntes, depois: registroAtualizado });
         logger_1.default.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de óbito atualizado.');
         return res.status(200).json(registroAtualizado);
     }
@@ -88,14 +94,16 @@ exports.atualizarObitoRegistro = atualizarObitoRegistro;
 const deletarObitoRegistro = async (req, res) => {
     const { id } = req.params;
     try {
+        const registroAntes = await prisma_1.prisma.obitoRegistro.findUnique({ where: { id: Number(id) } });
         const resultado = await prisma_1.prisma.obitoRegistro.updateMany({
             where: { id: Number(id), deletado_em: null },
             data: { deletado_em: new Date(), usuario_id: req.usuario?.id },
         });
         if (resultado.count === 0) {
-            return res.status(404).json({ message: 'Registro de �bito n�o encontrado.' });
+            return res.status(404).json({ message: 'Registro de óbito não encontrado.' });
         }
-        logger_1.default.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de �bito marcado como exclu�do.');
+        await (0, auditoriaService_1.registrarAcao)(req, 'DELETAR_OBITO_REGISTRO', { registro: registroAntes });
+        logger_1.default.info({ registroId: id, usuarioId: req.usuario?.id }, 'Registro de óbito marcado como excluído.');
         return res.status(204).send();
     }
     catch (error) {
@@ -119,6 +127,7 @@ const limparRegistrosPorData = async (req, res) => {
             },
             data: { deletado_em: new Date() }
         });
+        await (0, auditoriaService_1.registrarAcao)(req, 'LIMPAR_REGISTROS_OBITO_POR_DATA', { data, count: result.count });
         logger_1.default.info({ data, count: result.count, usuarioId: req.usuario?.id }, 'Registros de óbitos (soft) limpos por data.');
         return res.status(200).json({ message: `Operação concluída. ${result.count} registros de óbito foram marcados como excluídos para a data ${data}.` });
     }

@@ -11,6 +11,7 @@ const prisma_1 = require("../lib/prisma"); // Importando o Prisma Client
 const google_auth_library_1 = require("google-auth-library");
 const socketService_1 = require("../services/socketService");
 const logger_1 = __importDefault(require("../config/logger"));
+const auditoriaService_1 = require("../services/auditoriaService");
 const login = async (req, res) => {
     const { email, senha } = req.body;
     if (!email || !senha) {
@@ -26,6 +27,7 @@ const login = async (req, res) => {
             },
         });
         if (!usuario) {
+            await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_FALHA', { email, motivo: 'Usuário não encontrado' });
             res.status(401).json({ message: 'Credenciais inválidas.' });
             return;
         }
@@ -34,6 +36,7 @@ const login = async (req, res) => {
         const senhaValida = await bcryptjs_1.default.compare(senha, usuario.senha_hash);
         // ======================= FIM DA CORREÇÃO =======================
         if (!senhaValida) {
+            await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_FALHA', { email, motivo: 'Senha inválida' });
             res.status(401).json({ message: 'Credenciais inválidas.' });
             return;
         }
@@ -42,6 +45,9 @@ const login = async (req, res) => {
             res.status(500).json({ message: 'Erro de configuração interna do servidor.' });
             return;
         }
+        // Attach user to request for audit logging
+        req.usuario = usuario;
+        await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_SUCESSO', { email });
         const tokenPayload = {
             id: usuario.id,
             nome: usuario.nome,
@@ -80,6 +86,7 @@ const googleLogin = async (req, res) => {
         const ticket = await oauthClient.verifyIdToken({ idToken: id_token, audience: clientId });
         const payload = ticket.getPayload();
         if (!payload || !payload.email) {
+            await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_GOOGLE_FALHA', { motivo: 'Token inválido' });
             res.status(401).json({ message: 'Token inválido.' });
             return;
         }
@@ -88,6 +95,9 @@ const googleLogin = async (req, res) => {
         // Usuário já existe? Faz login normal
         const usuario = await prisma_1.prisma.usuario.findUnique({ where: { email }, include: { obm: true } });
         if (usuario) {
+            // Attach user to request for audit logging
+            req.usuario = usuario;
+            await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_GOOGLE_SUCESSO', { email });
             if (!process.env.JWT_SECRET) {
                 res.status(500).json({ message: 'JWT_SECRET ausente.' });
                 return;
@@ -106,6 +116,7 @@ const googleLogin = async (req, res) => {
             return;
         }
         // Não existe: sinaliza necessidade de aprovação
+        await (0, auditoriaService_1.registrarAcao)(req, 'LOGIN_GOOGLE_PRIMEIRO_ACESSO', { email });
         // Opcional: notificar admins que houve tentativa de acesso Google ainda não cadastrada
         try {
             (0, socketService_1.notifyAdmins)('acesso:google-primeiro-login', { nome, email, quando: new Date().toISOString() });

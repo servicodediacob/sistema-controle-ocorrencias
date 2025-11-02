@@ -19,11 +19,15 @@ router.get('/external/dashboard', verifySsoJwt_1.default, dashboardController_1.
 router.get('/external/dashboard/stats', verifySsoJwt_1.default, dashboardController_1.getDashboardStats);
 router.get('/external/plantao', verifySsoJwt_1.default, plantaoController_1.getPlantao);
 router.get('/external/relatorio-completo', verifySsoJwt_1.default, relatorioController_1.getRelatorioCompleto);
-router.get('/external/estatisticas-por-data', verifySsoJwt_1.default, (req, res) => {
-    if (!req.query.data) {
-        req.query.data = new Date().toISOString().split('T')[0];
-    }
-    return (0, estatisticasController_1.getEstatisticasAgrupadasPorData)(req, res);
+router.get('/external/estatisticas-por-intervalo', verifySsoJwt_1.default, (req, res) => {
+    const data = req.query.data ? new Date(req.query.data) : new Date();
+    const dataInicio = new Date(data);
+    dataInicio.setHours(0, 0, 0, 0);
+    const dataFim = new Date(data);
+    dataFim.setHours(23, 59, 59, 999);
+    req.query.dataInicio = dataInicio.toISOString();
+    req.query.dataFim = dataFim.toISOString();
+    return (0, estatisticasController_1.getEstatisticasAgrupadasPorIntervalo)(req, res);
 });
 router.get('/external/espelho-base', verifySsoJwt_1.default, estatisticasController_1.getEspelhoBase);
 exports.default = router;

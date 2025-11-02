@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registrarAcao = void 0;
 const db_1 = __importDefault(require("../db"));
 const logger_1 = __importDefault(require("../config/logger"));
+const prisma_1 = require("../lib/prisma"); // Import prisma
 /**
  * Registra uma ação de auditoria no banco de dados.
  * @param req - O objeto de requisição, que deve conter as informações do usuário autenticado.
@@ -14,12 +15,20 @@ const logger_1 = __importDefault(require("../config/logger"));
  * @param detalhes - Um objeto com informações contextuais relevantes para a ação.
  */
 const registrarAcao = async (req, acao, detalhes = {}) => {
-    // Se não houver um usuário na requisição (ex: um script rodando sem autenticação), não faz nada.
-    if (!req.usuario) {
-        logger_1.default.warn({ acao, detalhes }, 'Tentativa de registrar ação de auditoria sem usuário autenticado.');
-        return;
+    let usuario_id = null;
+    let usuario_nome = 'N/A';
+    if (req.usuario) {
+        usuario_id = req.usuario.id;
+        usuario_nome = req.usuario.nome;
     }
-    const { id: usuario_id, nome: usuario_nome } = req.usuario;
+    else if (detalhes.email) {
+        // If user is not in request (e.g. failed login), try to find user by email
+        const usuario = await prisma_1.prisma.usuario.findUnique({ where: { email: detalhes.email } });
+        if (usuario) {
+            usuario_id = usuario.id;
+            usuario_nome = usuario.nome;
+        }
+    }
     try {
         const query = `
       INSERT INTO auditoria_logs (usuario_id, usuario_nome, acao, detalhes)
