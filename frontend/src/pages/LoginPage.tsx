@@ -90,6 +90,24 @@ function LoginPage(): ReactElement {
 
   const hasAttemptedLoginRef = useRef(false);
 
+  const googlePromptOverlayStartedAt = useRef<number | null>(null);
+
+  const resetGooglePromptOverlay = async () => {
+
+    if (googlePromptOverlayStartedAt.current !== null) {
+
+      const startedAt = googlePromptOverlayStartedAt.current;
+
+      googlePromptOverlayStartedAt.current = null;
+
+      await ensureMinimumLoadingDuration(startedAt);
+
+    }
+
+    setIsSubmitting(false);
+
+  };
+
 
 
   useEffect(() => {
@@ -274,6 +292,7 @@ function LoginPage(): ReactElement {
 
             isSignInInProgress.current = false;
 
+            googlePromptOverlayStartedAt.current = null;
 
             hasAttemptedLoginRef.current = true;
 
@@ -419,79 +438,115 @@ function LoginPage(): ReactElement {
 
 
 
-    const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = () => {
 
 
 
-      if (isSignInInProgress.current) {
+    if (isSignInInProgress.current) {
 
 
 
-        return;
+      return;
 
 
 
-      }
+    }
 
 
 
-      if (!isGsiReady) {
+    if (!isGsiReady) {
 
 
 
-        addNotification('Servico de login ainda esta carregando. Tente novamente.', 'warning');
+      addNotification('Servico de login ainda esta carregando. Tente novamente.', 'warning');
 
 
 
-        return;
+      return;
 
 
 
-      }
+    }
 
 
 
-      isSignInInProgress.current = true;
+    isSignInInProgress.current = true;
 
 
 
-      try {
+    googlePromptOverlayStartedAt.current = Date.now();
 
 
 
-        window.google?.accounts?.id?.prompt((notification: any) => {
+    setIsSubmitting(true);
 
 
 
-          if (notification.isDisplayMoment()) {
+    try {
 
 
 
-                setIsSubmitting(false);
+      window.google?.accounts?.id?.prompt(async (notification: any) => {
 
 
 
-          } else if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        if (notification.isDisplayMoment()) {
 
 
 
-            isSignInInProgress.current = false;
+          googlePromptOverlayStartedAt.current = null;
 
 
 
-                setIsSubmitting(false);
+          setIsSubmitting(false);
 
 
 
-          } else if (notification.isDismissedMoment()) {
+          return;
 
 
 
-            isSignInInProgress.current = false;
+        }
 
 
 
-                setIsSubmitting(false);
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+
+
+
+          isSignInInProgress.current = false;
+
+
+
+          await resetGooglePromptOverlay();
+
+
+
+          return;
+
+
+
+        }
+
+
+
+        if (notification.isDismissedMoment()) {
+
+
+
+          const dismissedReason = typeof notification.getDismissedReason === 'function'
+
+            ? notification.getDismissedReason()
+
+            : undefined;
+
+
+
+          if (dismissedReason === 'credential_returned') {
+
+
+
+            return;
 
 
 
@@ -499,35 +554,51 @@ function LoginPage(): ReactElement {
 
 
 
-        });
+          isSignInInProgress.current = false;
 
 
 
-      } catch (error) {
+          await resetGooglePromptOverlay();
 
 
 
-        isSignInInProgress.current = false;
+        }
 
 
 
-        setIsSubmitting(false);
+      });
 
 
 
-        console.error('Erro ao exibir o prompt do Google:', error);
+    } catch (error) {
 
 
 
-        addNotification('Nao foi possivel iniciar o login com Google. Tente novamente.', 'error');
+      isSignInInProgress.current = false;
 
 
 
-      }
+      googlePromptOverlayStartedAt.current = null;
 
 
 
-    };
+      setIsSubmitting(false);
+
+
+
+      console.error('Erro ao exibir o prompt do Google:', error);
+
+
+
+      addNotification('Nao foi possivel iniciar o login com Google. Tente novamente.', 'error');
+
+
+
+    }
+
+
+
+  };
 
 
 

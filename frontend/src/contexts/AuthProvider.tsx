@@ -5,6 +5,7 @@ import { decodeJwt } from 'jose';
 import { api, login as apiLogin, extractErrorMessage, IUser as ApiUser } from '../services/api';
 
 import { offlineSyncService } from '../services/offlineSyncService';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // 1. Tipos compartilhados
 // Unifica o tipo de usuário com o do serviço de API e permite um alias opcional `role`.
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={{ user, usuario: user, token, loading, login, loginWithJwt, logout }}>
-      {isBootstrapping ? null : children}
+      {isBootstrapping ? <LoadingOverlay visible text="Preparando ambiente..." /> : children}
     </AuthContext.Provider>
   );
 };

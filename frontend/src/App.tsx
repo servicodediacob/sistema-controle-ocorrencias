@@ -18,6 +18,7 @@ import RelatorioObitosPage from './pages/RelatorioObitosPage';
 
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import NavigationLogger from './components/NavigationLogger'; // Import the new component
+import LoadingOverlay from './components/LoadingOverlay'; // Importar o LoadingOverlay
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
   const { user } = useAuth();
@@ -79,9 +80,16 @@ const AppContent: React.FC = () => {
   );
 };
 
+
 const App: React.FC = () => {
+  // O AuthProvider já envolve o App em `main.tsx`,
+  // então podemos usar o hook useAuth aqui para obter o estado de loading.
+  const { loading } = useAuth();
+
   return (
     <Router>
+      {/* O LoadingOverlay agora reage ao estado de loading do AuthProvider */}
+      <LoadingOverlay visible={loading} text="Carregando..." />
       <NavigationLogger />
       <AppContent />
     </Router>
