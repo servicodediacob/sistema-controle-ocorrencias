@@ -1,11 +1,9 @@
 // api/src/controllers/acessoController.ts
 
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { notifyAdmins } from '@/services/socketService';
-import nodemailer from 'nodemailer';
 import logger from '@/config/logger';
 import { RequestWithUser } from '@/middleware/authMiddleware';
 
@@ -101,7 +99,11 @@ export const solicitarAcessoGoogle = async (req: Request, res: Response): Promis
       select: { id: true, nome: true, email: true, data_solicitacao: true },
     });
 
-    try { notifyAdmins('acesso:solicitacao-nova', { id: novaSolicitacao.id, nome, email }); } catch {}
+    try {
+      notifyAdmins('acesso:solicitacao-nova', { id: novaSolicitacao.id, nome, email });
+    } catch (notifyError) {
+      logger.warn({ err: notifyError }, 'Falha ao notificar admins sobre nova solicitacao Google.');
+    }
 
     res.status(201).json({ message: 'Solicitacao enviada! Aguarde aprovacao de um administrador.', solicitacao: novaSolicitacao });
   } catch (error) {

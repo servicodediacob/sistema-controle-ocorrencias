@@ -15,6 +15,10 @@ import PerfilPage from './pages/PerfilPage';
 import AuditoriaPage from './pages/AuditoriaPage';
 import OcorrenciaPage from './pages/OcorrenciaPage';
 import RelatorioObitosPage from './pages/RelatorioObitosPage';
+import PlantoesSisgpoPage from './pages/PlantoesSisgpoPage';
+import ViaturasSisgpoPage from './pages/ViaturasSisgpoPage';
+import ObmsSisgpoPage from './pages/ObmsSisgpoPage';
+import MilitaresSisgpoPage from './pages/MilitaresSisgpoPage';
 
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import NavigationLogger from './components/NavigationLogger'; // Import the new component
@@ -68,6 +72,10 @@ const AppContent: React.FC = () => {
       <Route path="/relatorio-obitos" element={<PrivateRoute><RelatorioObitosPage /></PrivateRoute>} />
       <Route path="/lancar-ocorrencias" element={<PrivateRoute><LancamentoPage /></PrivateRoute>} />
       <Route path="/ocorrencia/:id" element={<PrivateRoute><OcorrenciaPage /></PrivateRoute>} />
+      <Route path="/plantoes-sisgpo" element={<PrivateRoute><PlantoesSisgpoPage /></PrivateRoute>} />
+      <Route path="/viaturas-sisgpo" element={<PrivateRoute><ViaturasSisgpoPage /></PrivateRoute>} />
+      <Route path="/obms-sisgpo" element={<PrivateRoute><ObmsSisgpoPage /></PrivateRoute>} />
+      <Route path="/militares-sisgpo" element={<PrivateRoute><MilitaresSisgpoPage /></PrivateRoute>} />
       <Route path="/gerenciar-usuarios" element={<PrivateRoute roles={['ADMIN']}><GestaoUsuariosPage /></PrivateRoute>} />
       <Route path="/gerenciar-acessos" element={<PrivateRoute roles={['ADMIN']}><GestaoAcessoPage /></PrivateRoute>} />
       <Route path="/gerenciar-dados" element={<PrivateRoute roles={['ADMIN']}><GestaoDadosApoioPage /></PrivateRoute>} />

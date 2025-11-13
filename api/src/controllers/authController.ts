@@ -58,6 +58,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const tokenPayload = {
       id: usuario.id,
       nome: usuario.nome,
+      email: usuario.email,
       role: usuario.role,
       perfil: usuario.role, // Mantido para compatibilidade com frontend
       obm_id: usuario.obm_id ?? (usuario.obm ? usuario.obm.id : null),
@@ -116,6 +117,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       const tokenPayload = {
         id: usuario.id,
         nome: usuario.nome,
+        email: usuario.email,
         role: usuario.role,
         perfil: usuario.role,
         obm_id: usuario.obm_id ?? (usuario.obm ? usuario.obm.id : null),

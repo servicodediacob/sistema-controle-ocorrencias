@@ -133,3 +133,34 @@ export const {
   // ======================= FIM DA CORREÇÃO =======================
 } = apiService;
 
+const normalizeSisgpoPath = (path: string): string => {
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+
+  if (!path.startsWith('/admin')) {
+    throw new Error('Sisgpo proxy path deve iniciar com /admin.');
+  }
+
+  return path;
+};
+
+export const sisgpoApi = {
+  get: async <T = unknown>(path: string, params?: Record<string, unknown>): Promise<T> => {
+    const normalized = normalizeSisgpoPath(path);
+    return api.get<T>(`/sisgpo/proxy${normalized}`, { params });
+  },
+  post: async <T = unknown>(path: string, payload?: any): Promise<T> => {
+    const normalized = normalizeSisgpoPath(path);
+    return api.post<T>(`/sisgpo/proxy${normalized}`, payload);
+  },
+  put: async <T = unknown>(path: string, payload?: any): Promise<T> => {
+    const normalized = normalizeSisgpoPath(path);
+    return api.put<T>(`/sisgpo/proxy${normalized}`, payload);
+  },
+  delete: async <T = unknown>(path: string): Promise<T> => {
+    const normalized = normalizeSisgpoPath(path);
+    return api.delete<T>(`/sisgpo/proxy${normalized}`);
+  },
+};
+

@@ -30,6 +30,7 @@ import estatisticasRoutes from './routes/estatisticasRoutes';
 import obmRoutes from './routes/obmRoutes'; // New import
 import diagRoutes from './routes/diagRoutes';
 import externalRoutes from './routes/externalRoutes';
+import sisgpoRoutes from './routes/sisgpoRoutes';
 import { initializeSocket } from './services/socketService';
 
 const app = express();
@@ -119,6 +120,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api', estatisticasRoutes);
 app.use('/api/obms', obmRoutes); // New app.use
+app.use('/api/sisgpo', sisgpoRoutes);
 app.use('/api', dadosRoutes);
 
 server.listen(PORT, () => {

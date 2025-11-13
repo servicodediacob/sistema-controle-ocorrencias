@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
 import {
-  LayoutDashboard, BarChart3, FileText, FilePlus, Users, UserCheck,
+  LayoutDashboard, CalendarClock, Car, Building2, Users, BarChart3, FileText, FilePlus, UserCheck,
   Database, ShieldAlert, UserCircle, ChevronDown, ChevronUp, LogOut,
   ChevronsLeft, ChevronsRight
 } from 'lucide-react';
@@ -44,14 +44,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
   return (
     <aside className={`flex h-screen flex-col bg-gray-800 text-white transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-      <div className="flex h-[73px] items-center justify-center border-b border-gray-700">
-        <Link to="/dashboard" className="text-2xl font-bold text-white" onClick={closeMobileMenu}>
-          {isCollapsed ? 'O' : 'COCB'}
-        </Link>
-      </div>
+      <div className="h-[73px]" />
 
       <nav className="flex-1 space-y-2 p-2">
         <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/plantoes-sisgpo" icon={<CalendarClock size={20} />} label="Plantoes SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/viaturas-sisgpo" icon={<Car size={20} />} label="Viaturas SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/obms-sisgpo" icon={<Building2 size={20} />} label="OBMs SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+        <NavItem to="/militares-sisgpo" icon={<Users size={20} />} label="Militares SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatório Estatístico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatório de Óbitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
         <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lançar Ocorrências" isCollapsed={isCollapsed} onClick={closeMobileMenu} isHighlighted={true} />

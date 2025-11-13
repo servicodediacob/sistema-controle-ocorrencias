@@ -9,6 +9,7 @@ export interface JwtPayload {
   id: number;
   role: 'admin' | 'user';
   obm_id: number | null;
+  email?: string;
   nome: string; // <-- CORREÇÃO: ADICIONAMOS A PROPRIEDADE 'nome'
   perfil?: 'admin' | 'user';
   obm_nome?: string | null;
