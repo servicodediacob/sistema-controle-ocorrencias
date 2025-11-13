@@ -218,83 +218,152 @@ const MilitaresSisgpoPage = () => {
           ) : militares.length === 0 ? (
             <p className="py-8 text-center text-text">Nenhum registro encontrado.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-surface/80">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Posto/Grad.
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Nome completo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Nome de guerra
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Matricula
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      OBM
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Telefone
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text">
-                      Acoes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {militares.map((militar) => (
-                    <tr key={militar.id}>
-                      <td className="px-4 py-3 text-sm text-text-strong">{militar.posto_graduacao}</td>
-                      <td className="px-4 py-3 text-sm text-text">{militar.nome_completo}</td>
-                      <td className="px-4 py-3 text-sm text-text">{militar.nome_guerra || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm text-text">{militar.matricula}</td>
-                      <td className="px-4 py-3 text-sm text-text">{militar.obm_nome || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm text-text">{militar.telefone || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
-                          }`}
-                        >
-                          {militar.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => {
-                              setEditing(militar);
-                              setFormErrors([]);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => setDeleteId(militar.id)}
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-surface/80">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Posto/Grad.
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Nome completo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Nome de guerra
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Matricula
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        OBM
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Telefone
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text">
+                        Acoes
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {militares.map((militar) => (
+                      <tr key={militar.id}>
+                        <td className="px-4 py-3 text-sm text-text-strong">{militar.posto_graduacao}</td>
+                        <td className="px-4 py-3 text-sm text-text">{militar.nome_completo}</td>
+                        <td className="px-4 py-3 text-sm text-text">{militar.nome_guerra || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-text">{militar.matricula}</td>
+                        <td className="px-4 py-3 text-sm text-text">{militar.obm_nome || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-text">{militar.telefone || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                            }`}
+                          >
+                            {militar.ativo ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => {
+                                setEditing(militar);
+                                setFormErrors([]);
+                                setIsFormOpen(true);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => setDeleteId(militar.id)}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {militares.map((militar) => (
+                  <div
+                    key={militar.id}
+                    className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase text-text">Posto/Grad.</p>
+                        <p className="text-base font-semibold text-text-strong">
+                          {militar.posto_graduacao}
+                        </p>
+                        <p className="text-sm text-text">{militar.nome_completo}</p>
+                        {militar.nome_guerra && (
+                          <p className="text-xs text-text">({militar.nome_guerra})</p>
+                        )}
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                        }`}
+                      >
+                        {militar.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm text-text">
+                      <p>
+                        <span className="font-semibold text-text-strong">Matricula:</span>{' '}
+                        {militar.matricula}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-text-strong">OBM:</span>{' '}
+                        {militar.obm_nome || 'Nao informado'}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-text-strong">Telefone:</span>{' '}
+                        {militar.telefone || 'Nao informado'}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditing(militar);
+                          setFormErrors([]);
+                          setIsFormOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="flex-1"
+                        onClick={() => setDeleteId(militar.id)}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {pagination && pagination.totalPages > 1 && (

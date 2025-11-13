@@ -266,76 +266,133 @@ const ViaturasSisgpoPage = () => {
           ) : viaturas.length === 0 ? (
             <p className="py-8 text-center text-text">Nenhuma viatura encontrada.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-surface/80">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Prefixo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      OBM
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Cidade
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Status
-                    </th>
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-surface/80">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Prefixo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        OBM
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Cidade
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Status
+                      </th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text">
                         Acoes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {viaturas.map((viatura) => (
-                    <tr key={viatura.id}>
-                      <td className="px-4 py-3 text-sm font-semibold text-text-strong">
-                        {viatura.prefixo}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text">
-                        {viatura.obm_abreviatura || viatura.obm || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text">{viatura.cidade || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            viatura.ativa
-                              ? 'bg-green-500/20 text-green-200'
-                              : 'bg-red-500/20 text-red-200'
-                          }`}
-                        >
-                          {viatura.ativa ? 'Ativa' : 'Inativa'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => {
-                              setEditing(viatura);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => setDeleteId(viatura.id)}
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {viaturas.map((viatura) => (
+                      <tr key={viatura.id}>
+                        <td className="px-4 py-3 text-sm font-semibold text-text-strong">
+                          {viatura.prefixo}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text">
+                          {viatura.obm_abreviatura || viatura.obm || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text">{viatura.cidade || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              viatura.ativa
+                                ? 'bg-green-500/20 text-green-200'
+                                : 'bg-red-500/20 text-red-200'
+                            }`}
+                          >
+                            {viatura.ativa ? 'Ativa' : 'Inativa'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => {
+                                setEditing(viatura);
+                                setIsFormOpen(true);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => setDeleteId(viatura.id)}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {viaturas.map((viatura) => (
+                  <div
+                    key={viatura.id}
+                    className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase text-text">Prefixo</p>
+                        <p className="text-lg font-semibold text-text-strong">{viatura.prefixo}</p>
+                        <p className="text-sm text-text">
+                          {viatura.obm_abreviatura || viatura.obm || 'OBM nao informada'}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          viatura.ativa ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                        }`}
+                      >
+                        {viatura.ativa ? 'Ativa' : 'Inativa'}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm text-text">
+                      <p>
+                        <span className="font-semibold text-text-strong">Cidade:</span>{' '}
+                        {viatura.cidade || 'Nao informado'}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditing(viatura);
+                          setIsFormOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="flex-1"
+                        onClick={() => setDeleteId(viatura.id)}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {pagination && pagination.totalPages > 1 && (

@@ -503,67 +503,128 @@ const PlantoesSisgpoPage = () => {
               <div className="py-16">
                 <Spinner text="Carregando plantoes..." />
               </div>
+            ) : plantoes.length === 0 ? (
+              <p className="py-8 text-center text-text">Nenhum plantao encontrado.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-surface/80">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Data
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Viatura
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        OBM
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Guarnicao
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
-                        Acoes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {plantoes.map((plantao) => (
-                      <tr key={plantao.id}>
-                        <td className="px-4 py-3 text-sm text-text">{formatDate(plantao.data_plantao)}</td>
-                        <td className="px-4 py-3 text-sm text-text-strong">{plantao.viatura_prefixo}</td>
-                        <td className="px-4 py-3 text-sm text-text">{plantao.obm_abreviatura}</td>
-                        <td className="px-4 py-3 text-sm text-text">
-                          <ul className="space-y-1">
-                            {plantao.guarnicao?.map((membro, index) => (
-                              <li key={`${plantao.id}-${index}`}>
-                                <span className="font-medium">{membro.nome_exibicao}</span>
-                                {membro.funcao && <span className="text-xs text-text"> - {membro.funcao}</span>}
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500"
-                              onClick={() => handleEditPlantao(plantao.id)}
-                            >
-                              <Edit size={14} /> Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
-                              onClick={() => setDeleteTarget({ id: plantao.id, type: 'plantoes' })}
-                            >
-                              <Trash2 size={14} /> Excluir
-                            </button>
-                          </div>
-                        </td>
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Data
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Viatura
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          OBM
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Guarnicao
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
+                          Acoes
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {plantoes.map((plantao) => (
+                        <tr key={plantao.id}>
+                          <td className="px-4 py-3 text-sm text-text">{formatDate(plantao.data_plantao)}</td>
+                          <td className="px-4 py-3 text-sm text-text-strong">{plantao.viatura_prefixo}</td>
+                          <td className="px-4 py-3 text-sm text-text">{plantao.obm_abreviatura}</td>
+                          <td className="px-4 py-3 text-sm text-text">
+                            <ul className="space-y-1">
+                              {plantao.guarnicao?.map((membro, index) => (
+                                <li key={`${plantao.id}-${index}`}>
+                                  <span className="font-medium">{membro.nome_exibicao}</span>
+                                  {membro.funcao && <span className="text-xs text-text"> - {membro.funcao}</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500"
+                                onClick={() => handleEditPlantao(plantao.id)}
+                              >
+                                <Edit size={14} /> Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                                onClick={() => setDeleteTarget({ id: plantao.id, type: 'plantoes' })}
+                              >
+                                <Trash2 size={14} /> Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {plantoes.map((plantao) => (
+                    <div
+                      key={plantao.id}
+                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-text">Data</p>
+                          <p className="text-base font-semibold text-text-strong">
+                            {formatDate(plantao.data_plantao)}
+                          </p>
+                          <p className="text-sm font-semibold text-text-strong">
+                            {plantao.viatura_prefixo}
+                          </p>
+                          <p className="text-sm text-text">{plantao.obm_abreviatura || 'Sem OBM'}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase text-text">Guarnicao</p>
+                        <ul className="mt-1 space-y-1 text-sm text-text">
+                          {plantao.guarnicao?.length ? (
+                            plantao.guarnicao.map((membro, index) => (
+                              <li key={`${plantao.id}-mobile-${index}`} className="flex flex-wrap gap-1">
+                                <span className="font-medium">{membro.nome_exibicao}</span>
+                                {membro.funcao && (
+                                  <span className="text-xs text-text">- {membro.funcao}</span>
+                                )}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-xs text-text">Nenhum integrante informado.</li>
+                          )}
+                        </ul>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                          onClick={() => handleEditPlantao(plantao.id)}
+                        >
+                          <Edit size={14} /> Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500"
+                          onClick={() => setDeleteTarget({ id: plantao.id, type: 'plantoes' })}
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             <SimplePagination pagination={plantaoPagination} onChange={setCurrentPlantaoPage} />
           </div>
@@ -575,59 +636,118 @@ const PlantoesSisgpoPage = () => {
               <div className="py-12">
                 <Spinner text="Carregando escala de medicos..." />
               </div>
+            ) : escalaMedicos.length === 0 ? (
+              <p className="py-8 text-center text-text">Nenhum registro encontrado.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-surface/80">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Nome
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Entrada
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Saida
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
-                        Acoes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {escalaMedicos.map((registro) => (
-                      <tr key={registro.id}>
-                        <td className="px-4 py-3 text-sm text-text-strong">{registro.nome_completo}</td>
-                        <td className="px-4 py-3 text-sm text-text">{formatDateTime(registro.entrada_servico)}</td>
-                        <td className="px-4 py-3 text-sm text-text">{formatDateTime(registro.saida_servico)}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span
-                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                              registro.status_servico === 'Presente'
-                                ? 'bg-green-500/20 text-green-300'
-                                : 'bg-yellow-500/20 text-yellow-200'
-                            }`}
-                          >
-                            {registro.status_servico}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
-                            onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaMedicos' })}
-                          >
-                            <Trash2 size={14} /> Excluir
-                          </button>
-                        </td>
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Nome
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Entrada
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Saida
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
+                          Acoes
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {escalaMedicos.map((registro) => (
+                        <tr key={registro.id}>
+                          <td className="px-4 py-3 text-sm text-text-strong">{registro.nome_completo}</td>
+                          <td className="px-4 py-3 text-sm text-text">
+                            {formatDateTime(registro.entrada_servico)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text">
+                            {formatDateTime(registro.saida_servico)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                registro.status_servico === 'Presente'
+                                  ? 'bg-green-500/20 text-green-300'
+                                  : 'bg-yellow-500/20 text-yellow-200'
+                              }`}
+                            >
+                              {registro.status_servico}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
+                              onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaMedicos' })}
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {escalaMedicos.map((registro) => (
+                    <div
+                      key={registro.id}
+                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-text-strong">{registro.nome_completo}</p>
+                          {registro.funcao && (
+                            <p className="text-xs uppercase text-text">{registro.funcao}</p>
+                          )}
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            registro.status_servico === 'Presente'
+                              ? 'bg-green-500/20 text-green-300'
+                              : 'bg-yellow-500/20 text-yellow-200'
+                          }`}
+                        >
+                          {registro.status_servico}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 space-y-1 text-sm text-text">
+                        <p>
+                          <span className="font-semibold text-text-strong">Entrada:</span>{' '}
+                          {formatDateTime(registro.entrada_servico)}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-text-strong">Saida:</span>{' '}
+                          {formatDateTime(registro.saida_servico)}
+                        </p>
+                        {registro.observacoes && (
+                          <p className="text-xs text-text">{registro.observacoes}</p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600/10 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-600/20"
+                          onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaMedicos' })}
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -638,55 +758,100 @@ const PlantoesSisgpoPage = () => {
               <div className="py-12">
                 <Spinner text="Carregando escala de aeronaves..." />
               </div>
+            ) : escalaAeronaves.length === 0 ? (
+              <p className="py-8 text-center text-text">Nenhum registro encontrado.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-surface/80">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Data
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Aeronave
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        1o Piloto
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        2o Piloto
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
-                        Acoes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {escalaAeronaves.map((registro) => (
-                      <tr key={registro.id}>
-                        <td className="px-4 py-3 text-sm text-text">{formatDate(registro.data)}</td>
-                        <td className="px-4 py-3 text-sm text-text-strong">{registro.aeronave_prefixo}</td>
-                        <td className="px-4 py-3 text-sm text-text">{registro.primeiro_piloto}</td>
-                        <td className="px-4 py-3 text-sm text-text">{registro.segundo_piloto}</td>
-                        <td className="px-4 py-3 text-sm text-text">{registro.status}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
-                            onClick={() =>
-                              setDeleteTarget({ id: registro.id, type: 'escalaAeronaves' })
-                            }
-                          >
-                            <Trash2 size={14} /> Excluir
-                          </button>
-                        </td>
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Data
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Aeronave
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          1o Piloto
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          2o Piloto
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
+                          Acoes
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {escalaAeronaves.map((registro) => (
+                        <tr key={registro.id}>
+                          <td className="px-4 py-3 text-sm text-text">{formatDate(registro.data)}</td>
+                          <td className="px-4 py-3 text-sm text-text-strong">{registro.aeronave_prefixo}</td>
+                          <td className="px-4 py-3 text-sm text-text">{registro.primeiro_piloto}</td>
+                          <td className="px-4 py-3 text-sm text-text">{registro.segundo_piloto}</td>
+                          <td className="px-4 py-3 text-sm text-text">{registro.status}</td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
+                              onClick={() =>
+                                setDeleteTarget({ id: registro.id, type: 'escalaAeronaves' })
+                              }
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {escalaAeronaves.map((registro) => (
+                    <div
+                      key={registro.id}
+                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-text">Data</p>
+                          <p className="text-base font-semibold text-text-strong">
+                            {formatDate(registro.data)}
+                          </p>
+                          <p className="text-sm text-text-strong">{registro.aeronave_prefixo}</p>
+                        </div>
+                        <span className="text-xs font-semibold uppercase text-text">{registro.status}</span>
+                      </div>
+
+                      <div className="mt-3 space-y-1 text-sm text-text">
+                        <p>
+                          <span className="font-semibold text-text-strong">1o Piloto:</span>{' '}
+                          {registro.primeiro_piloto}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-text-strong">2o Piloto:</span>{' '}
+                          {registro.segundo_piloto || 'Nao informado'}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600/10 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-600/20"
+                          onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaAeronaves' })}
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -697,51 +862,91 @@ const PlantoesSisgpoPage = () => {
               <div className="py-12">
                 <Spinner text="Carregando escala do CODEC..." />
               </div>
+            ) : escalaCodec.length === 0 ? (
+              <p className="py-8 text-center text-text">Nenhum registro encontrado.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-surface/80">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Data
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Turno
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Plantonista
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
-                        Nome
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
-                        Acoes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {escalaCodec.map((registro) => (
-                      <tr key={registro.id}>
-                        <td className="px-4 py-3 text-sm text-text">{formatDate(registro.data)}</td>
-                        <td className="px-4 py-3 text-sm text-text">{registro.turno}</td>
-                        <td className="px-4 py-3 text-sm text-text">
-                          Plantonista {registro.ordem_plantonista}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-text-strong">{registro.nome_plantonista}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
-                            onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaCodec' })}
-                          >
-                            <Trash2 size={14} /> Excluir
-                          </button>
-                        </td>
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Data
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Turno
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Plantonista
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Nome
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
+                          Acoes
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {escalaCodec.map((registro) => (
+                        <tr key={registro.id}>
+                          <td className="px-4 py-3 text-sm text-text">{formatDate(registro.data)}</td>
+                          <td className="px-4 py-3 text-sm text-text">{registro.turno}</td>
+                          <td className="px-4 py-3 text-sm text-text">
+                            Plantonista {registro.ordem_plantonista}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-strong">{registro.nome_plantonista}</td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300"
+                              onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaCodec' })}
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {escalaCodec.map((registro) => (
+                    <div
+                      key={registro.id}
+                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-text">Data</p>
+                          <p className="text-base font-semibold text-text-strong">
+                            {formatDate(registro.data)}
+                          </p>
+                          <p className="text-sm text-text">{registro.turno}</p>
+                        </div>
+                        <span className="text-xs font-semibold uppercase text-text">
+                          #{registro.ordem_plantonista}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm font-semibold text-text-strong">
+                        {registro.nome_plantonista}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600/10 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-600/20"
+                          onClick={() => setDeleteTarget({ id: registro.id, type: 'escalaCodec' })}
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

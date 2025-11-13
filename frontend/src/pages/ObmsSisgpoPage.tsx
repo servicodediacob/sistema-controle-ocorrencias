@@ -196,63 +196,114 @@ const ObmsSisgpoPage = () => {
           ) : obms.length === 0 ? (
             <p className="py-8 text-center text-text">Nenhuma OBM encontrada.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-surface/80">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Nome
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Sigla
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      Cidade
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
-                      CRBM
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text">
-                      Acoes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {obms.map((obm) => (
-                    <tr key={obm.id}>
-                      <td className="px-4 py-3 text-sm font-semibold text-text-strong">{obm.nome}</td>
-                      <td className="px-4 py-3 text-sm text-text">{obm.abreviatura}</td>
-                      <td className="px-4 py-3 text-sm text-text">{obm.cidade || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm text-text">{obm.crbm || 'N/A'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => {
-                              setEditing(obm);
-                              setFormErrors([]);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            className="px-3 py-1 text-xs"
-                            onClick={() => setDeleteId(obm.id)}
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-surface/80">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Nome
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Sigla
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        Cidade
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text">
+                        CRBM
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text">
+                        Acoes
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {obms.map((obm) => (
+                      <tr key={obm.id}>
+                        <td className="px-4 py-3 text-sm font-semibold text-text-strong">{obm.nome}</td>
+                        <td className="px-4 py-3 text-sm text-text">{obm.abreviatura}</td>
+                        <td className="px-4 py-3 text-sm text-text">{obm.cidade || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-text">{obm.crbm || 'N/A'}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => {
+                                setEditing(obm);
+                                setFormErrors([]);
+                                setIsFormOpen(true);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="px-3 py-1 text-xs"
+                              onClick={() => setDeleteId(obm.id)}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {obms.map((obm) => (
+                  <div
+                    key={obm.id}
+                    className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase text-text">Nome</p>
+                        <p className="text-base font-semibold text-text-strong">{obm.nome}</p>
+                        <p className="text-sm text-text">{obm.abreviatura}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-1 text-sm text-text">
+                      <p>
+                        <span className="font-semibold text-text-strong">Cidade:</span>{' '}
+                        {obm.cidade || 'Nao informado'}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-text-strong">CRBM:</span>{' '}
+                        {obm.crbm || 'Nao informado'}
+                      </p>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditing(obm);
+                          setFormErrors([]);
+                          setIsFormOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="flex-1"
+                        onClick={() => setDeleteId(obm.id)}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {pagination && pagination.totalPages > 1 && (
