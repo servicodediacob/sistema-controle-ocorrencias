@@ -2,6 +2,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarPlus,
   Car,
+  ChevronDown,
   Edit,
   Plane,
   Shield,
@@ -115,6 +116,7 @@ const PlantoesSisgpoPage = () => {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedMobilePlantoes, setExpandedMobilePlantoes] = useState<number[]>([]);
 
   const filteredParams = useMemo(
     () => buildFilterParams(filters),
@@ -385,6 +387,12 @@ const PlantoesSisgpoPage = () => {
     setCurrentPlantaoPage(1);
   };
 
+  const toggleMobilePlantaoDetails = (id: number) => {
+    setExpandedMobilePlantoes((prev) =>
+      prev.includes(id) ? prev.filter((plantaoId) => plantaoId !== id) : [...prev, id]
+    );
+  };
+
   const renderTabButton = (
     tab: ActiveTab,
     label: string,
@@ -404,6 +412,15 @@ const PlantoesSisgpoPage = () => {
 
   const formatDate = (value: string) =>
     new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+  const formatTime = (value?: string | null) => {
+    if (!value) return '--';
+    if (/^\d{2}:\d{2}/.test(value)) return value.slice(0, 5);
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().substring(11, 16);
+    }
+    return value;
+  };
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -422,27 +439,30 @@ const PlantoesSisgpoPage = () => {
             Gerencie plantoes de viaturas, medicos, pilotos e plantonistas diretamente do SISGPO.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={openPlantaoModal} className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 lg:flex lg:flex-wrap">
+          <Button
+            onClick={openPlantaoModal}
+            className="flex w-full items-center justify-center gap-2 bg-blue-600 text-white lg:w-auto lg:justify-start lg:bg-primary"
+          >
             <CalendarPlus size={16} /> Lancar Plantao VTR
           </Button>
           <Button
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 bg-green-600 text-white lg:w-auto lg:justify-start lg:bg-surface"
             onClick={() => setIsEscalaMedicoModalOpen(true)}
           >
             <Stethoscope size={16} /> Escala Medicos
           </Button>
           <Button
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 bg-yellow-600 text-white lg:w-auto lg:justify-start lg:bg-surface"
             onClick={() => setIsEscalaAeronaveModalOpen(true)}
           >
             <Plane size={16} /> Escala Pilotos
           </Button>
           <Button
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 bg-purple-600 text-white lg:w-auto lg:justify-start lg:bg-surface"
             onClick={() => setIsEscalaCodecModalOpen(true)}
           >
             <Shield size={16} /> Escala CODEC
@@ -515,6 +535,12 @@ const PlantoesSisgpoPage = () => {
                           Data
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Horario Inicial
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                          Horario Final
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
                           Viatura
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
@@ -532,14 +558,25 @@ const PlantoesSisgpoPage = () => {
                       {plantoes.map((plantao) => (
                         <tr key={plantao.id}>
                           <td className="px-4 py-3 text-sm text-text">{formatDate(plantao.data_plantao)}</td>
+                          <td className="px-4 py-3 text-sm text-text">{formatTime(plantao.horario_inicio)}</td>
+                          <td className="px-4 py-3 text-sm text-text">{formatTime(plantao.horario_fim)}</td>
                           <td className="px-4 py-3 text-sm text-text-strong">{plantao.viatura_prefixo}</td>
                           <td className="px-4 py-3 text-sm text-text">{plantao.obm_abreviatura}</td>
                           <td className="px-4 py-3 text-sm text-text">
                             <ul className="space-y-1">
                               {plantao.guarnicao?.map((membro, index) => (
-                                <li key={`${plantao.id}-${index}`}>
-                                  <span className="font-medium">{membro.nome_exibicao}</span>
-                                  {membro.funcao && <span className="text-xs text-text"> - {membro.funcao}</span>}
+                                <li
+                                  key={`${plantao.id}-${index}`}
+                                  className="flex flex-wrap items-center gap-2"
+                                >
+                                  <span className="font-medium text-text-strong">
+                                    {membro.nome_exibicao}
+                                  </span>
+                                  {membro.funcao && (
+                                    <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-200">
+                                      {membro.funcao}
+                                    </span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
@@ -569,60 +606,108 @@ const PlantoesSisgpoPage = () => {
                 </div>
 
                 <div className="space-y-3 md:hidden">
-                  {plantoes.map((plantao) => (
-                    <div
-                      key={plantao.id}
-                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase text-text">Data</p>
-                          <p className="text-base font-semibold text-text-strong">
-                            {formatDate(plantao.data_plantao)}
-                          </p>
-                          <p className="text-sm font-semibold text-text-strong">
-                            {plantao.viatura_prefixo}
-                          </p>
-                          <p className="text-sm text-text">{plantao.obm_abreviatura || 'Sem OBM'}</p>
+                  {plantoes.map((plantao) => {
+                    const isExpanded = expandedMobilePlantoes.includes(plantao.id);
+                    return (
+                      <div
+                        key={plantao.id}
+                        className="overflow-hidden rounded-lg border border-border bg-background shadow-sm"
+                      >
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-surface/60 ${
+                            isExpanded ? 'bg-surface/60' : ''
+                          }`}
+                          onClick={() => toggleMobilePlantaoDetails(plantao.id)}
+                        >
+                          <div>
+                            <p className="text-base font-semibold text-text-strong">
+                              {plantao.viatura_prefixo}
+                            </p>
+                            <p className="text-sm text-text">{plantao.obm_abreviatura || 'Sem OBM'}</p>
+                          </div>
+                          <ChevronDown
+                            size={18}
+                            className={`text-text transition-transform ${
+                              isExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+
+                        <div
+                          className={`border-t border-border px-4 pb-4 pt-3 ${
+                            isExpanded ? 'block' : 'hidden'
+                          }`}
+                          aria-hidden={!isExpanded}
+                        >
+                          <div>
+                            <p className="text-xs uppercase text-text">Data</p>
+                            <p className="text-base font-semibold text-text-strong">
+                              {formatDate(plantao.data_plantao)}
+                            </p>
+                          </div>
+
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="text-xs uppercase text-text">Horario Inicial</p>
+                              <p className="text-sm font-semibold text-text-strong">
+                                {formatTime(plantao.horario_inicio)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase text-text">Horario Final</p>
+                              <p className="text-sm font-semibold text-text-strong">
+                                {formatTime(plantao.horario_fim)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <p className="text-xs font-semibold uppercase text-text">Guarnicao</p>
+                            <ul className="mt-1 space-y-1 text-sm text-text">
+                              {plantao.guarnicao?.length ? (
+                                plantao.guarnicao.map((membro, index) => (
+                                  <li
+                                    key={`${plantao.id}-mobile-${index}`}
+                                    className="flex flex-wrap items-center gap-2"
+                                  >
+                                    <span className="font-medium text-text-strong">
+                                      {membro.nome_exibicao}
+                                    </span>
+                                    {membro.funcao && (
+                                      <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-200">
+                                        {membro.funcao}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))
+                              ) : (
+                                <li className="text-xs text-text">Nenhum integrante informado.</li>
+                              )}
+                            </ul>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                              onClick={() => handleEditPlantao(plantao.id)}
+                            >
+                              <Edit size={14} /> Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500"
+                              onClick={() => setDeleteTarget({ id: plantao.id, type: 'plantoes' })}
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="mt-3">
-                        <p className="text-xs font-semibold uppercase text-text">Guarnicao</p>
-                        <ul className="mt-1 space-y-1 text-sm text-text">
-                          {plantao.guarnicao?.length ? (
-                            plantao.guarnicao.map((membro, index) => (
-                              <li key={`${plantao.id}-mobile-${index}`} className="flex flex-wrap gap-1">
-                                <span className="font-medium">{membro.nome_exibicao}</span>
-                                {membro.funcao && (
-                                  <span className="text-xs text-text">- {membro.funcao}</span>
-                                )}
-                              </li>
-                            ))
-                          ) : (
-                            <li className="text-xs text-text">Nenhum integrante informado.</li>
-                          )}
-                        </ul>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                          onClick={() => handleEditPlantao(plantao.id)}
-                        >
-                          <Edit size={14} /> Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500"
-                          onClick={() => setDeleteTarget({ id: plantao.id, type: 'plantoes' })}
-                        >
-                          <Trash2 size={14} /> Excluir
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}

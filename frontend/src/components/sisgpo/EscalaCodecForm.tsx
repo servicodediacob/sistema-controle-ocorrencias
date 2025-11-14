@@ -38,6 +38,35 @@ export const EscalaCodecForm = ({ isSaving, onSave, onCancel }: EscalaCodecFormP
     noturno: [{ militar_id: null, ordem: 1 }],
   });
 
+  const customStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#2D3748',
+      borderColor: '#4A5568',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#2D3748',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: '#F7FAFC',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: '#A0AEC0',
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: '#F7FAFC',
+    }),
+    option: (provided: any, state: { isFocused: any; }) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#4A5568' : '#2D3748',
+      color: '#F7FAFC',
+    }),
+  };
+
   const loadMilitares = async (inputValue: string): Promise<MilitarOption[]> => {
     if (!inputValue || inputValue.trim().length < 2) {
       return [];
@@ -76,7 +105,7 @@ export const EscalaCodecForm = ({ isSaving, onSave, onCancel }: EscalaCodecFormP
         <h4 className="text-base font-semibold text-text-strong">{titulo}</h4>
         <Button
           type="button"
-          variant="secondary"
+          variant="primary"
           className="flex items-center gap-2 px-3 py-1 text-xs"
           onClick={() =>
             updateTurno(turno, (lista) => [
@@ -97,6 +126,7 @@ export const EscalaCodecForm = ({ isSaving, onSave, onCancel }: EscalaCodecFormP
                 defaultOptions
                 loadOptions={loadMilitares}
                 placeholder={`Buscar plantonista ${index + 1}`}
+                styles={customStyles}
                     value={
                       plantonista.militar_id
                         ? {

@@ -24,6 +24,8 @@ interface MilitarOption {
 export interface PlantaoFormPayload {
   id?: number;
   data_plantao: string;
+  horario_inicio: string;
+  horario_fim: string;
   viatura_id: number;
   obm_id: number | null;
   observacoes: string;
@@ -47,6 +49,23 @@ const formatPhone = (value: string): string => {
   if (digits.length <= 2) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const normalizeTimeValue = (value?: string | null): string => {
+  if (!value) return '';
+  if (/^\d{2}:\d{2}$/.test(value)) return value;
+  if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return value.slice(0, 5);
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(11, 16);
+  }
+  return '';
+};
+
+const timeToMinutes = (value: string): number | null => {
+  const [hours, minutes] = value.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return hours * 60 + minutes;
 };
 
 const createEmptyMember = (): GuarnicaoMembro => ({
@@ -105,6 +124,8 @@ export const PlantaoForm = ({
   const [dataPlantao, setDataPlantao] = useState(() =>
     new Date().toISOString().split('T')[0]
   );
+  const [horarioInicio, setHorarioInicio] = useState('');
+  const [horarioFim, setHorarioFim] = useState('');
   const [viaturaId, setViaturaId] = useState<number | ''>('');
   const [obmId, setObmId] = useState<number | null | ''>('');
   const [observacoes, setObservacoes] = useState('');
@@ -113,6 +134,8 @@ export const PlantaoForm = ({
   useEffect(() => {
     if (!initialData) {
       setDataPlantao(new Date().toISOString().split('T')[0]);
+      setHorarioInicio('');
+      setHorarioFim('');
       setViaturaId('');
       setObmId('');
       setObservacoes('');
@@ -121,6 +144,8 @@ export const PlantaoForm = ({
     }
 
     setDataPlantao(new Date(initialData.data_plantao).toISOString().split('T')[0]);
+    setHorarioInicio(normalizeTimeValue(initialData.horario_inicio));
+    setHorarioFim(normalizeTimeValue(initialData.horario_fim));
     setViaturaId(initialData.viatura_id);
     setObmId(initialData.obm_id ?? null);
     setObservacoes(initialData.observacoes ?? '');
@@ -226,9 +251,23 @@ export const PlantaoForm = ({
       return;
     }
 
+    if (!horarioInicio || !horarioFim) {
+      addNotification('Informe o horario inicial e final do plantao.', 'error');
+      return;
+    }
+
+    const inicioMin = timeToMinutes(horarioInicio);
+    const fimMin = timeToMinutes(horarioFim);
+    if (inicioMin === null || fimMin === null) {
+      addNotification('Informe horarios validos para o plantao.', 'error');
+      return;
+    }
+
     const payload: PlantaoFormPayload = {
       id: initialData?.id,
       data_plantao: dataPlantao,
+      horario_inicio: horarioInicio,
+      horario_fim: horarioFim,
       viatura_id: Number(viaturaId),
       obm_id: resolvedObmId,
       observacoes,
@@ -244,7 +283,7 @@ export const PlantaoForm = ({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <Label htmlFor="dataPlantao">Data do Plantao</Label>
           <Input
@@ -252,6 +291,26 @@ export const PlantaoForm = ({
             type="date"
             value={dataPlantao}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setDataPlantao(event.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="horarioInicio">Horario Inicial</Label>
+          <Input
+            id="horarioInicio"
+            type="time"
+            value={horarioInicio}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setHorarioInicio(event.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="horarioFim">Horario Final</Label>
+          <Input
+            id="horarioFim"
+            type="time"
+            value={horarioFim}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setHorarioFim(event.target.value)}
             required
           />
         </div>

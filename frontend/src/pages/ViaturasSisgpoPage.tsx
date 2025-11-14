@@ -5,6 +5,7 @@ import { sisgpoApi } from '../services/api';
 import {
   ApiListResponse,
   Obm,
+  Plantao,
   SisgpoPagination,
   ValidationError,
   Viatura,
@@ -28,6 +29,7 @@ const ViaturasSisgpoPage = () => {
   const [filters, setFilters] = useState<{ prefixo: string }>({ prefixo: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingList, setLoadingList] = useState(true);
+  const [empenhadasViaturas, setEmpenhadasViaturas] = useState<Set<string>>(new Set());
 
   const [lastUpload, setLastUpload] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -71,6 +73,45 @@ const ViaturasSisgpoPage = () => {
     }
   }, [activeFilters, addNotification, currentPage]);
 
+  const fetchEmpenhadas = useCallback(async () => {
+    try {
+      const engaged = new Set<string>();
+      let page = 1;
+      const limit = 100;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      while (true) {
+        const response = await sisgpoApi.get<ApiListResponse<Plantao>>('/admin/plantoes', {
+          page: String(page),
+          limit: String(limit),
+        });
+        (response.data ?? []).forEach((plantao) => {
+          const normalizedPrefix = plantao.viatura_prefixo?.trim().toUpperCase();
+          if (!normalizedPrefix) {
+            return;
+          }
+          const plantaoDate = new Date(plantao.data_plantao);
+          plantaoDate.setHours(0, 0, 0, 0);
+          if (Number.isNaN(plantaoDate.getTime())) {
+            return;
+          }
+          if (plantaoDate >= today) {
+            engaged.add(normalizedPrefix);
+          }
+        });
+
+        const paginationInfo = response.pagination;
+        if (!paginationInfo || paginationInfo.currentPage >= paginationInfo.totalPages) {
+          break;
+        }
+        page += 1;
+      }
+      setEmpenhadasViaturas(engaged);
+    } catch {
+      setEmpenhadasViaturas(new Set());
+    }
+  }, []);
+
   const fetchObms = useCallback(async () => {
     try {
       const response = await sisgpoApi.get<ApiListResponse<Obm>>('/admin/obms', {
@@ -96,9 +137,14 @@ const ViaturasSisgpoPage = () => {
     }
   }, []);
 
+  const refreshViaturas = useCallback(async () => {
+    await fetchViaturas();
+    await fetchEmpenhadas();
+  }, [fetchEmpenhadas, fetchViaturas]);
+
   useEffect(() => {
-    fetchViaturas();
-  }, [fetchViaturas]);
+    refreshViaturas();
+  }, [refreshViaturas]);
 
   useEffect(() => {
     fetchObms();
@@ -117,7 +163,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.post('/admin/viaturas/upload-csv', formData);
       addNotification('Arquivo enviado com sucesso!', 'success');
-      fetchViaturas();
+      await refreshViaturas();
       fetchLastUpload();
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Falha ao enviar o arquivo.';
@@ -174,7 +220,7 @@ const ViaturasSisgpoPage = () => {
       }
       setIsFormOpen(false);
       setEditing(null);
-      fetchViaturas();
+      await refreshViaturas();
     } catch (error: any) {
       if (error?.response?.data?.errors) {
         setFormErrors(error.response.data.errors);
@@ -194,7 +240,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.delete(`/admin/viaturas/${deleteId}`);
       addNotification('Viatura excluida com sucesso.', 'success');
-      fetchViaturas();
+      await refreshViaturas();
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Erro ao excluir a viatura.';
       addNotification(message, 'error');
@@ -209,7 +255,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.delete('/admin/viaturas/clear-all');
       addNotification('Tabela de viaturas limpa com sucesso.', 'success');
-      fetchViaturas();
+      await refreshViaturas();
       fetchLastUpload();
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Erro ao limpar a tabela de viaturas.';
@@ -218,6 +264,26 @@ const ViaturasSisgpoPage = () => {
       setClearingAll(false);
       setConfirmClear(false);
     }
+  };
+
+  const getViaturaStatus = (viatura: Viatura) => {
+    const prefix = (viatura.prefixo || '').toUpperCase();
+    if (prefix && empenhadasViaturas.has(prefix)) {
+      return {
+        label: 'EMPENHADO',
+        classes: 'bg-amber-500/20 text-amber-200',
+      };
+    }
+    if (viatura.ativa) {
+      return {
+        label: 'ATIVA',
+        classes: 'bg-green-500/20 text-green-200',
+      };
+    }
+    return {
+      label: 'INATIVA',
+      classes: 'bg-red-500/20 text-red-200',
+    };
   };
 
   return (
@@ -289,108 +355,108 @@ const ViaturasSisgpoPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {viaturas.map((viatura) => (
-                      <tr key={viatura.id}>
-                        <td className="px-4 py-3 text-sm font-semibold text-text-strong">
-                          {viatura.prefixo}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-text">
-                          {viatura.obm_abreviatura || viatura.obm || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-text">{viatura.cidade || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              viatura.ativa
-                                ? 'bg-green-500/20 text-green-200'
-                                : 'bg-red-500/20 text-red-200'
-                            }`}
-                          >
-                            {viatura.ativa ? 'Ativa' : 'Inativa'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="px-3 py-1 text-xs"
-                              onClick={() => {
-                                setEditing(viatura);
-                                setIsFormOpen(true);
-                              }}
+                    {viaturas.map((viatura) => {
+                      const status = getViaturaStatus(viatura);
+                      return (
+                        <tr key={viatura.id}>
+                          <td className="px-4 py-3 text-sm font-semibold text-text-strong">
+                            {viatura.prefixo}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text">
+                            {viatura.obm_abreviatura || viatura.obm || 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text">{viatura.cidade || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${status.classes}`}
                             >
-                              Editar
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              className="px-3 py-1 text-xs"
-                              onClick={() => setDeleteId(viatura.id)}
-                            >
-                              Excluir
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="px-3 py-1 text-xs"
+                                onClick={() => {
+                                  setEditing(viatura);
+                                  setIsFormOpen(true);
+                                }}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                className="px-3 py-1 text-xs"
+                                onClick={() => setDeleteId(viatura.id)}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               <div className="space-y-3 md:hidden">
-                {viaturas.map((viatura) => (
-                  <div
-                    key={viatura.id}
-                    className="rounded-lg border border-border bg-background p-4 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase text-text">Prefixo</p>
-                        <p className="text-lg font-semibold text-text-strong">{viatura.prefixo}</p>
-                        <p className="text-sm text-text">
-                          {viatura.obm_abreviatura || viatura.obm || 'OBM nao informada'}
+                {viaturas.map((viatura) => {
+                  const status = getViaturaStatus(viatura);
+                  return (
+                    <div
+                      key={viatura.id}
+                      className="rounded-lg border border-border bg-background p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-text">Prefixo</p>
+                          <p className="text-lg font-semibold text-text-strong">{viatura.prefixo}</p>
+                          <p className="text-sm text-text">
+                            {viatura.obm_abreviatura || viatura.obm || 'OBM nao informada'}
+                          </p>
+                        </div>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${status.classes}`}
+                        >
+                          {status.label}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 space-y-1 text-sm text-text">
+                        <p>
+                          <span className="font-semibold text-text-strong">Cidade:</span>{' '}
+                          {viatura.cidade || 'Nao informado'}
                         </p>
                       </div>
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          viatura.ativa ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
-                        }`}
-                      >
-                        {viatura.ativa ? 'Ativa' : 'Inativa'}
-                      </span>
-                    </div>
 
-                    <div className="mt-3 space-y-1 text-sm text-text">
-                      <p>
-                        <span className="font-semibold text-text-strong">Cidade:</span>{' '}
-                        {viatura.cidade || 'Nao informado'}
-                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => {
+                            setEditing(viatura);
+                            setIsFormOpen(true);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          className="flex-1"
+                          onClick={() => setDeleteId(viatura.id)}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
                     </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={() => {
-                          setEditing(viatura);
-                          setIsFormOpen(true);
-                        }}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        className="flex-1"
-                        onClick={() => setDeleteId(viatura.id)}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}

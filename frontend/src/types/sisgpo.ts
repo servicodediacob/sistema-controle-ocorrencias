@@ -65,6 +65,8 @@ export interface GuarnicaoMembro {
 export interface Plantao {
   id: number;
   data_plantao: string;
+  horario_inicio?: string | null;
+  horario_fim?: string | null;
   viatura_prefixo: string;
   obm_abreviatura: string;
   guarnicao: GuarnicaoMembro[];
@@ -73,6 +75,8 @@ export interface Plantao {
 export interface PlantaoDetalhado {
   id: number;
   data_plantao: string;
+  horario_inicio?: string | null;
+  horario_fim?: string | null;
   viatura_id: number;
   obm_id: number | null;
   observacoes: string;

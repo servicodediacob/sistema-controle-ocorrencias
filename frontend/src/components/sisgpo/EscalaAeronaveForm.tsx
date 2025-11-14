@@ -42,6 +42,35 @@ export const EscalaAeronaveForm = ({ isSaving, onSave, onCancel }: EscalaAeronav
     segundo_piloto_id: null,
   });
 
+  const customStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#2D3748',
+      borderColor: '#4A5568',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#2D3748',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: '#F7FAFC',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: '#A0AEC0',
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: '#F7FAFC',
+    }),
+    option: (provided: any, state: { isFocused: any; }) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#4A5568' : '#2D3748',
+      color: '#F7FAFC',
+    }),
+  };
+
   useEffect(() => {
     const fetchAeronaves = async () => {
       try {
@@ -114,6 +143,7 @@ export const EscalaAeronaveForm = ({ isSaving, onSave, onCancel }: EscalaAeronav
           }
           placeholder="Selecione o prefixo"
           className="text-text"
+          styles={customStyles}
         />
       </div>
 
@@ -124,6 +154,7 @@ export const EscalaAeronaveForm = ({ isSaving, onSave, onCancel }: EscalaAeronav
           defaultOptions
           loadOptions={loadMilitares}
           placeholder="Digite para buscar"
+          styles={customStyles}
           onChange={(option) =>
             setFormData((prev) => ({
               ...prev,
@@ -140,6 +171,7 @@ export const EscalaAeronaveForm = ({ isSaving, onSave, onCancel }: EscalaAeronav
           defaultOptions
           loadOptions={loadMilitares}
           placeholder="Digite para buscar"
+          styles={customStyles}
           onChange={(option) =>
             setFormData((prev) => ({
               ...prev,
