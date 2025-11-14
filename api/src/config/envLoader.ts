@@ -25,7 +25,8 @@ const candidates: string[] = [
 const chosenPath = candidates.find((p) => fs.existsSync(p));
 
 if (chosenPath) {
-  const result = dotenv.config({ path: chosenPath });
+  const shouldOverride = process.env.NODE_ENV !== 'production';
+  const result = dotenv.config({ path: chosenPath, override: shouldOverride });
   if (result.error) {
     console.warn(
       `[EnvLoader] Aviso: falha ao carregar ${chosenPath}. Variáveis de ambiente do sistema serão usadas.`
@@ -40,4 +41,3 @@ if (chosenPath) {
     )}. Variáveis de ambiente do sistema serão usadas.`
   );
 }
-

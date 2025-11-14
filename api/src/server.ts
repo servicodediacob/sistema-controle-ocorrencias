@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './config/envLoader';
 
 // Tratamento de Erros Globais (deve vir antes de qualquer outro código)
 process.on('uncaughtException', (error) => {
