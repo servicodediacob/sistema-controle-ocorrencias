@@ -47,19 +47,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
     <>
       <div
         className={`
-          fixed inset-0 bg-black/70 backdrop-blur-sm z-40
-          transition-opacity duration-300
+          fixed inset-y-0 right-0 bg-black/70 backdrop-blur-sm z-40
+          transition-[opacity,left] duration-300 ease-out
           lg:hidden ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
         `}
+        // Deixa livre a área do sidebar (não cobre o lado esquerdo)
+        style={{ left: isMobileMenuOpen ? (isCollapsed ? '5rem' : '16rem') as any : '0' }}
         onClick={() => setMobileMenuOpen(false)}
       />
 
       <div className={`grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text transition-all duration-300 ease-out ${shouldEnterAnim ? (entered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6') : ''}`}>
         <div
           className={`
-            absolute top-0 left-0 h-full z-50
+            fixed top-0 left-0 h-full z-[60]
             transform transition-transform duration-300
-            lg:relative lg:transform-none
+            lg:relative lg:transform-none lg:z-auto
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
         >
