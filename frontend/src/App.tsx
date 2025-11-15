@@ -23,6 +23,7 @@ import MilitaresSisgpoPage from './pages/MilitaresSisgpoPage';
 import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
 import NavigationLogger from './components/NavigationLogger'; // Import the new component
 import LoadingOverlay from './components/LoadingOverlay'; // Importar o LoadingOverlay
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
   const { user } = useAuth();
@@ -98,6 +99,7 @@ const App: React.FC = () => {
     <Router>
       {/* O LoadingOverlay agora reage ao estado de loading do AuthProvider */}
       <LoadingOverlay visible={loading} text="Carregando..." />
+      <PwaInstallPrompt />
       <NavigationLogger />
       <AppContent />
     </Router>
