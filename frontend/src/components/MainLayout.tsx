@@ -1,6 +1,6 @@
 // frontend/src/components/MainLayout.tsx
 
-import { useState, ReactNode } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthProvider'; // 1. Importar o useAuth
 import Sidebar from './Sidebar';
 import OnlineUsersPopover from './OnlineUsersPopover';
@@ -18,6 +18,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Animação de entrada ao vir do login
+  const [shouldEnterAnim, setShouldEnterAnim] = useState(false);
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    let t: number | undefined;
+    try {
+      if (sessionStorage.getItem('systemEnterAnim')) {
+        sessionStorage.removeItem('systemEnterAnim');
+        setShouldEnterAnim(true);
+        setEntered(false);
+        t = window.setTimeout(() => setEntered(true), 30);
+      } else {
+        setShouldEnterAnim(false);
+        setEntered(true);
+      }
+    } catch {
+      setEntered(true);
+    }
+    return () => {
+      if (t) window.clearTimeout(t);
+    };
+  }, []);
   // ======================= FIM DA CORREÇÃO =======================
 
   return (
@@ -31,7 +54,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      <div className="grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text">
+      <div className={`grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text transition-all duration-300 ease-out ${shouldEnterAnim ? (entered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6') : ''}`}>
         <div
           className={`
             absolute top-0 left-0 h-full z-50

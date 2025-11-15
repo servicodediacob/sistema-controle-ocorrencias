@@ -113,6 +113,17 @@ function LoginPage(): ReactElement {
   const readyToShowForm = bgLoaded && !showIntro;
   const uiBlocked = !readyToShowForm || isLoading;
 
+  // Animação de saída ao navegar para o sistema
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const navigateWithExit = (to: string) => {
+    try {
+      sessionStorage.setItem('systemEnterAnim', '1');
+    } catch {}
+    setIsLeaving(true);
+    window.setTimeout(() => navigate(to), 300);
+  };
+
   // Animação sequencial (inputs/botões)
   const animBase = 'transition-all duration-500 ease-out';
   const animHidden = 'opacity-0 translate-y-2';
@@ -143,9 +154,7 @@ function LoginPage(): ReactElement {
   useEffect(() => {
 
     if (user && !authLoading && !isSubmitting && !hasAttemptedLoginRef.current) {
-
-      navigate('/');
-
+      navigateWithExit('/');
     }
 
   }, [user, authLoading, isSubmitting, navigate]);
@@ -246,7 +255,7 @@ function LoginPage(): ReactElement {
 
       await finalize();
 
-      navigate('/');
+      navigateWithExit('/');
 
     } catch (err: unknown) { 
 
@@ -359,7 +368,7 @@ function LoginPage(): ReactElement {
 
                 await finalize();
 
-                navigate('/');
+                navigateWithExit('/');
 
               } else if (result.needsApproval && result.profile) {
 
@@ -668,7 +677,7 @@ function LoginPage(): ReactElement {
 
   return (
 
-    <div className="login-background flex min-h-screen w-full items-center justify-center px-4 py-8">
+    <div className={`login-background flex min-h-screen w-full items-center justify-center px-4 py-8 transition-all duration-300 ${isLeaving ? 'opacity-0 -translate-x-3' : 'opacity-100 translate-x-0'}`}>
 
       {/* 5. Renderizar o overlay de carregamento */}
 
