@@ -10,6 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      devOptions: {
+        enabled: true,
+      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
@@ -128,22 +131,14 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Sistema de Ocorrências',
+        name: 'Sistema de Ocorrencias',
         short_name: 'SisOcorr',
         description: 'Sistema para Controle de Ocorrências Policiais',
         theme_color: '#1f2937',
         background_color: '#111827',
         icons: [
-          {
-            src: 'vite.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml',
-          },
-          {
-            src: 'vite.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-          },
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
     }),
@@ -169,4 +164,6 @@ export default defineConfig({
     },
   },
 });
+
+
 
