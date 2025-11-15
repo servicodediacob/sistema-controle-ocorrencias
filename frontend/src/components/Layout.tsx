@@ -16,11 +16,11 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex h-screen bg-background text-text">
       {/* Overlay para o menu mobile */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -41,10 +41,10 @@ const Layout: React.FC = () => {
 
       {/* Conteúdo Principal */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-700 px-6 lg:hidden">
+        <header className="flex h-[73px] flex-shrink-0 items-center border-b border-border bg-surface px-6 lg:hidden">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="text-gray-300 hover:text-white"
+            className="text-text hover:text-text-strong"
             aria-label="Abrir menu"
           >
             <svg
@@ -57,7 +57,7 @@ const Layout: React.FC = () => {
             </svg>
           </button>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto bg-background-alt p-4 md:p-8">
           <Outlet />
         </main>
       </div>

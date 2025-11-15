@@ -88,6 +88,36 @@ function LoginPage(): ReactElement {
 
   const isLoading = isSubmitting || authLoading;
 
+  // Splash/intro: bloqueia a UI brevemente antes do login (uma vez por sessão)
+  const [showIntro, setShowIntro] = useState(() => !sessionStorage.getItem('loginIntroSeen'));
+  // Garante carregar a imagem de fundo antes de exibir o formulário
+  const [bgLoaded, setBgLoaded] = useState(false);
+  useEffect(() => {
+    const img = new Image();
+    img.src = '/images/login-blue-hex-bg.svg';
+    const done = () => setBgLoaded(true);
+    img.onload = done;
+    img.onerror = done;
+  }, []);
+
+  // Inicia o timer de intro somente após o fundo carregar
+  useEffect(() => {
+    if (!showIntro || !bgLoaded) return;
+    const t = setTimeout(() => {
+      setShowIntro(false);
+      sessionStorage.setItem('loginIntroSeen', '1');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [showIntro, bgLoaded]);
+
+  const readyToShowForm = bgLoaded && !showIntro;
+  const uiBlocked = !readyToShowForm || isLoading;
+
+  // Animação sequencial (inputs/botões)
+  const animBase = 'transition-all duration-500 ease-out';
+  const animHidden = 'opacity-0 translate-y-2';
+  const animVisible = 'opacity-100 translate-y-0';
+
   const hasAttemptedLoginRef = useRef(false);
 
   const googlePromptOverlayStartedAt = useRef<number | null>(null);
@@ -604,15 +634,17 @@ function LoginPage(): ReactElement {
 
   return (
 
-    <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
+    <div className="login-background flex min-h-screen w-full items-center justify-center px-4 py-8">
 
       {/* 5. Renderizar o overlay de carregamento */}
 
-      <LoadingOverlay visible={isLoading} text="Entrando..." />
+      <LoadingOverlay visible={uiBlocked} text={!bgLoaded ? 'Carregando...' : (showIntro ? 'Carregando...' : 'Entrando...')} />
 
 
 
-      <div className="w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">
+      <div
+        className={`login-card w-full max-w-md rounded-2xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.6)] mx-auto border border-white/10 transition-all duration-500 ease-out ${!readyToShowForm ? 'opacity-0 translate-y-3 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}
+      >
 
         <h2 className="mb-6 text-center text-2xl font-medium text-gray-200">
 
@@ -624,13 +656,13 @@ function LoginPage(): ReactElement {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
 
-          <div>
+          <div className={`${animBase} ${!readyToShowForm ? animHidden : animVisible}`} style={{ transitionDelay: '50ms' }}>
 
             <input
 
               type="email" name="email" placeholder="Email"
 
-              value={formData.email} onChange={handleChange} required disabled={isLoading}
+              value={formData.email} onChange={handleChange} required disabled={uiBlocked}
 
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
 
@@ -642,7 +674,7 @@ function LoginPage(): ReactElement {
 
 
 
-          <div>
+          <div className={`${animBase} ${!readyToShowForm ? animHidden : animVisible}`} style={{ transitionDelay: '100ms' }}>
 
             <input
 
@@ -650,7 +682,7 @@ function LoginPage(): ReactElement {
 
               name="senha" placeholder="Senha"
 
-              value={formData.senha} onChange={handleChange} required disabled={isLoading}
+              value={formData.senha} onChange={handleChange} required disabled={uiBlocked}
 
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-600"
 
@@ -662,7 +694,7 @@ function LoginPage(): ReactElement {
 
 
 
-          <div className="flex items-center gap-2 self-start">
+          <div className={`flex items-center gap-2 self-start ${animBase} ${!readyToShowForm ? animHidden : animVisible}`} style={{ transitionDelay: '150ms' }}>
 
             <input
 
@@ -692,9 +724,10 @@ function LoginPage(): ReactElement {
 
           <button
 
-            type="submit" disabled={isLoading || isFormInvalid}
+            type="submit" disabled={uiBlocked || isFormInvalid}
 
-            className="mt-2 flex items-center justify-center rounded-md bg-blue-700 p-3 text-lg font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-70"
+            className={`mt-2 flex items-center justify-center rounded-md bg-blue-700 p-3 text-lg font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-70 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`}
+            style={{ transitionDelay: '200ms' }}
 
           >
 
@@ -724,7 +757,7 @@ function LoginPage(): ReactElement {
 
         {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
 
-          <button onClick={handleGoogleSignIn} disabled={isLoading || !isGsiReady} className="mb-4 flex w-full items-center justify-center gap-3 rounded-md bg-white p-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70">
+          <button onClick={handleGoogleSignIn} disabled={uiBlocked || !isGsiReady} className={`mb-4 flex w-full items-center justify-center gap-3 rounded-md bg-white p-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`} style={{ transitionDelay: '250ms' }}>
 
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
 
@@ -734,7 +767,7 @@ function LoginPage(): ReactElement {
 
         ) : (
 
-          <div className="mb-4 w-full rounded-md bg-gray-700 p-3 text-center text-sm text-gray-300">
+          <div className={`mb-4 w-full rounded-md bg-gray-700 p-3 text-center text-sm text-gray-300 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`} style={{ transitionDelay: '250ms' }}>
 
             Login com Google indisponivel (GOOGLE_CLIENT_ID nao configurado)
 
@@ -748,7 +781,8 @@ function LoginPage(): ReactElement {
 
           to="/solicitar-acesso"
 
-          className="block w-full text-center rounded-md bg-gray-600 p-3 font-semibold text-white transition hover:bg-gray-500"
+          className={`block w-full text-center rounded-md bg-gray-600 p-3 font-semibold text-white transition hover:bg-gray-500 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`}
+          style={{ transitionDelay: '300ms' }}
 
         >
 

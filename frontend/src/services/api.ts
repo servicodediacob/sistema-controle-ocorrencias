@@ -41,6 +41,11 @@ export interface IAuditoriaLog {
   criado_em: string;
 }
 export interface IPaginatedAuditoriaLogs { logs: IAuditoriaLog[]; pagination: { page: number; limit: number; total: number; totalPages: number; }; }
+export interface ISisgpoEmpenhoResponse {
+  engagedPrefixes: string[];
+  fetchedAt?: string;
+  cached?: boolean;
+}
 
 // New interface for PendingObm
 export interface IPendingObm {
@@ -102,6 +107,10 @@ const apiService = {
   deleteNatureza: (id: number): Promise<{ message: string }> => api.delete(`/naturezas/${id}`),
   alterarPropriaSenha: (payload: { senhaAtual: string; novaSenha: string }): Promise<{ message: string }> => api.put('/perfil/alterar-senha', payload),
   getAuditoriaLogs: (page = 1, limit = 20): Promise<IPaginatedAuditoriaLogs> => api.get('/auditoria', { params: { page, limit } }),
+  getSisgpoViaturasEmpenhadas: (force = false): Promise<ISisgpoEmpenhoResponse> =>
+    api.get('/sisgpo/viaturas/empenhadas', {
+      params: force ? { force: true } : undefined,
+    }),
 
   // New service for pending OBMs
   getObmsPendentesPorIntervalo: (dataInicio: string, dataFim: string): Promise<IPendingObm[]> => api.get('/obms/pendentes-por-intervalo', { params: { dataInicio, dataFim } }),
@@ -125,6 +134,7 @@ export const {
   getObitosPorData, criarObitoRegistro, atualizarObitoRegistro, deletarObitoRegistro, limparRegistrosDoDia,
   createUnidade, updateUnidade, deleteUnidade, createNatureza, updateNatureza, deleteNatureza,
   alterarPropriaSenha,   getAuditoriaLogs,
+  getSisgpoViaturasEmpenhadas,
   // New export
   getObmsPendentesPorIntervalo,
   // ======================= INÍCIO DA CORREÇÃO =======================

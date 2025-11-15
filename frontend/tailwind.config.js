@@ -11,10 +11,21 @@ export default {
     extend: {
       colors: {
         background: 'var(--color-background)',
+        'background-alt': 'var(--color-background-alt)',
         surface: 'var(--color-surface)',
+        'surface-elevated': 'var(--color-surface-elevated)',
         border: 'var(--color-border)',
         text: 'var(--color-text)',
         'text-strong': 'var(--color-text-strong)',
+        accent: {
+          primary: 'var(--color-accent-primary)',
+          secondary: 'var(--color-accent-secondary)',
+        },
+        state: {
+          success: 'var(--color-success)',
+          warning: 'var(--color-warning)',
+          danger: 'var(--color-danger)',
+        },
         
         teal: {
           300: '#81e6d9',

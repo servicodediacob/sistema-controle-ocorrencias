@@ -27,6 +27,20 @@ import SystemStatusIndicator from './SystemStatusIndicator';
 
 const RECURSOS_MENU_STORAGE_KEY = 'sidebar:recursos-op-open';
 const RECURSOS_MENU_PATHS = ['/plantoes-sisgpo', '/viaturas-sisgpo', '/obms-sisgpo', '/militares-sisgpo'];
+const RELATORIOS_MENU_STORAGE_KEY = 'sidebar:relatorios-open';
+const RELATORIOS_MENU_PATHS = ['/relatorio-estatistico', '/relatorio-obitos'];
+const ADMINISTRADOR_MENU_STORAGE_KEY = 'sidebar:administrador-open';
+const ADMINISTRADOR_MENU_PATHS = ['/gerenciar-usuarios', '/gerenciar-acessos', '/gerenciar-dados', '/auditoria'];
+
+const getInitialMenuState = (storageKey: string, paths: string[], pathname: string) => {
+  if (typeof window !== 'undefined') {
+    const storedValue = window.localStorage.getItem(storageKey);
+    if (storedValue !== null) {
+      return storedValue === 'true';
+    }
+  }
+  return paths.some((path) => pathname.startsWith(path));
+};
 
 interface SidebarProps {
   onLogout: () => void;
@@ -52,13 +66,20 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isCollapsed, onClick
       : highlightVariant === 'sisgpo'
         ? 'highlight-sisgpo'
         : '';
-  const navLinkClasses = `flex items-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700 ${highlightTagClass} ${highlightClassName || ''}`;
-  const activeClasses = "bg-blue-700 text-white";
+  const navLinkClasses = `flex items-center gap-4 rounded-2xl px-3 py-2.5 text-text transition-all duration-200 hover:bg-white/10 ${highlightTagClass} ${highlightClassName || ''}`;
+  const activeClasses = "bg-gradient-to-r from-[#3869D2] to-[#C57CF9] text-white shadow-[0_10px_30px_rgba(197,124,249,0.35)]";
+
+  const handleClick = () => {
+    // Only close the mobile menu if the sidebar is collapsed (i.e., on mobile)
+    if (isCollapsed) {
+      onClick();
+    }
+  };
 
   return (
     <NavLink
       to={to}
-      onClick={onClick}
+      onClick={handleClick}
       className={({ isActive }) => `${navLinkClasses} ${isActive ? activeClasses : ''} ${isCollapsed ? 'justify-center' : ''}`}
       title={isCollapsed ? label : undefined}
     >
@@ -76,6 +97,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isCollapsed, onClick
     </NavLink>
   );
 };
+
 
 interface DropdownMenuProps {
   label: string;
@@ -120,7 +142,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ label, icon, isCollapsed, c
 
         <button
 
-          className={`flex w-full items-center justify-center gap-4 rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700 ${highlightClassName || ''}`}
+          className={`flex w-full items-center justify-center gap-4 rounded-2xl px-3 py-2.5 text-text transition-all duration-200 hover:bg-white/10 ${highlightClassName || ''}`}
 
           title={label}
 
@@ -146,7 +168,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ label, icon, isCollapsed, c
 
         onClick={() => setIsOpen(!isOpen)}
 
-        className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-gray-300 transition-all duration-200 hover:bg-gray-700 ${highlightClassName || ''}`}
+        className={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-text transition-all duration-200 hover:bg-white/10 ${highlightClassName || ''}`}
 
       >
 
@@ -179,21 +201,25 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(!isCollapsed);
 
-  const [isRecursosMenuOpen, setIsRecursosMenuOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedValue = window.localStorage.getItem(RECURSOS_MENU_STORAGE_KEY);
-      if (storedValue !== null) {
-        return storedValue === 'true';
-      }
-    }
-    return RECURSOS_MENU_PATHS.some((path) => location.pathname.startsWith(path));
-  });
+  const [isRecursosMenuOpen, setIsRecursosMenuOpen] = useState(() =>
+    getInitialMenuState(RECURSOS_MENU_STORAGE_KEY, RECURSOS_MENU_PATHS, location.pathname)
+  );
 
-  const [isRelatoriosMenuOpen, setIsRelatoriosMenuOpen] = useState(false);
+  const [isRelatoriosMenuOpen, setIsRelatoriosMenuOpen] = useState(() =>
+    getInitialMenuState(RELATORIOS_MENU_STORAGE_KEY, RELATORIOS_MENU_PATHS, location.pathname)
+  );
 
-  const [isAdministradorMenuOpen, setIsAdministradorMenuOpen] = useState(false);
+  const [isAdministradorMenuOpen, setIsAdministradorMenuOpen] = useState(() =>
+    getInitialMenuState(ADMINISTRADOR_MENU_STORAGE_KEY, ADMINISTRADOR_MENU_PATHS, location.pathname)
+  );
 
-
+  const isAdminUser = user?.role === 'admin' || user?.perfil === 'admin';
+  const areAllDropdownsExpanded =
+    isRecursosMenuOpen &&
+    isRelatoriosMenuOpen &&
+    (!isAdminUser || isAdministradorMenuOpen);
+  const shouldEnableNavScroll = !isCollapsed && areAllDropdownsExpanded;
+  const navContainerClasses = `flex-1 space-y-2 p-2 ${shouldEnableNavScroll ? 'overflow-y-auto pr-2 sidebar-scroll' : ''}`;
 
   React.useEffect(() => {
 
@@ -208,15 +234,29 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
     window.localStorage.setItem(RECURSOS_MENU_STORAGE_KEY, String(isRecursosMenuOpen));
   }, [isRecursosMenuOpen]);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(RELATORIOS_MENU_STORAGE_KEY, String(isRelatoriosMenuOpen));
+  }, [isRelatoriosMenuOpen]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(ADMINISTRADOR_MENU_STORAGE_KEY, String(isAdministradorMenuOpen));
+  }, [isAdministradorMenuOpen]);
+
 
 
   return (
 
-    <aside className={`flex h-screen flex-col bg-gray-800 text-white transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+    <aside className={`sidebar-panel flex h-screen flex-col border-r border-border text-text shadow-[0_25px_60px_rgba(0,0,0,0.45)] transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
 
-      <div className="flex h-[73px] items-center justify-center border-b border-gray-700 p-2">
+      <div className="flex h-[73px] items-center justify-center border-b border-border p-2">
 
-        <Link to="/dashboard" className={`flex items-center gap-3 font-bold text-white ${isCollapsed ? 'justify-center' : ''}`}>
+        <Link to="/dashboard" className={`flex items-center gap-3 font-bold text-text-strong ${isCollapsed ? 'justify-center' : ''}`}>
 
           <ShieldCheck size={24} />
 
@@ -228,7 +268,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
 
 
-      <nav className="flex-1 space-y-2 p-2">
+      <nav className={navContainerClasses}>
 
         <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
@@ -340,13 +380,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
 
 
-        {(user?.role === 'admin' || user?.perfil === 'admin') && (
+        {isAdminUser && (
 
           <>
 
             <div className="px-3 pt-4 pb-2">
 
-              <span className={`text-xs font-semibold uppercase text-gray-400 ${isCollapsed ? 'hidden' : 'block'}`}>
+            <span className={`text-xs font-semibold uppercase text-[rgba(216,219,255,0.65)] ${isCollapsed ? 'hidden' : 'block'}`}>
 
                 Admin
 
@@ -354,51 +394,55 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
             </div>
 
-            <DropdownMenu
+            
 
-              label="Administrador"
+                        <DropdownMenu
 
-              icon={<ShieldAlert size={20} />}
+                          label="Administrador"
 
-              isCollapsed={isCollapsed}
+                          icon={<ShieldAlert size={20} />}
 
-              isOpen={isAdministradorMenuOpen}
+                          isCollapsed={isCollapsed}
 
-              setIsOpen={setIsAdministradorMenuOpen}
+                          isOpen={isAdministradorMenuOpen}
 
-            >
+                          setIsOpen={setIsAdministradorMenuOpen}
 
-              <NavItem to="/gerenciar-usuarios" icon={<Users size={20} />} label="Gerenciar Usuários" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+                        >
 
-              <NavItem to="/gerenciar-acessos" icon={<UserCheck size={20} />} label="Gerenciar Acessos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+                          <NavItem to="/gerenciar-usuarios" icon={<Users size={20} />} label="Gerenciar Usuários" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-              <NavItem to="/gerenciar-dados" icon={<Database size={20} />} label="Gerenciar Dados" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+                          <NavItem to="/gerenciar-acessos" icon={<UserCheck size={20} />} label="Gerenciar Acessos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-            </DropdownMenu>
+                          <NavItem to="/gerenciar-dados" icon={<Database size={20} />} label="Gerenciar Dados" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-            <NavItem to="/auditoria" icon={<ShieldAlert size={20} />} label="Logs de Auditoria" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+                          <NavItem to="/auditoria" icon={<ShieldAlert size={20} />} label="Logs de Auditoria" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-          </>
+                        </DropdownMenu>
 
-        )}
+                      </>
+
+                    )}
+
+            
 
       </nav>
 
 
-      <div className="border-t border-gray-700 p-2">
+      <div className="border-t border-border p-2">
         <div className="mb-2">
           <SystemStatusIndicator isCollapsed={isCollapsed} />
         </div>
         <button
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-          className={`flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-gray-700 ${isCollapsed ? 'justify-center' : ''}`}
+          className={`flex w-full items-center justify-between rounded-2xl p-2 text-left hover:bg-white/10 ${isCollapsed ? 'justify-center' : ''}`}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <UserCircle size={24} />
             {!isCollapsed && (
               <div className="flex flex-col leading-tight truncate">
                 <span className="font-semibold truncate">{user?.nome ?? 'Usuário'}</span>
-                <span className="text-xs text-gray-400 truncate">{user?.obm_nome ?? 'OBM não informada'}</span>
+                <span className="text-xs text-[rgba(216,219,255,0.7)] truncate">{user?.obm_nome ?? 'OBM não informada'}</span>
               </div>
             )}
           </div>
@@ -410,7 +454,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
             <NavItem to="/meu-perfil" icon={<UserCircle size={20} />} label="Meu Perfil" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
             <button
               onClick={onLogout}
-              className="flex w-full items-center gap-4 rounded-md bg-red-800/50 px-3 py-2.5 text-left text-red-300 transition-all duration-200 hover:bg-red-700 hover:text-white"
+              className="flex w-full items-center gap-4 rounded-2xl bg-gradient-to-r from-[#ff5b80] to-[#f87171] px-3 py-2.5 text-left text-white transition-all duration-200 shadow-[0_10px_25px_rgba(248,113,113,0.35)]"
             >
               <LogOut size={20} />
               <span>Sair</span>
@@ -419,7 +463,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex w-full items-center justify-center gap-4 rounded-md p-2 mt-2 text-gray-400 hover:bg-gray-700 hover:text-white"
+          className="hidden lg:flex w-full items-center justify-center gap-4 rounded-2xl p-2 mt-2 text-[rgba(216,219,255,0.7)] hover:bg-white/10 hover:text-white"
         >
           {isCollapsed ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
         </button>

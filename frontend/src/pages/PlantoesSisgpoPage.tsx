@@ -41,6 +41,49 @@ interface DeleteTarget {
   type: ActiveTab;
 }
 
+type PlantaoHorarioLike = {
+  horario_inicio?: string | null;
+  horario_inicial?: string | null;
+  horarioInicio?: string | null;
+  horarioInicial?: string | null;
+  hora_inicio?: string | null;
+  hora_inicial?: string | null;
+  horaInicio?: string | null;
+  horaInicial?: string | null;
+  horario_fim?: string | null;
+  horario_final?: string | null;
+  horarioFim?: string | null;
+  horarioFinal?: string | null;
+  hora_fim?: string | null;
+  hora_final?: string | null;
+  horaFim?: string | null;
+  horaFinal?: string | null;
+};
+
+const normalizeHorarios = <T extends PlantaoHorarioLike>(item: T): T => ({
+  ...item,
+  horario_inicio:
+    item.horario_inicio ??
+    item.horario_inicial ??
+    item.horarioInicio ??
+    item.horarioInicial ??
+    item.hora_inicio ??
+    item.hora_inicial ??
+    item.horaInicio ??
+    item.horaInicial ??
+    null,
+  horario_fim:
+    item.horario_fim ??
+    item.horario_final ??
+    item.horarioFim ??
+    item.horarioFinal ??
+    item.hora_fim ??
+    item.hora_final ??
+    item.horaFim ??
+    item.horaFinal ??
+    null,
+});
+
 const SimplePagination = ({
   pagination,
   onChange,
@@ -176,7 +219,8 @@ const PlantoesSisgpoPage = () => {
         page: String(currentPlantaoPage),
         limit: String(PLANTOES_PER_PAGE),
       });
-      setPlantoes(response.data ?? []);
+      const rawData = response.data ?? [];
+      setPlantoes(rawData.map((plantao) => normalizeHorarios(plantao)));
       setPlantaoPagination(
         response.pagination ?? {
           currentPage: currentPlantaoPage,
@@ -266,7 +310,7 @@ const PlantoesSisgpoPage = () => {
   const handleEditPlantao = async (id: number) => {
     try {
       const response = await sisgpoApi.get<PlantaoDetalhado>(`/admin/plantoes/${id}`);
-      setPlantaoToEdit(response);
+      setPlantaoToEdit(normalizeHorarios(response));
       setIsPlantaoModalOpen(true);
     } catch {
       addNotification('Nao foi possivel carregar o plantao selecionado.', 'error');
@@ -413,13 +457,23 @@ const PlantoesSisgpoPage = () => {
   const formatDate = (value: string) =>
     new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   const formatTime = (value?: string | null) => {
-    if (!value) return '--';
-    if (/^\d{2}:\d{2}/.test(value)) return value.slice(0, 5);
-    const parsed = new Date(value);
+    if (!value) return '--:--';
+    const trimmed = value.trim();
+    if (/^\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+      return trimmed.slice(0, 5);
+    }
+    const numericOnly = trimmed.replace(/\D/g, '');
+    if (numericOnly.length === 4) {
+      return `${numericOnly.slice(0, 2)}:${numericOnly.slice(2)}`;
+    }
+    if (numericOnly.length === 6) {
+      return `${numericOnly.slice(0, 2)}:${numericOnly.slice(2, 4)}`;
+    }
+    const parsed = new Date(trimmed);
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.toISOString().substring(11, 16);
     }
-    return value;
+    return trimmed.length >= 5 ? trimmed.slice(0, 5) : '--:--';
   };
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString('pt-BR', {

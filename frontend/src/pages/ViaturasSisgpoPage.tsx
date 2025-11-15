@@ -1,11 +1,10 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import MainLayout from '../components/MainLayout';
 import { useNotification } from '../contexts/NotificationContext';
-import { sisgpoApi } from '../services/api';
+import { getSisgpoViaturasEmpenhadas, sisgpoApi } from '../services/api';
 import {
   ApiListResponse,
   Obm,
-  Plantao,
   SisgpoPagination,
   ValidationError,
   Viatura,
@@ -73,44 +72,24 @@ const ViaturasSisgpoPage = () => {
     }
   }, [activeFilters, addNotification, currentPage]);
 
-  const fetchEmpenhadas = useCallback(async () => {
-    try {
-      const engaged = new Set<string>();
-      let page = 1;
-      const limit = 100;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      while (true) {
-        const response = await sisgpoApi.get<ApiListResponse<Plantao>>('/admin/plantoes', {
-          page: String(page),
-          limit: String(limit),
-        });
-        (response.data ?? []).forEach((plantao) => {
-          const normalizedPrefix = plantao.viatura_prefixo?.trim().toUpperCase();
-          if (!normalizedPrefix) {
-            return;
-          }
-          const plantaoDate = new Date(plantao.data_plantao);
-          plantaoDate.setHours(0, 0, 0, 0);
-          if (Number.isNaN(plantaoDate.getTime())) {
-            return;
-          }
-          if (plantaoDate >= today) {
-            engaged.add(normalizedPrefix);
-          }
-        });
-
-        const paginationInfo = response.pagination;
-        if (!paginationInfo || paginationInfo.currentPage >= paginationInfo.totalPages) {
-          break;
+  const fetchEmpenhadas = useCallback(
+    async (force = false) => {
+      try {
+        const response = await getSisgpoViaturasEmpenhadas(force);
+        const normalized = (response.engagedPrefixes ?? [])
+          .map((prefix) => prefix?.trim().toUpperCase())
+          .filter((prefix): prefix is string => Boolean(prefix));
+        setEmpenhadasViaturas(new Set(normalized));
+      } catch (error) {
+        if (force) {
+          addNotification('Nao foi possivel atualizar o status das viaturas empenhadas.', 'warning');
         }
-        page += 1;
+        setEmpenhadasViaturas(new Set());
+        console.error('[SISGPO] Falha ao buscar viaturas empenhadas.', error);
       }
-      setEmpenhadasViaturas(engaged);
-    } catch {
-      setEmpenhadasViaturas(new Set());
-    }
-  }, []);
+    },
+    [addNotification]
+  );
 
   const fetchObms = useCallback(async () => {
     try {
@@ -137,14 +116,24 @@ const ViaturasSisgpoPage = () => {
     }
   }, []);
 
-  const refreshViaturas = useCallback(async () => {
-    await fetchViaturas();
-    await fetchEmpenhadas();
-  }, [fetchEmpenhadas, fetchViaturas]);
+  const refreshViaturas = useCallback(
+    async (options?: { forceEmpenhadas?: boolean }) => {
+      await fetchViaturas();
+      await fetchEmpenhadas(options?.forceEmpenhadas ?? false);
+    },
+    [fetchEmpenhadas, fetchViaturas]
+  );
 
   useEffect(() => {
-    refreshViaturas();
+    refreshViaturas({ forceEmpenhadas: true });
   }, [refreshViaturas]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetchEmpenhadas(false);
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [fetchEmpenhadas]);
 
   useEffect(() => {
     fetchObms();
@@ -163,7 +152,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.post('/admin/viaturas/upload-csv', formData);
       addNotification('Arquivo enviado com sucesso!', 'success');
-      await refreshViaturas();
+      await refreshViaturas({ forceEmpenhadas: true });
       fetchLastUpload();
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Falha ao enviar o arquivo.';
@@ -220,7 +209,7 @@ const ViaturasSisgpoPage = () => {
       }
       setIsFormOpen(false);
       setEditing(null);
-      await refreshViaturas();
+      await refreshViaturas({ forceEmpenhadas: true });
     } catch (error: any) {
       if (error?.response?.data?.errors) {
         setFormErrors(error.response.data.errors);
@@ -240,7 +229,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.delete(`/admin/viaturas/${deleteId}`);
       addNotification('Viatura excluida com sucesso.', 'success');
-      await refreshViaturas();
+      await refreshViaturas({ forceEmpenhadas: true });
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Erro ao excluir a viatura.';
       addNotification(message, 'error');
@@ -255,7 +244,7 @@ const ViaturasSisgpoPage = () => {
     try {
       await sisgpoApi.delete('/admin/viaturas/clear-all');
       addNotification('Tabela de viaturas limpa com sucesso.', 'success');
-      await refreshViaturas();
+      await refreshViaturas({ forceEmpenhadas: true });
       fetchLastUpload();
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Erro ao limpar a tabela de viaturas.';

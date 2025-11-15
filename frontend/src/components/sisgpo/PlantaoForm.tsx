@@ -1,9 +1,9 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncSelect from 'react-select/async';
 import { Trash2 } from 'lucide-react';
 import { useNotification } from '../../contexts/NotificationContext';
 import { sisgpoApi } from '../../services/api';
-import { GuarnicaoMembro, PlantaoDetalhado, Viatura } from '../../types/sisgpo';
+import { ApiListResponse, GuarnicaoMembro, Plantao, PlantaoDetalhado, Viatura } from '../../types/sisgpo';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Label from '../ui/Label';
@@ -25,7 +25,21 @@ export interface PlantaoFormPayload {
   id?: number;
   data_plantao: string;
   horario_inicio: string;
+  horario_inicial?: string;
+  horarioInicio?: string;
+  horarioInicial?: string;
+  hora_inicio?: string;
+  hora_inicial?: string;
+  horaInicio?: string;
+  horaInicial?: string;
   horario_fim: string;
+  horario_final?: string;
+  horarioFim?: string;
+  horarioFinal?: string;
+  hora_fim?: string;
+  hora_final?: string;
+  horaFim?: string;
+  horaFinal?: string;
   viatura_id: number;
   obm_id: number | null;
   observacoes: string;
@@ -53,9 +67,17 @@ const formatPhone = (value: string): string => {
 
 const normalizeTimeValue = (value?: string | null): string => {
   if (!value) return '';
-  if (/^\d{2}:\d{2}$/.test(value)) return value;
-  if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return value.slice(0, 5);
-  const parsed = new Date(value);
+  const trimmed = value.trim();
+  if (/^\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) return trimmed.slice(0, 5);
+  const numericOnly = trimmed.replace(/\D/g, '');
+  if (numericOnly.length === 4) {
+    return `${numericOnly.slice(0, 2)}:${numericOnly.slice(2)}`;
+  }
+  if (numericOnly.length === 6) {
+    return `${numericOnly.slice(0, 2)}:${numericOnly.slice(2, 4)}`;
+  }
+  const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toISOString().slice(11, 16);
   }
@@ -113,6 +135,16 @@ const selectStyles = {
   }),
 };
 
+const resolveHorarioCampo = (source: Record<string, any>, keys: string[]): string | undefined => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+};
+
 export const PlantaoForm = ({
   viaturas,
   initialData,
@@ -144,8 +176,28 @@ export const PlantaoForm = ({
     }
 
     setDataPlantao(new Date(initialData.data_plantao).toISOString().split('T')[0]);
-    setHorarioInicio(normalizeTimeValue(initialData.horario_inicio));
-    setHorarioFim(normalizeTimeValue(initialData.horario_fim));
+    const horaInicioRaw = resolveHorarioCampo(initialData, [
+      'horario_inicio',
+      'horario_inicial',
+      'horarioInicio',
+      'horarioInicial',
+      'hora_inicio',
+      'hora_inicial',
+      'horaInicio',
+      'horaInicial',
+    ]);
+    const horaFimRaw = resolveHorarioCampo(initialData, [
+      'horario_fim',
+      'horario_final',
+      'horarioFim',
+      'horarioFinal',
+      'hora_fim',
+      'hora_final',
+      'horaFim',
+      'horaFinal',
+    ]);
+    setHorarioInicio(normalizeTimeValue(horaInicioRaw));
+    setHorarioFim(normalizeTimeValue(horaFimRaw));
     setViaturaId(initialData.viatura_id);
     setObmId(initialData.obm_id ?? null);
     setObservacoes(initialData.observacoes ?? '');
@@ -223,7 +275,45 @@ export const PlantaoForm = ({
   const removeMember = (index: number) =>
     setGuarnicao((prev) => prev.filter((_, idx) => idx !== index));
 
-  const handleSubmit = (event: FormEvent) => {
+  const verificarPlantaoDuplicado = useCallback(
+    async (dataPlantao: string, viaturaSelecionada: Viatura | undefined) => {
+      if (!viaturaSelecionada) {
+        return false;
+      }
+      try {
+        const response = await sisgpoApi.get<ApiListResponse<Plantao>>('/admin/plantoes', {
+          data_inicio: dataPlantao,
+          data_fim: dataPlantao,
+          limit: '500',
+        });
+        const lista = response?.data ?? [];
+        const normalizedPrefix = viaturaSelecionada.prefixo?.trim().toUpperCase() ?? '';
+        return lista.some((plantao) => {
+          const prefixo =
+            plantao.viatura_prefixo ||
+            (plantao as any).prefixo ||
+            (plantao as any).viatura?.prefixo ||
+            '';
+          const normalizedPlantaoPrefix = prefixo.trim().toUpperCase();
+          const plantaoViaturaId = Number(
+            (plantao as any).viatura_id ??
+              (plantao as any).viaturaId ??
+              (plantao as any).viatura?.id
+          );
+          return (
+            (normalizedPrefix && normalizedPlantaoPrefix === normalizedPrefix) ||
+            (Number.isFinite(plantaoViaturaId) && plantaoViaturaId === viaturaSelecionada.id)
+          );
+        });
+      } catch (error) {
+        console.error('Erro ao verificar plantão duplicado', error);
+        return false;
+      }
+    },
+    []
+  );
+
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
     if (!viaturaId) {
@@ -233,6 +323,17 @@ export const PlantaoForm = ({
 
     const viatura = viaturasById[viaturaId];
     const resolvedObmId = viatura?.obm_id ?? (typeof obmId === 'number' ? obmId : null);
+
+    if (!initialData?.id) {
+      const duplicado = await verificarPlantaoDuplicado(dataPlantao, viatura);
+      if (duplicado) {
+        addNotification(
+          'Já existe um plantao cadastrado para esta viatura nesta data.',
+          'error'
+        );
+        return;
+      }
+    }
 
     if (!resolvedObmId) {
       addNotification(
@@ -267,7 +368,21 @@ export const PlantaoForm = ({
       id: initialData?.id,
       data_plantao: dataPlantao,
       horario_inicio: horarioInicio,
+      horario_inicial: horarioInicio,
+      horarioInicio: horarioInicio,
+      horarioInicial: horarioInicio,
+      hora_inicio: horarioInicio,
+      hora_inicial: horarioInicio,
+      horaInicio: horarioInicio,
+      horaInicial: horarioInicio,
       horario_fim: horarioFim,
+      horario_final: horarioFim,
+      horarioFim: horarioFim,
+      horarioFinal: horarioFim,
+      hora_fim: horarioFim,
+      hora_final: horarioFim,
+      horaFim: horarioFim,
+      horaFinal: horarioFim,
       viatura_id: Number(viaturaId),
       obm_id: resolvedObmId,
       observacoes,

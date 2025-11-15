@@ -1,5 +1,3 @@
-// Caminho: frontend/src/main.tsx
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
@@ -15,26 +13,26 @@ import { SocketProvider } from './hooks/useSocket';
 
 const rootElement = document.getElementById('root');
 
-if (rootElement) {
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <ThemeProvider>
-          <NotificationProvider>
-            <AuthProvider>
-              <SocketProvider>
-                <DataProvider>
-                  <ChatProvider>
-                    <App />
-                  </ChatProvider>
-                </DataProvider>
-              </SocketProvider>
-            </AuthProvider>
-          </NotificationProvider>
-        </ThemeProvider>
-      </ErrorBoundary>
-    </React.StrictMode>,
-  );
-} else {
-  console.error("Elemento 'root' não encontrado no DOM.");
+if (!rootElement) {
+  throw new Error("Elemento 'root' não encontrado no DOM.");
 }
+
+ReactDOM.createRoot(rootElement).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <SocketProvider>
+              <DataProvider>
+                <ChatProvider>
+                  <App />
+                </ChatProvider>
+              </DataProvider>
+            </SocketProvider>
+          </AuthProvider>
+        </NotificationProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  </React.StrictMode>,
+);

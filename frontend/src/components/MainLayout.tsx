@@ -24,7 +24,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
     <>
       <div
         className={`
-          fixed inset-0 bg-black bg-opacity-50 z-40
+          fixed inset-0 bg-black/70 backdrop-blur-sm z-40
           transition-opacity duration-300
           lg:hidden ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
         `}
@@ -49,7 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         </div>
 
         <div className="flex flex-col overflow-hidden">
-          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10">
+          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10 shadow-[0_15px_35px_rgba(0,0,0,0.45)]">
             <div className="flex items-center">
               <button
                 onClick={() => setMobileMenuOpen(true)}
@@ -72,7 +72,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
             </div>
           </header>
 
-          <main className="flex-grow overflow-auto p-6 md:p-8">
+          <main className="flex-grow overflow-auto bg-background-alt p-6 md:p-8">
             {children}
           </main>
         </div>
