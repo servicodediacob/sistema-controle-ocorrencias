@@ -553,7 +553,17 @@ function LoginPage(): ReactElement {
 
 
 
-      window.google?.accounts?.id?.prompt(async (notification: any) => {
+      const gsi = window.google?.accounts?.id;
+
+      if (!gsi) {
+
+        throw new Error('Google Identity Services nao inicializado.');
+
+      }
+
+      gsi.disableAutoSelect?.();
+
+      gsi.prompt(async (notification: any) => {
 
 
 
