@@ -89,8 +89,8 @@ const buildRelatorioPdfDocument = (
       },
       styles: { fontSize: 9 },
       footStyles: {
-        fillColor: [30, 83, 139],
-        textColor: 255,
+        fillColor: [255, 255, 0],
+        textColor: 0,
         halign: 'center',
         valign: 'middle',
         fontStyle: 'bold',

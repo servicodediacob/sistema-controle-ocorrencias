@@ -98,6 +98,21 @@ function RegistroObitoModal({
     }
   };
 
+  const processedCidades = Array.from(cidades.reduce((map, cidade) => {
+    if (cidade.cidade_nome.startsWith('GOIÂNIA')) {
+      if (!map.has('GOIÂNIA')) {
+        map.set('GOIÂNIA', { ...cidade, cidade_nome: 'GOIÂNIA' });
+      }
+    } else if (cidade.cidade_nome.startsWith('APARECIDA DE GOIÂNIA')) {
+      if (!map.has('APARECIDA DE GOIÂNIA')) {
+        map.set('APARECIDA DE GOIÂNIA', { ...cidade, cidade_nome: 'APARECIDA DE GOIÂNIA' });
+      }
+    } else {
+      map.set(cidade.cidade_nome, cidade);
+    }
+    return map;
+  }, new Map<string, ICidade>()).values());
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4"
@@ -150,7 +165,7 @@ function RegistroObitoModal({
               className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="" disabled>Selecione uma OBM</option>
-              {cidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
+              {processedCidades.map(c => <option key={c.id} value={c.id}>{c.cidade_nome}</option>)}
             </select>
           </div>
           {/* ======================= FIM DA CORREÇÃO NO JSX ======================= */}
