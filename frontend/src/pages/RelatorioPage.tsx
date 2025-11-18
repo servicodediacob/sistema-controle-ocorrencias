@@ -1,6 +1,6 @@
 // Caminho: frontend/src/pages/RelatorioPage.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getPlantaoRange } from '../utils/date';
 import { IRelatorioRow, IObitoRegistro, IDestaqueRelatorio, IDataApoio, getNaturezas } from '../services/api';
 import { getRelatorioCompleto, limparDadosPorIntervalo } from '../services/relatorioService';
@@ -11,11 +11,14 @@ import { useAuth } from '../contexts/AuthProvider';
 import MainLayout from '../components/MainLayout';
 import ReportRow from '../components/ReportRow';
 import Spinner from '../components/Spinner';
-import { gerarPDFRelatorioCompleto } from '../services/pdfGeneratorService';
+import {
+  gerarPDFRelatorioCompleto,
+  gerarPDFRelatorioCompletoBlob,
+} from '../services/pdfGeneratorService';
 import { mergeEstatisticasWithNaturezas, CRBM_HEADERS } from '../utils/estatisticas';
 
 import RelatorioEstatisticoCards from '../components/RelatorioEstatisticoCards'; // Import the new component
-import ConfirmarLimpezaModal from '../components/ConfirmarLimpezaModal';
+import RelatorioPreviewModal from '../components/RelatorioPreviewModal';
 import { registrarGeracaoRelatorio } from '../services/auditoriaService';
 import AssinaturaModal from '../components/AssinaturaModal';
 
@@ -41,7 +44,10 @@ function RelatorioPage() {
   const [estatisticas, setEstatisticas] = useState<IRelatorioRow[]>([]);
   const [obitos, setObitos] = useState<IObitoRegistro[]>([]);
   const [destaques, setDestaques] = useState<IDestaqueRelatorio[]>([]);
-  const [isConfirmandoLimpeza, setIsConfirmandoLimpeza] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isAssinaturaModalOpen, setIsAssinaturaModalOpen] = useState(false);
 
   const handleGenerateReport = useCallback(async () => {
@@ -83,19 +89,79 @@ function RelatorioPage() {
     handleGenerateReport();
   }, [handleGenerateReport]);
 
-  // Abre o modal de confirmação
+  const formatPreviewDate = (iso: string) => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+      return '-';
+    }
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+  };
+
+  const periodoLabel = useMemo(
+    () => `Período: ${formatPreviewDate(dataInicio)} até ${formatPreviewDate(dataFim)}`,
+    [dataInicio, dataFim],
+  );
+
+  const generatePreview = useCallback(async () => {
+    setPreviewError(null);
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+    setIsGeneratingPreview(true);
+    try {
+      const previewBlob = gerarPDFRelatorioCompletoBlob(
+        { estatisticas, obitos, destaques },
+        dataInicio,
+        dataFim,
+        { nome: usuarioLogado?.nome || '', funcao: usuarioLogado?.role || '' },
+      );
+      const url = URL.createObjectURL(previewBlob);
+      setPreviewUrl(url);
+    } catch (error) {
+      console.error('[RelatorioPage] Falha ao gerar o preview do relatório.', error);
+      setPreviewError(
+        error instanceof Error ? error.message : 'Falha ao gerar a pré-visualização do relatório.',
+      );
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  }, [estatisticas, obitos, destaques, dataInicio, dataFim, usuarioLogado]);
+
+  const closePreview = useCallback(() => {
+    setIsPreviewOpen(false);
+    setPreviewError(null);
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+  }, []);
+
+  const handleConfirmarLimpeza = useCallback(() => {
+    setIsAssinaturaModalOpen(true);
+  }, []);
+
+  const handlePreviewConfirm = useCallback(() => {
+    closePreview();
+    handleConfirmarLimpeza();
+  }, [closePreview, handleConfirmarLimpeza]);
+
   const handleDownloadPdf = () => {
     if (estatisticas.length === 0 && obitos.length === 0 && destaques.length === 0) {
       addNotification('Não há dados para gerar o PDF.', 'warning');
       return;
     }
-    setIsConfirmandoLimpeza(true);
-  };
-
-  // Chamado pelo modal de confirmacao para abrir o modal de assinatura
-  const handleConfirmarLimpeza = () => {
-    setIsConfirmandoLimpeza(false);
-    setIsAssinaturaModalOpen(true);
+    setIsPreviewOpen(true);
+    generatePreview();
   };
 
   // Chamado pelo modal de assinatura para gerar o PDF e limpar os dados
@@ -137,6 +203,14 @@ function RelatorioPage() {
       }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const groupedData = estatisticas.reduce((acc, row) => {
     const grupo = row.grupo;
@@ -300,11 +374,16 @@ function RelatorioPage() {
         </div>
       )}
 
-      <ConfirmarLimpezaModal
-        isOpen={isConfirmandoLimpeza}
-        onClose={() => setIsConfirmandoLimpeza(false)}
-        onConfirm={handleConfirmarLimpeza}
+      <RelatorioPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        onRetry={generatePreview}
+        onConfirm={handlePreviewConfirm}
         loading={loading}
+        generatingPreview={isGeneratingPreview}
+        previewUrl={previewUrl}
+        previewError={previewError}
+        periodoLabel={periodoLabel}
       />
       <AssinaturaModal
         isOpen={isAssinaturaModalOpen}
@@ -319,6 +398,4 @@ function RelatorioPage() {
 }
 
 export default RelatorioPage;
-
-
 

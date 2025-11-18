@@ -15,13 +15,12 @@ interface Assinatura {
   funcao: string;
 }
 
-// Função principal para gerar o PDF
-export const gerarPDFRelatorioCompleto = (
+const buildRelatorioPdfDocument = (
   dados: IRelatorioCompleto,
   dataInicio: string,
   dataFim: string,
   assinatura: Assinatura
-) => {
+): jsPDFWithAutoTable => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const dataFormatada = new Date().toLocaleDateString('pt-BR');
   const formatHeaderDate = (dateString: string) => {
@@ -118,9 +117,10 @@ export const gerarPDFRelatorioCompleto = (
       headStyles: { fillColor: [192, 57, 43] },
     });
     finalY = ((doc as unknown) as any).lastAutoTable?.finalY ?? finalY;
-      doc.setFontSize(11);
-      doc.text(`Total de Óbitos: ${dados.totalObitos}`, 14, finalY + 5);
-      finalY += 5;
+    const totalObitos = (dados as any).totalObitos ?? dados.obitos.length;
+    doc.setFontSize(11);
+    doc.text(`Total de Óbitos: ${totalObitos}`, 14, finalY + 5);
+    finalY += 5;
   }
 
   // --- Tabela de Destaques ---
@@ -217,7 +217,25 @@ export const gerarPDFRelatorioCompleto = (
   doc.text(assinatura.nome, 105, signatureY + 5, { align: 'center' });
   doc.text(assinatura.funcao, 105, signatureY + 10, { align: 'center' });
 
-  // --- Salvar o PDF ---
+  return doc;
+};
+
+export const gerarPDFRelatorioCompleto = (
+  dados: IRelatorioCompleto,
+  dataInicio: string,
+  dataFim: string,
+  assinatura: Assinatura
+) => {
+  const doc = buildRelatorioPdfDocument(dados, dataInicio, dataFim, assinatura);
   doc.save(`relatorio_consolidado_${dataInicio}_a_${dataFim}.pdf`);
 };
 
+export const gerarPDFRelatorioCompletoBlob = (
+  dados: IRelatorioCompleto,
+  dataInicio: string,
+  dataFim: string,
+  assinatura: Assinatura
+): Blob => {
+  const doc = buildRelatorioPdfDocument(dados, dataInicio, dataFim, assinatura);
+  return doc.output('blob');
+};
