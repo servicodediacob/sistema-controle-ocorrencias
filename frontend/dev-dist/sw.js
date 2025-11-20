@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-cd5ceeac'], (function (workbox) { 'use strict';
+define(['./workbox-20b2de74'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,12 +82,20 @@ define(['./workbox-cd5ceeac'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.qdmujr90mhg"
+    "revision": "0.vh4947moqd"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/sisgpo/proxy"), new workbox.NetworkOnly({
+    "cacheName": "api-sisgpo-proxy-cache",
+    plugins: [new workbox.CacheableResponsePlugin({
+      statuses: [0, 200, 201, 204, 400, 404, 500]
+    })]
+  }), 'GET');
   workbox.registerRoute(({
     url
   }) => url.pathname.startsWith("/api/acesso/obms-public"), new workbox.StaleWhileRevalidate({

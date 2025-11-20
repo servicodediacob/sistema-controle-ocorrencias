@@ -1,6 +1,6 @@
 // Caminho: frontend/src/services/api.ts
 
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // --- INTERFACES (sem alterações) ---
 export interface IUser { id: number; nome: string; email: string; perfil: 'admin' | 'supervisor' | 'user'; role?: 'admin' | 'supervisor' | 'user'; obm_id: number | null; obm_nome?: string; }
@@ -61,7 +61,13 @@ const rawBaseURL = import.meta.env.VITE_API_BASE_URL || '/';
 const baseURL = rawBaseURL.endsWith('/api') ? rawBaseURL : `${rawBaseURL.replace(/\/$/, '')}/api`;
 export const api = axios.create({ baseURL });
 api.interceptors.request.use((config) => { const token = localStorage.getItem('@siscob:token'); if (token) { config.headers.Authorization = `Bearer ${token}`; } return config; }, (error) => Promise.reject(error));
-api.interceptors.response.use((response) => response.data, (error) => { if (axios.isAxiosError(error) && error.response?.status === 401) { console.warn('[Axios Interceptor] Erro 401. Realizando logout forçado.'); localStorage.removeItem('@siscob:token'); if (window.location.pathname !== '/login') { window.location.href = '/login'; } } return Promise.reject(error); });
+api.interceptors.response.use((response) => {
+  // Permite obter a resposta completa (com headers) quando rawResponse estiver setado na config.
+  if ((response.config as any)?.rawResponse) {
+    return response;
+  }
+  return response.data;
+}, (error) => { if (axios.isAxiosError(error) && error.response?.status === 401) { console.warn('[Axios Interceptor] Erro 401. Realizando logout forçado.'); localStorage.removeItem('@siscob:token'); if (window.location.pathname !== '/login') { window.location.href = '/login'; } } return Promise.reject(error); });
 export const extractErrorMessage = (error: unknown): string => { if (axios.isAxiosError(error)) { const axiosError = error as AxiosError<ApiError>; return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`; } if (error instanceof Error) return error.message; return 'Ocorreu um erro desconhecido.'; };
 
 // --- Serviços da API ---
@@ -156,10 +162,7 @@ const normalizeSisgpoPath = (path: string): string => {
 };
 
 export const sisgpoApi = {
-  get: async <T = unknown>(path: string, params?: Record<string, unknown>): Promise<T> => {
-    const normalized = normalizeSisgpoPath(path);
-    return api.get<T>(`/sisgpo/proxy${normalized}`, { params });
-  },
+  get: sisgpoGet,
   post: async <T = unknown>(path: string, payload?: any): Promise<T> => {
     const normalized = normalizeSisgpoPath(path);
     return api.post<T>(`/sisgpo/proxy${normalized}`, payload);
@@ -168,9 +171,40 @@ export const sisgpoApi = {
     const normalized = normalizeSisgpoPath(path);
     return api.put<T>(`/sisgpo/proxy${normalized}`, payload);
   },
-  delete: async <T = unknown>(path: string): Promise<T> => {
+  delete: async <T = unknown>(path: string, config?: AxiosRequestConfig): Promise<T> => {
     const normalized = normalizeSisgpoPath(path);
-    return api.delete<T>(`/sisgpo/proxy${normalized}`);
+    return api.delete<T>(`/sisgpo/proxy${normalized}`, config);
   },
 };
 
+async function sisgpoGet<T = unknown>(
+  path: string,
+  params?: Record<string, unknown>
+): Promise<T>;
+async function sisgpoGet<T = unknown>(
+  path: string,
+  params: Record<string, unknown> | undefined,
+  options: { raw: true }
+): Promise<AxiosResponse<T>>;
+async function sisgpoGet<T = unknown>(
+  path: string,
+  params?: Record<string, unknown>,
+  options?: { raw?: boolean }
+): Promise<T | AxiosResponse<T>> {
+  const normalized = normalizeSisgpoPath(path);
+  const config: AxiosRequestConfig & { rawResponse?: boolean } = {
+    params,
+    headers: {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  };
+
+  if (options?.raw) {
+    config.rawResponse = true;
+  }
+
+  // Quando rawResponse está habilitado, o interceptor devolve AxiosResponse completo.
+  return api.get<T>(`/sisgpo/proxy${normalized}`, config as AxiosRequestConfig);
+}

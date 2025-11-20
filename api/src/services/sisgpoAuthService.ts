@@ -4,7 +4,7 @@ import logger from '@/config/logger';
 import { prisma } from '@/lib/prisma';
 import { RequestWithUser, JwtPayload as AuthJwtPayload } from '@/middleware/authMiddleware';
 
-const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
+const SISGPO_API_URL = (process.env.SISGPO_API_URL || 'http://localhost:3333').trim();
 const SHARED_SECRET = process.env.SSO_SHARED_SECRET;
 const SISGPO_SSO_TTL_SECONDS = Number(process.env.SISGPO_SSO_TTL_SECONDS || 90);
 
@@ -55,9 +55,11 @@ export const fetchSisgpoSessionToken = async (
 ): Promise<string> => {
   const ssoToken = await generateSisgpoSsoToken(usuario);
 
+  const targetUrl = `${SISGPO_API_URL}/api/auth/sso-login`;
+  
   try {
     const response = await axios.post(
-      `${SISGPO_API_URL}/api/auth/sso-login`,
+      targetUrl,
       {},
       {
         headers: {
@@ -71,8 +73,21 @@ export const fetchSisgpoSessionToken = async (
     }
 
     return response.data.token;
-  } catch (error) {
-    logger.error({ err: error }, '[SISGPO] Falha ao obter token de sessão via SSO.');
+  } catch (error: any) {
+    const isConnectionError = error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND';
+    
+    if (isConnectionError) {
+      logger.error(
+        { err: error, url: targetUrl, code: error?.code },
+        '[SISGPO] Falha ao conectar com o SISGPO. Verifique se o serviço está rodando e a URL está correta.'
+      );
+    } else {
+      logger.error(
+        { err: error, url: targetUrl },
+        '[SISGPO] Falha ao obter token de sessão via SSO.'
+      );
+    }
+    
     throw error;
   }
 };

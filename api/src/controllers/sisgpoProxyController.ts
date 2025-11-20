@@ -4,7 +4,7 @@ import logger from '@/config/logger';
 import { fetchSisgpoSessionToken } from '@/services/sisgpoAuthService';
 import { RequestWithUser } from '@/middleware/authMiddleware';
 
-const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
+const SISGPO_API_URL = (process.env.SISGPO_API_URL || 'http://localhost:3333').trim();
 const ALLOWED_PREFIXES = [
   '/admin/plantoes',
   '/admin/viaturas',
@@ -42,26 +42,64 @@ export const proxySisgpoRequest = async (req: RequestWithUser, res: Response): P
   let sisgpoJwt: string;
   try {
     sisgpoJwt = await fetchSisgpoSessionToken(req.usuario);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Falha ao autenticar no SISGPO via SSO.';
-    res.status(500).json({ message });
+  } catch (error: any) {
+    const isConnectionError = error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND';
+
+    let message: string;
+    if (isConnectionError) {
+      message = 'Não foi possível conectar ao SISGPO. Verifique se o serviço está rodando.';
+    } else if (error instanceof Error) {
+      message = error.message;
+    } else {
+      message = 'Falha ao autenticar no SISGPO via SSO.';
+    }
+
+    res.status(503).json({ message });
     return;
   }
 
   const targetUrl = `${SISGPO_API_URL}/api${wildcardPath}`;
+  
+  // Log the request details for debugging
+  logger.info({
+    targetUrl,
+    method: req.method,
+    params: req.query,
+    wildcardPath,
+    sisgpoApiUrl: SISGPO_API_URL,
+  }, '[SISGPO Proxy] Forwarding request to SISGPO');
+
+  const incomingIfMatch = req.headers['if-match'];
+  const contentType = req.headers['content-type'];
+  const isMultipart = typeof contentType === 'string' && contentType.startsWith('multipart/form-data');
+
+  const outgoingHeaders: Record<string, string | string[] | undefined> = {
+    Authorization: `Bearer ${sisgpoJwt}`,
+    'Content-Type': contentType,
+  };
+  if (typeof incomingIfMatch === 'string' && incomingIfMatch.trim()) {
+    outgoingHeaders['If-Match'] = incomingIfMatch;
+  }
+
+  // Para JSON/urlencoded usamos req.body (já parseado). Para multipart encaminhamos o stream bruto.
+  const data = isMultipart ? req : req.body;
 
   try {
     const response = await axios.request({
       method: req.method as any,
       url: targetUrl,
       params: req.query,
-      data: req.body,
-      headers: {
-        Authorization: `Bearer ${sisgpoJwt}`,
-      },
+      data,
+      headers: outgoingHeaders,
       validateStatus: () => true,
     });
+
+    const eTagValue =
+      (response.headers?.etag as string | undefined) ??
+      (response.headers?.ETag as string | undefined);
+    if (eTagValue) {
+      res.setHeader('ETag', eTagValue);
+    }
 
     if (response.status === 204) {
       res.sendStatus(204);

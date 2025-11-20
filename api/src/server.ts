@@ -76,11 +76,16 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Cache-Control', 'Pragma', 'Expires'],
   credentials: true,
+  exposedHeaders: ['ETag'],
 };
 
 app.use(cors(corsOptions));
+
+// As rotas de proxy devem vir antes do express.json() para lidar com uploads de arquivo
+app.use('/api/sisgpo', sisgpoRoutes);
+
 app.use(express.json());
 
 // Health endpoints used by uptime monitors to keep the instance warm.
@@ -120,7 +125,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api', estatisticasRoutes);
 app.use('/api/obms', obmRoutes); // New app.use
-app.use('/api/sisgpo', sisgpoRoutes);
 app.use('/api', dadosRoutes);
 
 server.listen(PORT, () => {

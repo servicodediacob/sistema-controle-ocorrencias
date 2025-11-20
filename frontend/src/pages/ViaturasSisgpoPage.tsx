@@ -32,6 +32,7 @@ const ViaturasSisgpoPage = () => {
 
   const [lastUpload, setLastUpload] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [viaturasEtag, setViaturasEtag] = useState<string | null>(null);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Viatura | null>(null);
@@ -52,19 +53,31 @@ const ViaturasSisgpoPage = () => {
   const fetchViaturas = useCallback(async () => {
     setLoadingList(true);
     try {
-      const response = await sisgpoApi.get<ApiListResponse<Viatura>>('/admin/viaturas', {
-        page: String(currentPage),
-        limit: String(PAGE_SIZE),
-        ...activeFilters,
-      });
-      setViaturas(response.data ?? []);
+      const response = await sisgpoApi.get<ApiListResponse<Viatura>>(
+        '/admin/viaturas',
+        {
+          page: String(currentPage),
+          limit: String(PAGE_SIZE),
+          ...activeFilters,
+          '_': Date.now(),
+        },
+        { raw: true }
+      );
+
+      const rawEtag = response.headers?.etag ?? response.headers?.ETag;
+      const normalizedEtag =
+        Array.isArray(rawEtag) ? rawEtag[0] : typeof rawEtag === 'string' ? rawEtag : null;
+
+      setViaturasEtag(normalizedEtag);
+      setViaturas(response.data.data ?? []);
       setPagination(
-        response.pagination ?? {
+        response.data.pagination ?? {
           currentPage,
           totalPages: 1,
         }
       );
     } catch (error: any) {
+      setViaturasEtag(null);
       const message = error?.response?.data?.message || 'Nao foi possivel carregar as viaturas.';
       addNotification(message, 'error');
     } finally {
@@ -151,13 +164,28 @@ const ViaturasSisgpoPage = () => {
     formData.append('file', file);
     try {
       await sisgpoApi.post('/admin/viaturas/upload-csv', formData);
-      addNotification('Arquivo enviado com sucesso!', 'success');
-      await refreshViaturas({ forceEmpenhadas: true });
-      fetchLastUpload();
+      addNotification('Arquivo enviado com sucesso! A lista sera atualizada em breve.', 'success');
+
+      setTimeout(() => {
+        const refreshData = async () => {
+          try {
+            await refreshViaturas({ forceEmpenhadas: true });
+            fetchLastUpload();
+          } catch (refreshError: any) {
+            const message =
+              refreshError?.response?.data?.message || 'Falha ao atualizar a lista de viaturas.';
+            addNotification(message, 'error');
+          } finally {
+            // Garante que o estado de loading seja desativado mesmo se a atualização falhar
+            setIsUploading(false);
+          }
+        };
+        refreshData();
+      }, 7000);
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Falha ao enviar o arquivo.';
       addNotification(message, 'error');
-    } finally {
+      // Desativa o loading se o upload inicial falhar
       setIsUploading(false);
     }
   };
@@ -240,9 +268,25 @@ const ViaturasSisgpoPage = () => {
   };
 
   const handleClearAll = async () => {
+    if (empenhadasViaturas.size > 0) {
+      addNotification('Nao e possivel limpar a tabela enquanto houver viaturas empenhadas.', 'error');
+      return;
+    }
+    if (!viaturasEtag) {
+      addNotification(
+        'Nao foi possivel identificar a versao atual das viaturas. Atualize a lista antes de limpar.',
+        'error'
+      );
+      setConfirmClear(false);
+      return;
+    }
     setClearingAll(true);
     try {
-      await sisgpoApi.delete('/admin/viaturas/clear-all');
+      await sisgpoApi.delete('/admin/viaturas/clear-all', {
+        headers: {
+          'If-Match': viaturasEtag,
+        },
+      });
       addNotification('Tabela de viaturas limpa com sucesso.', 'success');
       await refreshViaturas({ forceEmpenhadas: true });
       fetchLastUpload();

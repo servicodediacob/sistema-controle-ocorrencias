@@ -77,7 +77,7 @@ const fetchViaturasEmpenhadas = async (usuario: RequestWithUser['usuario']): Pro
   const limit = 200;
   let currentPage = 1;
   while (true) {
-    const response = await axios.get(`${SISGPO_API_URL}/api/admin/plantoes`, {
+    const response = await axios.get(`${SISGPO_API_URL}/api/sisgpo/proxy/admin/plantoes`, {
       params: {
         page: currentPage,
         limit,
