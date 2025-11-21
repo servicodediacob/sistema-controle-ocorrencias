@@ -58,7 +58,7 @@ model Usuario {
   nome       String    @db.VarChar(100)
   email      String    @unique @db.VarChar(100)
   senha_hash String    @db.VarChar(255)
-  role       Role      @default(user)
+  role       Role      @default(user) @map("perfil")
   obm_id     Int?
   criado_em  DateTime? @default(now()) @db.Timestamptz()
   obm        OBM?      @relation(fields: [obm_id], references: [id], onDelete: SetNull)
