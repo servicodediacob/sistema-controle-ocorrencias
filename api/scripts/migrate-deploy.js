@@ -11,10 +11,13 @@ const { spawnSync } = require('node:child_process');
 const { existsSync, readdirSync } = require('node:fs');
 const { join } = require('node:path');
 
+const originalDbUrl = process.env.DATABASE_URL;
+const directUrl = process.env.DIRECT_DATABASE_URL;
+
 // Prefer a direct connection string if provided (important when DATABASE_URL points to a pooler).
-if (process.env.DIRECT_DATABASE_URL) {
+if (directUrl) {
   console.log('[migrate] Using DIRECT_DATABASE_URL for migrations');
-  process.env.DATABASE_URL = process.env.DIRECT_DATABASE_URL;
+  process.env.DATABASE_URL = directUrl;
 } else if (!process.env.DATABASE_URL) {
   console.error('[migrate] DATABASE_URL is not set. Aborting migrations.');
   process.exit(1);
@@ -56,15 +59,32 @@ function deploy() {
   return r;
 }
 
-const first = deploy();
-if (first.status === 0) {
+// 1) Tenta deploy com a URL atual (direta ou pool).
+let current = deploy();
+
+// 2) Se falhar com P1001 na URL direta, tenta cair para a URL de pool.
+const outFirst = (current.stdout || '') + (current.stderr || '');
+if (
+  current.status !== 0 &&
+  directUrl &&
+  originalDbUrl &&
+  originalDbUrl !== directUrl &&
+  outFirst.includes('P1001')
+)
+{
+  console.warn('[migrate] P1001 usando DIRECT_DATABASE_URL. Tentando fallback para DATABASE_URL (pool)...');
+  process.env.DATABASE_URL = originalDbUrl;
+  current = deploy();
+}
+
+if (current.status === 0) {
   process.exit(0);
 }
 
-const out = (first.stdout || '') + (first.stderr || '');
+const out = (current.stdout || '') + (current.stderr || '');
 if (!out.includes('P3005')) {
-  // Some other failure; exit with original status
-  process.exit(first.status || 1);
+  // Alguma outra falha; sair com o status atual
+  process.exit(current.status || 1);
 }
 
 console.log('[migrate] Detected P3005 (database not empty). Applying baseline adoption...');
