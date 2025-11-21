@@ -7,10 +7,15 @@ import '../config/envLoader';
 
 // Usa explicitamente a connectionString para evitar problemas quando
 // o processo é iniciado fora do diretório api/.
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_POOL_URL ||
+  process.env.DATABASE_URL ||
+  process.env.DIRECT_DATABASE_URL;
 
 if (!connectionString) {
-  logger.error('[DB] DATABASE_URL não definida. Verifique seu arquivo .env');
+  logger.error(
+    '[DB] Nenhuma URL de banco definida. Configure DATABASE_POOL_URL, DATABASE_URL ou DIRECT_DATABASE_URL.'
+  );
 }
 
 const config: PoolConfig = {

@@ -11,6 +11,15 @@ const { spawnSync } = require('node:child_process');
 const { existsSync, readdirSync } = require('node:fs');
 const { join } = require('node:path');
 
+// Prefer a direct connection string if provided (important when DATABASE_URL points to a pooler).
+if (process.env.DIRECT_DATABASE_URL) {
+  console.log('[migrate] Using DIRECT_DATABASE_URL for migrations');
+  process.env.DATABASE_URL = process.env.DIRECT_DATABASE_URL;
+} else if (!process.env.DATABASE_URL) {
+  console.error('[migrate] DATABASE_URL is not set. Aborting migrations.');
+  process.exit(1);
+}
+
 const prisma = (...args) => spawnSync('npx', ['prisma', ...args], { encoding: 'utf8' });
 
 function migrationsPath(name) {

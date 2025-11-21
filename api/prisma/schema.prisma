@@ -5,6 +5,8 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Use a dedicated direct connection for migrations to avoid issues with pooled URLs (Supabase/Neon).
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // Define o gerador do Prisma Client, que criará o cliente tipado
