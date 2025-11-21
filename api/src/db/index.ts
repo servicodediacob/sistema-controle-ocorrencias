@@ -18,9 +18,19 @@ if (!connectionString) {
   );
 }
 
+// Em produção/Supabase, o cert pode ser self-signed via pooler.
+// Forçamos ssl com rejectUnauthorized=false se:
+// - NODE_ENV=production, ou
+// - DATABASE_URL tem sslmode=require/verify-full, ou
+// - FORÇA explicitamente via FORCE_DB_SSL=true
+const sslRequired =
+  process.env.FORCE_DB_SSL === 'true' ||
+  (connectionString && connectionString.includes('sslmode=')) ||
+  process.env.NODE_ENV === 'production';
+
 const config: PoolConfig = {
   connectionString,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: sslRequired ? { rejectUnauthorized: false } : false,
 };
 
 const pool = new Pool(config);
