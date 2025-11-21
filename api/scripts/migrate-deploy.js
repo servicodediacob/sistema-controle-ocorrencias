@@ -13,9 +13,10 @@ const { join } = require('node:path');
 
 const originalDbUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_DATABASE_URL;
+const disableDirect = String(process.env.MIGRATE_USE_DIRECT || 'true').toLowerCase() === 'false';
 
 // Prefer a direct connection string if provided (important when DATABASE_URL points to a pooler).
-if (directUrl) {
+if (directUrl && !disableDirect) {
   console.log('[migrate] Using DIRECT_DATABASE_URL for migrations');
   process.env.DATABASE_URL = directUrl;
 } else if (!process.env.DATABASE_URL) {
@@ -53,6 +54,7 @@ function resolveApplied(name) {
 
 function deploy() {
   console.log('[migrate] Running prisma migrate deploy');
+  console.log(`[migrate] DATABASE_URL in use: ${process.env.DATABASE_URL}`);
   const r = prisma('migrate', 'deploy');
   process.stdout.write(r.stdout || '');
   process.stderr.write(r.stderr || '');
@@ -67,6 +69,7 @@ const outFirst = (current.stdout || '') + (current.stderr || '');
 if (
   current.status !== 0 &&
   directUrl &&
+  !disableDirect &&
   originalDbUrl &&
   originalDbUrl !== directUrl &&
   outFirst.includes('P1001')
