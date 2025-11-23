@@ -119,7 +119,7 @@ function LoginPage(): ReactElement {
   const navigateWithExit = (to: string) => {
     try {
       sessionStorage.setItem('systemEnterAnim', '1');
-    } catch {}
+    } catch { }
     setIsLeaving(true);
     window.setTimeout(() => navigate(to), 300);
   };
@@ -257,7 +257,7 @@ function LoginPage(): ReactElement {
 
       navigateWithExit('/');
 
-    } catch (err: unknown) { 
+    } catch (err: unknown) {
 
       const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
 
@@ -294,7 +294,7 @@ function LoginPage(): ReactElement {
     // Detecta ambiente mobile para ajustar o fluxo do Google
     try {
       setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-    } catch {}
+    } catch { }
 
     if (!clientId) {
 
@@ -396,10 +396,12 @@ function LoginPage(): ReactElement {
 
             }
 
+
           },
 
-          use_fedcm_for_prompt: true,
+          use_fedcm_for_prompt: false,
           itp_support: true,
+          auto_select: false,
 
         });
 
@@ -593,7 +595,7 @@ function LoginPage(): ReactElement {
               ? notification.getNotDisplayedReason()
               : undefined;
             console.warn('Google Sign-In prompt not displayed/skipped:', reason);
-          } catch {}
+          } catch { }
 
 
 
@@ -731,7 +733,7 @@ function LoginPage(): ReactElement {
 
             <input
 
-              type={showPassword ? 'text' : 'password'} 
+              type={showPassword ? 'text' : 'password'}
 
               name="senha" placeholder="Senha"
 
@@ -856,7 +858,7 @@ function LoginPage(): ReactElement {
 
             <p className="mb-4 text-sm text-gray-300">{pendingGoogleProfile.nome} ({pendingGoogleProfile.email})</p>
 
-            <select value={selectedObm} onChange={e=>setSelectedObm(e.target.value)} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white">
+            <select value={selectedObm} onChange={e => setSelectedObm(e.target.value)} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white">
 
               <option value="">Selecione sua OBM</option>
 
@@ -866,11 +868,11 @@ function LoginPage(): ReactElement {
 
             <div className="mt-6 flex justify-end gap-2">
 
-              <button onClick={()=>setPendingGoogleProfile(null)} className="rounded-md bg-gray-600 px-4 py-2 text-white">Cancelar</button>
+              <button onClick={() => setPendingGoogleProfile(null)} className="rounded-md bg-gray-600 px-4 py-2 text-white">Cancelar</button>
 
-              <button onClick={async ()=>{
+              <button onClick={async () => {
 
-                if(!selectedObm){ addNotification('Selecione sua OBM.', 'warning'); return; }
+                if (!selectedObm) { addNotification('Selecione sua OBM.', 'warning'); return; }
 
                 setIsSubmitting(true);
 
