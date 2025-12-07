@@ -55,6 +55,7 @@ declare global { interface Window { google?: any } }
 function LoginPage(): ReactElement {
 
   const navigate = useNavigate();
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const [formData, setFormData] = useState({
 
@@ -283,13 +284,64 @@ function LoginPage(): ReactElement {
   const isGsiInitialized = useRef(false);
   const [isGsiReady, setIsGsiReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
+
+  const runGoogleDiagnostics = async (reason?: string, notification?: any, notifyUser = false) => {
+    if (isRunningDiagnostics) return;
+    setIsRunningDiagnostics(true);
+    try {
+      const diag: Record<string, unknown> = {
+        reason,
+        clientIdPresent: Boolean(clientId),
+        isMobile,
+        isGsiReady,
+        gsiScriptPresent: Boolean(document.querySelector('script[src="https://accounts.google.com/gsi/client"]')),
+        windowGoogle: Boolean(window.google),
+        accountsId: Boolean(window.google?.accounts?.id),
+        promptDisplayMoment: notification?.isDisplayMoment?.(),
+        promptSkipped: notification?.isSkippedMoment?.(),
+        promptNotDisplayed: notification?.isNotDisplayed?.(),
+      };
+      try {
+        diag.notDisplayedReason = typeof notification?.getNotDisplayedReason === 'function'
+          ? notification.getNotDisplayedReason()
+          : undefined;
+      } catch (err) {
+        diag.notDisplayedReasonError = (err as Error).message;
+      }
+      try {
+        diag.dismissedReason = typeof notification?.getDismissedReason === 'function'
+          ? notification.getDismissedReason()
+          : undefined;
+      } catch (err) {
+        diag.dismissedReasonError = (err as Error).message;
+      }
+      if (clientId) {
+        try {
+          const resp = await fetch(`https://accounts.google.com/gsi/status?client_id=${encodeURIComponent(clientId)}`, {
+            mode: 'cors',
+            credentials: 'omit',
+          });
+          diag.statusProbe = { status: resp.status, ok: resp.ok, type: resp.type };
+        } catch (err) {
+          diag.statusProbeError = (err as Error).message;
+        }
+      }
+      console.groupCollapsed('Google login diagnostics');
+      console.log(diag);
+      console.groupEnd();
+      if (notifyUser) {
+        addNotification('Diagnostico do login com Google registrado no console.', 'info');
+      }
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
 
 
 
   useEffect(() => {
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     // Detecta ambiente mobile para ajustar o fluxo do Google
     try {
@@ -399,7 +451,8 @@ function LoginPage(): ReactElement {
 
           },
 
-          use_fedcm_for_prompt: false,
+          // FedCM is becoming mandatory; keep it enabled to avoid prompt blocking in modern browsers
+          use_fedcm_for_prompt: true,
           itp_support: true,
           auto_select: false,
 
@@ -483,7 +536,7 @@ function LoginPage(): ReactElement {
     };
 
 
-  }, [addNotification, loginWithJwt, navigate]);
+  }, [addNotification, clientId, loginWithJwt, navigate]);
 
   // Renderiza o botão oficial do Google em mobile (melhor compatibilidade em iOS/Android)
   useEffect(() => {
@@ -595,20 +648,22 @@ function LoginPage(): ReactElement {
               ? notification.getNotDisplayedReason()
               : undefined;
             console.warn('Google Sign-In prompt not displayed/skipped:', reason);
+            if (reason) {
+              addNotification(`Login Google bloqueado: ${reason}. Verifique permissões de cookies/FedCM.`, 'warning');
+            } else {
+              addNotification('Login Google não pôde mostrar o prompt. Verifique permissões de cookies/FedCM.', 'warning');
+            }
           } catch { }
-
+          void runGoogleDiagnostics('prompt_not_displayed_or_skipped', notification, false);
 
 
           isSignInInProgress.current = false;
 
 
-
           await resetGooglePromptOverlay();
 
 
-
           return;
-
 
 
         }
@@ -625,6 +680,7 @@ function LoginPage(): ReactElement {
 
             : undefined;
 
+          void runGoogleDiagnostics('prompt_dismissed', notification, false);
 
 
           if (dismissedReason === 'credential_returned') {
@@ -828,6 +884,16 @@ function LoginPage(): ReactElement {
           </div>
 
         )}
+
+        <button
+          type="button"
+          onClick={() => runGoogleDiagnostics('manual', null, true)}
+          disabled={uiBlocked || isRunningDiagnostics}
+          className={`mb-2 w-full rounded-md border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-70 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`}
+          style={{ transitionDelay: '275ms' }}
+        >
+          Diagnosticar login com Google
+        </button>
 
 
 

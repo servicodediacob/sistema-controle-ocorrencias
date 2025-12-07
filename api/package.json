@@ -13,6 +13,9 @@
     "test": "jest",
     "lint": "eslint . --ext .ts"
   },
+  "prisma": {
+    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.x.x",
     "axios": "^1.12.2",
