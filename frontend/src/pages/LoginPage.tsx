@@ -885,16 +885,6 @@ function LoginPage(): ReactElement {
 
         )}
 
-        <button
-          type="button"
-          onClick={() => runGoogleDiagnostics('manual', null, true)}
-          disabled={uiBlocked || isRunningDiagnostics}
-          className={`mb-2 w-full rounded-md border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-70 ${animBase} ${!readyToShowForm ? animHidden : animVisible}`}
-          style={{ transitionDelay: '275ms' }}
-        >
-          Diagnosticar login com Google
-        </button>
-
 
 
         <Link
