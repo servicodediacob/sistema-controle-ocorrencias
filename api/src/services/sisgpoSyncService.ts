@@ -1,5 +1,5 @@
 import axios from 'axios';
-import logger from '../utils/logger';
+import logger from '@/config/logger';
 
 const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
 
