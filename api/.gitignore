@@ -1,0 +1,24 @@
+# Dependências
+/node_modules
+
+# Arquivos de ambiente
+# Ignora todos os arquivos que começam com .env
+.env*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Metadados do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de script locais com possíveis segredos
+sync_db.sh
+
+# Arquivos de backup do banco de dados
+# Em geral ignore .sql, MAS não ignore migrations do Prisma
+*.sql
+!prisma/migrations/**/migration.sql
+*.dump

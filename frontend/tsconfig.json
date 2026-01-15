@@ -1,0 +1,36 @@
+// Caminho: frontend/tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linter Checks */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* --- CORREÇÕES APLICADAS --- */
+
+    // 1. Facilita a importação de módulos CommonJS em um ambiente de Módulos ES.
+    //    Resolve o aviso do ts-jest.
+    "esModuleInterop": true,
+
+    // 2. Informa ao TypeScript para carregar os tipos do Jest e do Jest-DOM
+    //    para todo o projeto, habilitando o autocomplete e a verificação de tipos
+    //    para matchers como .toBeInTheDocument()
+    "types": ["jest", "@testing-library/jest-dom"]
+  },
+  "include": ["src"],
+}

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: api-siscob
+    env: node
+    plan: free
+    rootDirectory: api # ESSA LINHA É CRÍTICA E DEVE ESTAR PRESENTE
+    buildCommand: "npm install --production=false && npm run build && npm run migrate"
+    startCommand: "npm start" # Ou "node -r tsconfig-paths/register dist/server.js" se preferir explicitar
+    healthCheckPath: /api/diag
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: JWT_SECRET
+        sync: false
+      - key: ALLOW_SCHEMA_RESET
+        value: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false

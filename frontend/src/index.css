@@ -1,0 +1,202 @@
+/* frontend/src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background: #05030b;
+    --color-background-alt: #080719;
+    --color-surface: #121225;
+    --color-surface-elevated: #1a1b33;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-text: #d8dbff;
+    --color-text-strong: #ffffff;
+    --color-accent-primary: #3869d2;
+    --color-accent-secondary: #c57cf9;
+    --color-success: #37d39b;
+    --color-warning: #facc15;
+    --color-danger: #f87171;
+  }
+
+  body {
+    font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top left, rgba(197, 124, 249, 0.25), transparent 55%) fixed,
+      radial-gradient(circle at 20% 20%, rgba(56, 105, 210, 0.35), transparent 45%) fixed,
+      linear-gradient(135deg, #020205, #090918 65%, #04030b);
+    color: var(--color-text);
+    min-height: 100vh;
+  }
+
+  /* Override utilitários Tailwind mais usados */
+  .bg-gray-900 {
+    background-color: #070512 !important;
+  }
+
+  .bg-gray-800 {
+    background-color: #111225 !important;
+  }
+
+  .bg-gray-700 {
+    background-color: #1a1b33 !important;
+  }
+
+  .bg-gray-200,
+  .bg-gray-100 {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  .text-gray-100 {
+    color: #ffffff !important;
+  }
+
+  .text-gray-200,
+  .text-gray-300,
+  .text-gray-400 {
+    color: var(--color-text) !important;
+  }
+
+  .text-gray-500 {
+    color: rgba(216, 219, 255, 0.7) !important;
+  }
+
+  .border-gray-700,
+  .border-gray-600,
+  .border-gray-500 {
+    border-color: var(--color-border) !important;
+  }
+
+  .border-gray-200,
+  .border-gray-300,
+  .border-gray-100 {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .hover\:bg-gray-700:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-gray-200:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: linear-gradient(135deg, rgba(17, 18, 37, 0.9), rgba(26, 27, 51, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(18px);
+    border-radius: 20px;
+  }
+
+  .login-background {
+    background-color: #020b1a;
+    background-image: url('/images/login-blue-hex-bg.svg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .sidebar-panel {
+    background: rgba(17, 18, 37, 0.78);
+    backdrop-filter: blur(16px);
+  }
+
+  .login-card {
+    background: rgba(8, 10, 24, 0.58);
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+  }
+
+  .accent-button {
+    background: linear-gradient(120deg, var(--color-accent-primary), var(--color-accent-secondary));
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 15px 30px rgba(197, 124, 249, 0.35);
+  }
+
+  .accent-button:hover {
+    filter: brightness(1.05);
+  }
+
+  .status-pill {
+    border-radius: 999px;
+    padding: 0.15rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.5px;
+  }
+
+  .status-pill--complete {
+    background-color: rgba(56, 105, 210, 0.15);
+    color: var(--color-accent-primary);
+  }
+
+  .status-pill--cancelled {
+    background-color: rgba(197, 124, 249, 0.15);
+    color: var(--color-accent-secondary);
+  }
+
+  .input-dark {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-text-strong);
+  }
+
+  .input-dark:focus {
+    border-color: var(--color-accent-secondary);
+    box-shadow: 0 0 0 2px rgba(197, 124, 249, 0.25);
+  }
+
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+  }
+}
+
+.highlight-input {
+  border-color: #34d399; /* Tailwind's emerald-400 */
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.5); /* A subtle glow */
+}
+
+.highlight-lancamento {
+  animation: pulse-bright 2s infinite;
+  color: white !important;
+  font-weight: bold;
+  background: linear-gradient(115deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
+  box-shadow: 0 0 25px rgba(197, 124, 249, 0.35);
+}
+
+.highlight-lancamento svg {
+  filter: drop-shadow(0 0 8px rgba(197, 124, 249, 0.65));
+}
+
+.highlight-sisgpo {
+  border: 1px solid rgba(56, 105, 210, 0.6);
+  background-color: rgba(56, 105, 210, 0.12) !important;
+  box-shadow: 0 0 18px rgba(56, 105, 210, 0.45);
+}
+
+.highlight-sisgpo svg {
+  color: var(--color-accent-primary);
+}

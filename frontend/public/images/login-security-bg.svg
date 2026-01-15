@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#132c79" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#08164a" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#030b2a" />
+    </radialGradient>
+    <linearGradient id="edgeFadeLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#04133f" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#04133f" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="edgeFadeRight" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#04133f" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#04133f" stop-opacity="0" />
+    </linearGradient>
+    <pattern id="hexPattern" width="180" height="200" patternUnits="userSpaceOnUse">
+      <g opacity="0.65">
+        <path d="M60 10L120 40V100L60 130L0 100V40L60 10Z" stroke="#1f4bb5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M150 110L180 125V165L150 180L120 165V125L150 110Z" stroke="#1f4bb5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M30 150L60 165V205L30 220L0 205V165L30 150Z" stroke="#1f4bb5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M120 40L150 55V95L120 110L90 95V55L120 40Z" stroke="#1f75d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <g transform="translate(60,50)">
+          <rect x="10" y="20" width="40" height="50" rx="8" fill="rgba(7,28,82,0.8)" stroke="#42a0ff" stroke-width="2" />
+          <rect x="22" y="12" width="16" height="16" rx="8" fill="none" stroke="#42a0ff" stroke-width="2" />
+          <rect x="26" y="38" width="8" height="16" rx="3" fill="#42a0ff" />
+        </g>
+        <g transform="translate(120,140)">
+          <rect x="10" y="20" width="40" height="50" rx="8" fill="rgba(7,28,82,0.8)" stroke="#42a0ff" stroke-width="2" />
+          <rect x="22" y="12" width="16" height="16" rx="8" fill="none" stroke="#42a0ff" stroke-width="2" />
+          <rect x="26" y="38" width="8" height="16" rx="3" fill="#42a0ff" />
+        </g>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bgGlow)" />
+  <rect width="420" height="1080" fill="url(#hexPattern)" />
+  <rect x="1500" width="420" height="1080" fill="url(#hexPattern)" />
+  <rect width="500" height="1080" fill="url(#edgeFadeLeft)" />
+  <rect x="1420" width="500" height="1080" fill="url(#edgeFadeRight)" />
+  <circle cx="960" cy="540" r="320" fill="rgba(32,66,170,0.18)" />
+</svg>

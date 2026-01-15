@@ -1,0 +1,220 @@
+// api/prisma/schema.prisma
+
+// Define o provedor do banco de dados e a URL de conexão,
+// que será lida do arquivo .env.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// Define o gerador do Prisma Client, que criará o cliente tipado
+// para interagirmos com o banco de dados de forma segura.
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+// --- ENUMS ---
+// Mapeia os tipos de dados restritos do SQL para Enums no Prisma.
+
+enum Role {
+  user
+  admin
+}
+
+enum SolicitacaoStatus {
+  pendente
+  aprovado
+  recusado
+}
+
+// --- MODELS ---
+// Cada 'model' representa uma tabela no banco de dados.
+
+model CRBM {
+  id   Int    @id @default(autoincrement())
+  nome String @unique @db.VarChar(100)
+  obms OBM[]
+
+  @@map("crbms")
+}
+
+model OBM {
+  id      Int    @id @default(autoincrement())
+  nome    String @unique @db.VarChar(100)
+  crbm_id Int
+  crbm    CRBM   @relation(fields: [crbm_id], references: [id], onDelete: Restrict)
+
+  usuarios               Usuario[]
+  solicitacoes_acesso    SolicitacaoAcesso[]
+  ocorrencias_detalhadas OcorrenciaDetalhada[]
+  estatisticas_diarias   EstatisticaDiaria[]
+  obitos_registros       ObitoRegistro[]
+
+  @@map("obms")
+}
+
+model Usuario {
+  id         Int       @id @default(autoincrement())
+  nome       String    @db.VarChar(100)
+  email      String    @unique @db.VarChar(100)
+  senha_hash String    @db.VarChar(255)
+  role       Role      @default(user) @map("perfil")
+  obm_id     Int?
+  criado_em  DateTime? @default(now()) @db.Timestamptz()
+  obm        OBM?      @relation(fields: [obm_id], references: [id], onDelete: SetNull)
+
+  solicitacoes_aprovadas SolicitacaoAcesso[]
+  ocorrencias_detalhadas OcorrenciaDetalhada[]
+  supervisor_plantao     SupervisorPlantao?
+  estatisticas_diarias   EstatisticaDiaria[]
+  obitos_registros       ObitoRegistro[]
+  auditoria_logs         AuditoriaLog[] // Added this line
+
+  sentMessages     ChatMessage[] @relation("sentMessages")
+  receivedMessages ChatMessage[] @relation("receivedMessages")
+
+  @@map("usuarios")
+}
+
+model SolicitacaoAcesso {
+  id               Int               @id @default(autoincrement())
+  nome             String            @db.VarChar(100)
+  email            String            @unique @db.VarChar(100)
+  senha_hash       String            @db.VarChar(255)
+  obm_id           Int
+  status           SolicitacaoStatus @default(pendente)
+  data_solicitacao DateTime?         @default(now()) @db.Timestamptz()
+  data_aprovacao   DateTime?         @db.Timestamptz()
+  aprovador_id     Int?
+  obm              OBM               @relation(fields: [obm_id], references: [id], onDelete: Cascade)
+  aprovador        Usuario?          @relation(fields: [aprovador_id], references: [id], onDelete: SetNull)
+
+  @@map("solicitacoes_acesso")
+}
+
+model NaturezaOcorrencia {
+  id         Int     @id @default(autoincrement())
+  grupo      String  @db.VarChar(255)
+  subgrupo   String  @db.VarChar(255)
+  abreviacao String? @db.VarChar(20)
+
+  ocorrencias_detalhadas OcorrenciaDetalhada[]
+  estatisticas_diarias   EstatisticaDiaria[]
+  obitos_registros       ObitoRegistro[]
+
+  @@unique([grupo, subgrupo])
+  @@map("naturezas_ocorrencia")
+}
+
+model OcorrenciaDetalhada {
+  id                  Int       @id @default(autoincrement())
+  numero_ocorrencia   String?   @db.VarChar(100)
+  natureza_id         Int
+  endereco            String?
+  bairro              String?   @db.VarChar(255)
+  cidade_id           Int
+  viaturas            String?
+  veiculos_envolvidos String?
+  dados_vitimas       String?
+  resumo_ocorrencia   String?
+  data_ocorrencia     DateTime  @db.Date
+  horario_ocorrencia  DateTime? @db.Time
+  usuario_id          Int?
+  criado_em           DateTime? @default(now()) @db.Timestamptz()
+  deletado_em         DateTime? @db.Timestamptz()
+
+  natureza NaturezaOcorrencia  @relation(fields: [natureza_id], references: [id], onDelete: Restrict)
+  cidade   OBM                 @relation(fields: [cidade_id], references: [id], onDelete: Restrict)
+  usuario  Usuario?            @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+  destaque OcorrenciaDestaque?
+
+  @@map("ocorrencias_detalhadas")
+}
+
+model OcorrenciaDestaque {
+  id            Int                  @id @default(1)
+  ocorrencia_id Int?                 @unique
+  definido_em   DateTime?            @default(now()) @db.Timestamptz()
+  ocorrencia    OcorrenciaDetalhada? @relation(fields: [ocorrencia_id], references: [id], onDelete: SetNull)
+
+  @@map("ocorrencia_destaque")
+}
+
+model SupervisorPlantao {
+  id          Int       @id @default(1)
+  // ======================= INÍCIO DA CORREÇÃO =======================
+  // Adicionamos @unique para indicar que cada usuário só pode ser supervisor
+  // de um plantão por vez, resolvendo o erro do Prisma.
+  usuario_id  Int?      @unique
+  // ======================= FIM DA CORREÇÃO =======================
+  definido_em DateTime? @default(now()) @db.Timestamptz()
+  usuario     Usuario?  @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("supervisor_plantao")
+}
+
+model EstatisticaDiaria {
+  id            Int       @id @default(autoincrement())
+  data_registro DateTime  @db.Date
+  obm_id        Int
+  natureza_id   Int
+  quantidade    Int       @default(0)
+  usuario_id    Int?
+  criado_em     DateTime? @default(now()) @db.Timestamptz()
+  deletado_em   DateTime? @db.Timestamptz()
+
+  obm      OBM                @relation(fields: [obm_id], references: [id], onDelete: Cascade)
+  natureza NaturezaOcorrencia @relation(fields: [natureza_id], references: [id], onDelete: Cascade)
+  usuario  Usuario?           @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@unique([data_registro, obm_id, natureza_id], name: "uq_dia_obm_natureza")
+  @@map("estatisticas_diarias")
+}
+
+model ObitoRegistro {
+  id                 Int       @id @default(autoincrement())
+  data_ocorrencia    DateTime  @db.Date
+  natureza_id        Int
+  numero_ocorrencia  String?   @db.VarChar(255)
+  obm_id             Int
+  quantidade_vitimas Int       @default(1)
+  usuario_id         Int?
+  criado_em          DateTime? @default(now()) @db.Timestamptz()
+  deletado_em        DateTime? @db.Timestamptz()
+
+  natureza NaturezaOcorrencia @relation(fields: [natureza_id], references: [id], onDelete: Restrict)
+  obm      OBM                @relation(fields: [obm_id], references: [id], onDelete: Cascade)
+  usuario  Usuario?           @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("obitos_registros")
+}
+
+model AuditoriaLog {
+  id           Int       @id @default(autoincrement())
+  usuario_id   Int?
+  usuario_nome String
+  acao         String
+  detalhes     Json
+  criado_em    DateTime  @default(now()) @db.Timestamptz()
+
+  usuario Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@map("auditoria_logs")
+}
+
+model ChatMessage {
+  id          Int         @id @default(autoincrement())
+  text        String
+  createdAt   DateTime    @default(now()) @db.Timestamptz()
+  senderId    Int
+  recipientId Int
+  status      String      @default("enviado") // enviado, visualizado
+  seenAt      DateTime?   @db.Timestamptz()
+
+  sender      Usuario     @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   Usuario     @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}

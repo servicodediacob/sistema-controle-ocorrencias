@@ -1,0 +1,188 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSisgpoViaturasEmpenhadas = exports.getSisgpoSettings = exports.issueSisgpoPlantaoToken = void 0;
+const axios_1 = __importDefault(require("axios"));
+const logger_1 = __importDefault(require("../config/logger"));
+const sisgpoAuthService_1 = require("../services/sisgpoAuthService");
+const SISGPO_BASE_URL = process.env.SISGPO_PUBLIC_URL || 'https://sisgpo.vercel.app';
+const SISGPO_API_URL = process.env.SISGPO_API_URL || 'http://localhost:3333';
+const SISGPO_DEFAULT_REDIRECT_PATH = process.env.SISGPO_PLANTOES_PATH || '/app/plantoes';
+const SISGPO_SSO_ENTRY_PATH = process.env.SISGPO_SSO_ENTRY_PATH || '/sso/login';
+const SISGPO_EMPENHO_CACHE_TTL_MS = Number(process.env.SISGPO_EMPENHO_CACHE_TTL_MS || 60000);
+let viaturasEmpenhadasCache = {
+    prefixes: [],
+    expiresAt: 0,
+    fetchedAt: null,
+};
+const normalizePrefix = (value) => {
+    if (!value) {
+        return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+    return trimmed.toUpperCase();
+};
+const parseSisgpoDate = (value) => {
+    if (!value) {
+        return null;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split('/').map(Number);
+        return new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
+    }
+    const timestamp = Date.parse(value);
+    if (Number.isNaN(timestamp)) {
+        return null;
+    }
+    return new Date(timestamp);
+};
+const shouldConsiderPlantao = (rawDate, today) => {
+    if (!rawDate) {
+        return true;
+    }
+    const parsed = parseSisgpoDate(rawDate);
+    if (!parsed) {
+        return true;
+    }
+    const normalized = new Date(parsed);
+    normalized.setUTCHours(0, 0, 0, 0);
+    return normalized >= today;
+};
+const fetchViaturasEmpenhadas = async (usuario) => {
+    const sisgpoToken = await (0, sisgpoAuthService_1.fetchSisgpoSessionToken)(usuario);
+    const engaged = new Set();
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const todayIso = today.toISOString().split('T')[0];
+    const limit = 200;
+    let currentPage = 1;
+    while (true) {
+        const response = await axios_1.default.get(`${SISGPO_API_URL}/api/sisgpo/proxy/admin/plantoes`, {
+            params: {
+                page: currentPage,
+                limit,
+                data_inicio: todayIso,
+            },
+            headers: {
+                Authorization: `Bearer ${sisgpoToken}`,
+            },
+            validateStatus: () => true,
+        });
+        if (response.status >= 400) {
+            const message = (response.data && response.data.message) ||
+                'Falha ao consultar os plantoes do SISGPO.';
+            throw new Error(typeof message === 'string' ? message : 'Erro ao consultar os plantoes.');
+        }
+        const registros = Array.isArray(response.data?.data) ? response.data.data : [];
+        registros.forEach((plantao) => {
+            const prefix = normalizePrefix(plantao.viatura_prefixo) || normalizePrefix(plantao.viatura?.prefixo);
+            if (!prefix) {
+                return;
+            }
+            if (shouldConsiderPlantao(plantao.data_plantao, today)) {
+                engaged.add(prefix);
+            }
+        });
+        const pagination = response.data?.pagination;
+        const pageFromPayload = Number(pagination?.currentPage ?? pagination?.current_page) || currentPage;
+        const totalPages = Number(pagination?.totalPages ?? pagination?.total_pages) || pageFromPayload;
+        if (!pagination || pageFromPayload >= totalPages) {
+            break;
+        }
+        currentPage += 1;
+    }
+    return Array.from(engaged);
+};
+const buildSisgpoUrl = (relativePath, token, extraParams) => {
+    const path = relativePath || SISGPO_SSO_ENTRY_PATH;
+    try {
+        const url = new URL(path, SISGPO_BASE_URL);
+        url.searchParams.set('token', token);
+        Object.entries(extraParams).forEach(([key, value]) => {
+            if (value) {
+                url.searchParams.set(key, value);
+            }
+        });
+        return url.toString();
+    }
+    catch (error) {
+        logger_1.default.warn({ err: error, SISGPO_BASE_URL, SISGPO_DEFAULT_REDIRECT_PATH, SISGPO_SSO_ENTRY_PATH }, '[SISGPO] Falha ao montar URL. Usando concatenacao simples.');
+        const trimmedBase = SISGPO_BASE_URL.replace(/\/$/, '');
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        const query = new URLSearchParams(Object.entries({ token, ...extraParams })
+            .filter(([, value]) => Boolean(value)));
+        return `${trimmedBase}${normalizedPath}?${query.toString()}`;
+    }
+};
+const issueSisgpoPlantaoToken = async (req, res) => {
+    try {
+        const { viaturaId, dataPlantao, turno, redirectPath } = req.query;
+        const token = await (0, sisgpoAuthService_1.generateSisgpoSsoToken)(req.usuario, {
+            viaturaId,
+            dataPlantao,
+            turno,
+        });
+        const normalizedRedirect = redirectPath && redirectPath.startsWith('/') ? redirectPath : SISGPO_DEFAULT_REDIRECT_PATH;
+        const redirectUrl = buildSisgpoUrl(SISGPO_SSO_ENTRY_PATH, token, {
+            viaturaId,
+            dataPlantao,
+            turno,
+            redirect: normalizedRedirect,
+        });
+        return res.json({
+            token,
+            expiresIn: (0, sisgpoAuthService_1.getSisgpoSsoTtlSeconds)(),
+            redirectUrl,
+        });
+    }
+    catch (error) {
+        logger_1.default.error({ err: error, usuarioId: req.usuario?.id }, '[SISGPO] Falha ao gerar token de SSO.');
+        return res.status(500).json({ message: 'Nao foi possivel gerar o token de SSO.' });
+    }
+};
+exports.issueSisgpoPlantaoToken = issueSisgpoPlantaoToken;
+const getSisgpoSettings = (_req, res) => {
+    return res.json({
+        baseUrl: SISGPO_BASE_URL,
+        plantoesPath: SISGPO_DEFAULT_REDIRECT_PATH,
+        ssoEntryPath: SISGPO_SSO_ENTRY_PATH,
+        ttlSeconds: (0, sisgpoAuthService_1.getSisgpoSsoTtlSeconds)(),
+    });
+};
+exports.getSisgpoSettings = getSisgpoSettings;
+const getSisgpoViaturasEmpenhadas = async (req, res) => {
+    const forceRefresh = req.query.force === 'true';
+    const now = Date.now();
+    if (!forceRefresh && viaturasEmpenhadasCache.expiresAt > now) {
+        return res.json({
+            engagedPrefixes: viaturasEmpenhadasCache.prefixes,
+            cached: true,
+            fetchedAt: viaturasEmpenhadasCache.fetchedAt,
+        });
+    }
+    try {
+        const prefixes = await fetchViaturasEmpenhadas(req.usuario);
+        viaturasEmpenhadasCache = {
+            prefixes,
+            fetchedAt: new Date().toISOString(),
+            expiresAt: now + SISGPO_EMPENHO_CACHE_TTL_MS,
+        };
+        return res.json({
+            engagedPrefixes: prefixes,
+            cached: false,
+            fetchedAt: viaturasEmpenhadasCache.fetchedAt,
+        });
+    }
+    catch (error) {
+        logger_1.default.error({ err: error, usuarioId: req.usuario?.id }, '[SISGPO] Falha ao listar empenhos.');
+        return res
+            .status(500)
+            .json({ message: 'Nao foi possivel atualizar o status das viaturas empenhadas.' });
+    }
+};
+exports.getSisgpoViaturasEmpenhadas = getSisgpoViaturasEmpenhadas;
