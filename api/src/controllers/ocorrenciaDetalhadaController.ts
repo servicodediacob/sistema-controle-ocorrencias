@@ -6,6 +6,7 @@ import logger from '@/config/logger';
 import { parseDateParam } from '@/utils/date';
 import { excluirRegistrosAntigos } from '@/services/cleanupService';
 import { registrarAcao } from '@/services/auditoriaService';
+import sisgpoSyncService from '@/services/sisgpoSyncService';
 
 // ... (interface e criarOcorrenciaDetalhada permanecem iguais)
 interface OcorrenciaDetalhadaPayload {
@@ -67,8 +68,23 @@ export const criarOcorrenciaDetalhada = async (req: RequestWithUser, res: Respon
 
       return ocorrenciaCriada;
     });
-    
+
     await registrarAcao(req, 'CRIAR_OCORRENCIA_DETALHADA', { ocorrencia: novaOcorrencia });
+
+    // FEEDBACK LOOP: Sincronizar status EMPENHADA com SISGPO (assíncrono, não bloqueia resposta)
+    if (payload.viaturas) {
+      const viaturasPrefixos = payload.viaturas.split(',').map((v: string) => v.trim());
+      viaturasPrefixos.forEach((prefixo: string) => {
+        if (prefixo) {
+          // Fire-and-forget: não aguarda resposta do SISGPO
+          sisgpoSyncService.marcarViaturaEmpenhada(
+            prefixo,
+            String(novaOcorrencia.id),
+            req.headers.authorization?.replace('Bearer ', '')
+          ).catch(() => { /* Erro já é tratado no service */ });
+        }
+      });
+    }
 
     logger.info({ ocorrenciaId: novaOcorrencia.id, usuarioId: usuario_id }, 'Ocorrência detalhada criada e definida como destaque.');
     return res.status(201).json(novaOcorrencia);
@@ -182,6 +198,20 @@ export const deletarOcorrenciaDetalhada = async (req: RequestWithUser, res: Resp
     }
 
     await registrarAcao(req, 'DELETAR_OCORRENCIA_DETALHADA', { ocorrencia: ocorrenciaAntes });
+
+    // FEEDBACK LOOP: Liberar viaturas no SISGPO (assíncrono, não bloqueia resposta)
+    if (ocorrenciaAntes?.viaturas) {
+      const viaturasPrefixos = ocorrenciaAntes.viaturas.split(',').map((v: string) => v.trim());
+      viaturasPrefixos.forEach((prefixo: string) => {
+        if (prefixo) {
+          sisgpoSyncService.marcarViaturaDisponivel(
+            prefixo,
+            String(id),
+            req.headers.authorization?.replace('Bearer ', '')
+          ).catch(() => { /* Erro já é tratado no service */ });
+        }
+      });
+    }
 
     logger.info({ ocorrenciaId: id, usuarioId: req.usuario?.id }, 'Ocorrência detalhada marcada como excluída.');
     return res.status(204).send();
