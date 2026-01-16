@@ -84,6 +84,21 @@ function LoginPage(): ReactElement {
     }
   }, [user, authLoading, isSubmitting, navigate]);
 
+  // Handle case: Authenticated via Google but no local profile found
+  useEffect(() => {
+    if (!authLoading && !user) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) {
+          const { email, user_metadata } = session.user;
+          setPendingGoogleProfile(prev => prev || { // Only set if not already set
+            nome: user_metadata?.full_name || user_metadata?.name || email.split('@')[0],
+            email
+          });
+        }
+      });
+    }
+  }, [authLoading, user]);
+
   useEffect(() => {
     if (pendingGoogleProfile && obms.length === 0) {
       getCidades().then(setObms).catch(() => {
@@ -207,7 +222,7 @@ function LoginPage(): ReactElement {
               {obms.map(o => <option key={o.id} value={o.id}>{o.cidade_nome}</option>)}
             </select>
             <div className="mt-6 flex justify-end gap-2">
-              <button onClick={() => setPendingGoogleProfile(null)} className="rounded-md bg-gray-600 px-4 py-2 text-white">Cancelar</button>
+              <button onClick={async () => { await supabase.auth.signOut(); setPendingGoogleProfile(null); }} className="rounded-md bg-gray-600 px-4 py-2 text-white">Cancelar</button>
               <button onClick={async () => {
                 if (!selectedObm) { addNotification('Selecione sua OBM.', 'warning'); return; }
                 setIsSubmitting(true);
