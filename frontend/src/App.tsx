@@ -96,7 +96,7 @@ const App: React.FC = () => {
   const { loading } = useAuth();
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {/* O LoadingOverlay agora reage ao estado de loading do AuthProvider */}
       <LoadingOverlay visible={loading} text="Carregando..." />
       <PwaInstallPrompt />
