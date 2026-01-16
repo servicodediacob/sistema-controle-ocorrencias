@@ -12,7 +12,7 @@ import { useNotification } from '../contexts/NotificationContext';
 
 import { z } from 'zod';
 import { isAxiosError } from 'axios';
-
+import { supabase } from '../lib/supabase'; // 1. Importar supabase
 import LoadingOverlay from '../components/LoadingOverlay'; // 1. Importar o overlay
 
 
@@ -409,43 +409,28 @@ function LoginPage(): ReactElement {
             let shouldResetOverlay = true;
 
             try {
+              // MIGRAÇÃO SUPABASE: Login com Google via ID Token
+              const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.credential,
+              });
 
-              const result = await authGoogle(response.credential);
+              if (error) throw error;
 
-              if (result.token) {
+              // O AuthProvider (onAuthStateChange) detectará a sessão e redirecionará.
+              // Apenas finalizamos o overlay visual.
+              shouldResetOverlay = false;
+              await finalize();
 
-                loginWithJwt(result.token);
+              // O redirecionamento acontece via useEffect monitorando 'user'
 
-                shouldResetOverlay = false;
-
-                await finalize();
-
-                navigateWithExit('/');
-
-              } else if (result.needsApproval && result.profile) {
-
-                setPendingGoogleProfile(result.profile);
-
-              } else {
-
-                addNotification('Falha no login com Google. Tente novamente.', 'error');
-
-              }
-
-            } catch (error) {
-
-              console.error('Erro na autenticacao com o backend:', error);
-
-              addNotification('Falha na verificacao com o servidor.', 'error');
-
+            } catch (error: any) {
+              console.error('Erro na autenticacao Google Supabase:', error);
+              addNotification(error.message || 'Falha no login com Google.', 'error');
             } finally {
-
               if (shouldResetOverlay) {
-
                 await finalize();
-
               }
-
             }
 
 
