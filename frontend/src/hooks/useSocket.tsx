@@ -18,8 +18,16 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const socketUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+    // Debug
+    console.log('[Socket] VITE_API_BASE_URL:', apiUrl);
+
     // Se estiver usando Supabase diretamente, não tenta conectar Socket.IO
-    if (apiUrl.includes('supabase.co')) return null;
+    if (apiUrl.includes('supabase.co')) {
+      console.log('[Socket] Modo Supabase detectado. Socket.IO desabilitado.');
+      return null;
+    }
+
     return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
   }, []);
 
