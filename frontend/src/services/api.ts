@@ -68,7 +68,17 @@ api.interceptors.response.use((response) => {
     return response;
   }
   return response.data;
-}, (error) => { if (axios.isAxiosError(error) && error.response?.status === 401) { console.warn('[Axios Interceptor] Erro 401. Realizando logout forçado.'); localStorage.removeItem('@siscob:token'); if (window.location.pathname !== '/login') { window.location.href = '/login'; } } return Promise.reject(error); });
+}, (error) => {
+  if (axios.isAxiosError(error) && error.response?.status === 401) {
+    console.warn('[Axios Interceptor] Erro 401 detectado (logout automático DESABILITADO).');
+    // TEMPORARIAMENTE DESABILITADO: logout automático para evitar loop após login Supabase
+    // localStorage.removeItem('@siscob:token'); 
+    // if (window.location.pathname !== '/login') { 
+    //   window.location.href = '/login'; 
+    // } 
+  }
+  return Promise.reject(error);
+});
 export const extractErrorMessage = (error: unknown): string => { if (axios.isAxiosError(error)) { const axiosError = error as AxiosError<ApiError>; return axiosError.response?.data?.message || `Request failed with status code ${axiosError.response?.status}`; } if (error instanceof Error) return error.message; return 'Ocorreu um erro desconhecido.'; };
 
 // --- Serviços da API ---
@@ -317,8 +327,8 @@ const apiService = {
   },
 
   getPlantao: async (_inicio?: string, _fim?: string): Promise<IPlantao> => {
-    // 1. Get Destaque
-    const { data: destaqueRow } = await supabase.from('ocorrencia_destaque').select('ocorrencia_id').single();
+    // 1. Get Destaque (usa maybeSingle pois a tabela pode estar vazia)
+    const { data: destaqueRow } = await supabase.from('ocorrencia_destaque').select('ocorrencia_id').maybeSingle();
     let ocorrenciasDestaque: any[] = [];
 
     if (destaqueRow?.ocorrencia_id) {
@@ -346,7 +356,7 @@ const apiService = {
       .select('usuario_id, definido_em, usuario:usuarios(nome)')
       .order('definido_em', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle(); // Usa maybeSingle pois pode não ter supervisor
 
     const supervisorPlantao = supRow ? {
       usuario_id: supRow.usuario_id,

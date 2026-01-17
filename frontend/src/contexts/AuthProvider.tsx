@@ -30,22 +30,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Helper para buscar perfil e atualizar estado
   const fetchProfileAndSetUser = async (sessionUser: any) => {
     try {
-      if (!sessionUser?.email) throw new Error('Email não encontrado na sessão.');
+      console.log('[AuthProvider] fetchProfileAndSetUser - email:', sessionUser?.email);
+      if (!sessionUser?.email) {
+        setUser(null);
+        return null;
+      }
 
       // Busca o usuário na tabela 'usuarios' usando o email
+      console.log('[AuthProvider] Consultando tabela usuarios...');
+
+      // Query direta sem timeout - deixa o Supabase gerenciar
       const { data: profile, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('email', sessionUser.email)
-        .single();
+        .maybeSingle(); // Usa maybeSingle para não dar erro se não encontrar
 
-      if (error || !profile) {
-        console.error('Perfil de usuário não encontrado na tabela usuarios.', error);
-        // Fallback or Logout?
+      console.log('[AuthProvider] Resultado da consulta:', { hasProfile: !!profile, error: error?.message || null });
+
+      if (error) {
+        console.error('[AuthProvider] Erro ao buscar perfil:', error.message);
+        setUser(null);
+        return null;
+      }
+
+      if (!profile) {
+        console.warn('[AuthProvider] Perfil não encontrado para:', sessionUser.email);
+        setUser(null);
         return null;
       }
 
@@ -55,25 +71,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: profile.perfil as IUser['role']
       };
 
+      console.log('[AuthProvider] setUser com perfil:', userProfile.email, 'perfil:', userProfile.perfil);
       setUser(userProfile);
       return userProfile;
-    } catch (err) {
-      console.error('Erro ao buscar perfil:', err);
+    } catch (err: any) {
+      console.error('[AuthProvider] Erro ao buscar perfil:', err?.message || err);
+      setUser(null);
       return null;
     }
   };
 
   useEffect(() => {
+    let didCancel = false;
+
+    // Verifica sessão inicial imediatamente (sem timeout de segurança)
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (didCancel) return;
+
+        if (session) {
+          setToken(session.access_token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+          // Não deixar a tela travar se a consulta demorar: seguimos depois de 8s
+          await Promise.race([
+            fetchProfileAndSetUser(session.user),
+            wait(8000)
+          ]);
+        } else {
+          setToken(null);
+          setUser(null);
+          delete api.defaults.headers.common['Authorization'];
+        }
+      } catch (error) {
+        console.error('[AuthProvider] Erro ao verificar sessão inicial:', error);
+      } finally {
+        if (!didCancel) {
+          setLoading(false);
+          setIsBootstrapping(false);
+        }
+      }
+    };
+
+    checkInitialSession();
+
     // Escuta mudanças na sessão do Supabase (Login, Logout, Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (didCancel) return;
+
       if (session) {
         setToken(session.access_token);
-        // Atualiza header da API legado, caso ainda seja usada
         api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
-
-        // Se ainda não temos o perfil do usuário carregado, busca agora
-        // (Ou sempre busca para garantir dados frescos)
-        await fetchProfileAndSetUser(session.user);
+        await Promise.race([
+          fetchProfileAndSetUser(session.user),
+          wait(8000)
+        ]);
       } else {
         setToken(null);
         setUser(null);
@@ -84,30 +137,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => {
+      didCancel = true;
       subscription.unsubscribe();
     };
   }, []);
 
   const login = useCallback(async (credentials: { email: string; senha: string }) => {
     setLoading(true);
+    console.log('[AuthProvider] Iniciando login para:', credentials.email);
     try {
+      console.log('[AuthProvider] Chamando signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.senha,
       });
 
+      console.log('[AuthProvider] Resposta do Supabase:', { hasData: !!data, hasError: !!error });
       if (error) throw error;
       if (!data.session) throw new Error('Sessão não criada.');
 
+      console.log('[AuthProvider] Buscando perfil do usuário...');
       // O onAuthStateChange vai lidar com a atualização do estado, 
       // mas podemos aguardar a busca do perfil aqui se quisermos garantir que 'user' está setado antes de resolver a Promise.
       const profile = await fetchProfileAndSetUser(data.session.user);
+      console.log('[AuthProvider] Perfil encontrado:', !!profile);
       if (!profile) throw new Error('Usuário autenticado, mas perfil não encontrado no sistema.');
 
+      console.log('[AuthProvider] Login concluído com sucesso!');
     } catch (error: any) {
-      console.error('Falha no processo de login Supabase:', error);
+      console.error('[AuthProvider] Falha no processo de login:', error);
       throw new Error(error.message || 'Erro ao realizar login.');
     } finally {
+      console.log('[AuthProvider] Finalizando login, setLoading(false)');
       setLoading(false);
     }
   }, []);
@@ -140,4 +201,3 @@ export const useAuth = (): IAuthContext => {
   }
   return context;
 };
-
