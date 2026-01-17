@@ -18,11 +18,14 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const socketUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+    // Se estiver usando Supabase diretamente, não tenta conectar Socket.IO
+    if (apiUrl.includes('supabase.co')) return null;
     return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
   }, []);
 
   useEffect(() => {
-    if (!usuario) {
+    // Se não há URL de socket (modo Supabase-only), não conecta
+    if (!usuario || !socketUrl) {
       if (socketRef.current) {
         socketRef.current.emit('user-logout');
         socketRef.current.disconnect();
@@ -32,7 +35,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       return;
     }
 
-    if (!socketRef.current) {
+    if (!socketRef.current && socketUrl) {
       console.log(`[Socket.IO] Tentando conectar a: ${socketUrl}`);
       const newSocket = io(socketUrl, { transports: ['polling', 'websocket'] });
 
