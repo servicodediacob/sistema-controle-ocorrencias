@@ -44,36 +44,51 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     if (!socketRef.current && socketUrl) {
-      console.log(`[Socket.IO] Tentando conectar a: ${socketUrl}`);
-      const newSocket = io(socketUrl, { transports: ['polling', 'websocket'] });
+      try {
+        console.log(`[Socket.IO] Inicializando conexão... URL: ${socketUrl}`);
+        const newSocket = io(socketUrl, {
+          transports: ['polling', 'websocket'],
+          reconnectionAttempts: 3, // Limita tentativas
+          timeout: 5000
+        });
 
-      newSocket.on('connect', () => {
-        console.log(`[Socket.IO] Conectado com sucesso. ID: ${newSocket.id}`);
-        if (usuario) {
-          const payload = {
-            id: usuario.id,
-            nome: usuario.nome,
-            email: usuario.email,
-            role: (usuario.role ?? usuario.perfil ?? 'user') as 'admin' | 'user' | 'supervisor',
-          };
-          newSocket.emit('user-login', payload, () => {
-            newSocket.emit('request-logged-in-users');
-          });
-        }
-      });
+        newSocket.on('connect', () => {
+          console.log(`[Socket.IO] Conectado com sucesso. ID: ${newSocket.id}`);
+          if (usuario) {
+            const payload = {
+              id: usuario.id,
+              nome: usuario.nome,
+              email: usuario.email,
+              role: (usuario.role ?? usuario.perfil ?? 'user') as 'admin' | 'user' | 'supervisor',
+            };
+            newSocket.emit('user-login', payload, () => {
+              newSocket.emit('request-logged-in-users');
+            });
+          }
+        });
 
-      newSocket.on('disconnect', (reason: string) => {
-        console.warn(`[Socket.IO] Desconectado do servidor. Razao: ${reason}`);
-        socketRef.current = null;
-        setSocketInstance(null);
-      });
+        newSocket.on('disconnect', (reason: string) => {
+          console.warn(`[Socket.IO] Desconectado. Razão: ${reason}`);
+          if (reason === 'io server disconnect') {
+            newSocket.connect();
+          }
+          // Se falhar por transporte/CORS, não limpa a ref imediatamente para evitar loop,
+          // mas o socketInstance ficará null visualmente
+        });
 
-      newSocket.on('connect_error', (err: Error) => {
-        console.error(`[Socket.IO] Erro de conexao: ${err.message}`);
-      });
+        newSocket.on('connect_error', (err: Error) => {
+          console.warn(`[Socket.IO] Erro de conexão (provavelmente sem backend): ${err.message}`);
+          // Se der erro, assumimos que não tem backend Socket.IO e paramos de tentar
+          newSocket.disconnect();
+          socketRef.current = null;
+          setSocketInstance(null);
+        });
 
-      socketRef.current = newSocket;
-      setSocketInstance(newSocket);
+        socketRef.current = newSocket;
+        setSocketInstance(newSocket);
+      } catch (e) {
+        console.error('[Socket.IO] Falha crítica ao iniciar:', e);
+      }
     }
   }, [usuario, socketUrl]);
 
