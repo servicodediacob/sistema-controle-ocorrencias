@@ -28,7 +28,19 @@
     min-height: 100vh;
   }
 
-  /* Scaling removed per user request to fill page */
+  /* Escala global de 80% via font-size para desktop (≥768px), mantém preenchimento da tela */
+  @media (min-width: 768px) {
+    html {
+      font-size: 12.8px;
+      /* 16px * 0.8 = 12.8px */
+    }
+
+    /* Ajusta elementos para preencher melhor a tela */
+    body {
+      font-size: 1rem;
+      /* Agora 1rem = 12.8px em vez de 16px */
+    }
+  }
 
   /* Override utilitários Tailwind mais usados */
   .bg-gray-900 {
