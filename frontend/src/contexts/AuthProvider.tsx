@@ -17,6 +17,7 @@ export interface IAuthContext {
   token: string | null; // Access Token do Supabase
   loading: boolean;
   login(credentials: { email: string; senha: string }): Promise<void>;
+  loginWithGoogle(): Promise<void>;
   loginWithJwt(token: string): void; // Deprecated/Adapted
   logout(): void;
 }
@@ -173,6 +174,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    setLoading(true);
+    console.log('[AuthProvider] Iniciando login com Google...');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('[AuthProvider] Redirecionando para Google OAuth...');
+      // O redirecionamento acontece automaticamente
+      // Quando o usuário retornar, onAuthStateChange será chamado
+    } catch (error: any) {
+      console.error('[AuthProvider] Falha no login com Google:', error);
+      setLoading(false);
+      throw new Error(error.message || 'Erro ao realizar login com Google.');
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     offlineSyncService.clearAllPendingLancamentos();
     await supabase.auth.signOut();
@@ -181,14 +209,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   // Mantemos para compatibilidade, mas agora apenas redireciona ou faz nada se não for sessão Supabase
-  const loginWithJwt = useCallback((newToken: string) => {
+  const loginWithJwt = useCallback((_token: string) => {
     // No fluxo Supabase, loginWithJwt é menos comum a menos que venha de OAuth manual.
     // Se for necessário, podemos tentar `supabase.auth.setSession(newToken)` se for um refresh token.
     console.warn('loginWithJwt chamado - ignorado em favor do fluxo Supabase ou implemente setSession.');
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, usuario: user, token, loading, login, loginWithJwt, logout }}>
+    <AuthContext.Provider value={{ user, usuario: user, token, loading, login, loginWithGoogle, loginWithJwt, logout }}>
       {isBootstrapping ? <LoadingOverlay visible text="Iniciando sistema..." /> : children}
     </AuthContext.Provider>
   );
