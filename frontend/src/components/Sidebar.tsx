@@ -42,6 +42,8 @@ const getInitialMenuState = (storageKey: string, paths: string[], pathname: stri
   return paths.some((path) => pathname.startsWith(path));
 };
 
+type NavHighlightVariant = 'lancamento' | 'sisgpo';
+
 interface SidebarProps {
   onLogout: () => void;
   isCollapsed: boolean;
@@ -105,34 +107,14 @@ interface DropdownMenuProps {
   isCollapsed: boolean;
   children: React.ReactNode;
   highlightVariant?: NavHighlightVariant;
-  highlightClassName?: string; // New prop for custom highlight class
-}
-
-
-
-interface DropdownMenuProps {
-
-  label: string;
-
-  icon: React.ReactNode;
-
-  isCollapsed: boolean;
-
-  children: React.ReactNode;
-
-  highlightVariant?: NavHighlightVariant;
-
   highlightClassName?: string;
-
   isOpen: boolean;
-
   setIsOpen: (isOpen: boolean) => void;
-
 }
 
 
 
-const DropdownMenu: React.FC<DropdownMenuProps> = ({ label, icon, isCollapsed, children, highlightVariant, highlightClassName, isOpen, setIsOpen }) => {
+const DropdownMenu: React.FC<DropdownMenuProps> = ({ label, icon, isCollapsed, children, highlightClassName, isOpen, setIsOpen }) => {
 
   if (isCollapsed) {
 
@@ -272,109 +254,109 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
         <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-        
 
-        
 
-        
 
-                <DropdownMenu
 
-        
 
-                  label="Recursos Op."
 
-        
+        <DropdownMenu
 
-                  icon={<ShieldAlert size={20} />}
 
-        
 
-                  isCollapsed={isCollapsed}
+          label="Recursos Op."
 
-        
 
-                  highlightVariant="sisgpo"
 
-        
+          icon={<ShieldAlert size={20} />}
 
-                  isOpen={isRecursosMenuOpen}
 
-        
 
-                  setIsOpen={setIsRecursosMenuOpen}
+          isCollapsed={isCollapsed}
 
-        
 
-                >
 
-        
+          highlightVariant="sisgpo"
 
-                  <NavItem to="/plantoes-sisgpo" icon={<CalendarClock size={20} />} label="Plantoes SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-        
 
-                  <NavItem to="/viaturas-sisgpo" icon={<Car size={20} />} label="Viaturas SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
+          isOpen={isRecursosMenuOpen}
 
-        
 
-                  <NavItem to="/obms-sisgpo" icon={<Building2 size={20} />} label="OBMs SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-        
+          setIsOpen={setIsRecursosMenuOpen}
 
-                  <NavItem to="/militares-sisgpo" icon={<Users size={20} />} label="Militares SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-        
 
-                </DropdownMenu>
+        >
 
-        
 
-        
 
-        
+          <NavItem to="/plantoes-sisgpo" icon={<CalendarClock size={20} />} label="Plantoes SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-                <DropdownMenu
 
-        
 
-                  label="Relatorios"
+          <NavItem to="/viaturas-sisgpo" icon={<Car size={20} />} label="Viaturas SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-        
 
-                  icon={<BarChart3 size={20} />}
 
-        
+          <NavItem to="/obms-sisgpo" icon={<Building2 size={20} />} label="OBMs SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-                  isCollapsed={isCollapsed}
 
-        
 
-                  isOpen={isRelatoriosMenuOpen}
+          <NavItem to="/militares-sisgpo" icon={<Users size={20} />} label="Militares SISGPO" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="sisgpo" />
 
-        
 
-                  setIsOpen={setIsRelatoriosMenuOpen}
 
-        
+        </DropdownMenu>
 
-                >
 
-        
 
-                  <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatorio Estatistico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-        
 
-                  <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatorio de Obitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-        
 
-                </DropdownMenu>
+        <DropdownMenu
 
-        
 
-        
+
+          label="Relatorios"
+
+
+
+          icon={<BarChart3 size={20} />}
+
+
+
+          isCollapsed={isCollapsed}
+
+
+
+          isOpen={isRelatoriosMenuOpen}
+
+
+
+          setIsOpen={setIsRelatoriosMenuOpen}
+
+
+
+        >
+
+
+
+          <NavItem to="/relatorio-estatistico" icon={<BarChart3 size={20} />} label="Relatorio Estatistico" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+
+
+
+          <NavItem to="/relatorio-obitos" icon={<FileText size={20} />} label="Relatorio de Obitos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+
+
+
+        </DropdownMenu>
+
+
+
+
 
         <NavItem to="/lancar-ocorrencias" icon={<FilePlus size={20} />} label="Lancar Ocorrencias" isCollapsed={isCollapsed} onClick={closeMobileMenu} highlightVariant="lancamento" />
 
@@ -386,7 +368,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
             <div className="px-3 pt-4 pb-2">
 
-            <span className={`text-xs font-semibold uppercase text-[rgba(216,219,255,0.65)] ${isCollapsed ? 'hidden' : 'block'}`}>
+              <span className={`text-xs font-semibold uppercase text-[rgba(216,219,255,0.65)] ${isCollapsed ? 'hidden' : 'block'}`}>
 
                 Admin
 
@@ -394,37 +376,37 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
 
             </div>
 
-            
 
-                        <DropdownMenu
 
-                          label="Administrador"
+            <DropdownMenu
 
-                          icon={<ShieldAlert size={20} />}
+              label="Administrador"
 
-                          isCollapsed={isCollapsed}
+              icon={<ShieldAlert size={20} />}
 
-                          isOpen={isAdministradorMenuOpen}
+              isCollapsed={isCollapsed}
 
-                          setIsOpen={setIsAdministradorMenuOpen}
+              isOpen={isAdministradorMenuOpen}
 
-                        >
+              setIsOpen={setIsAdministradorMenuOpen}
 
-                          <NavItem to="/gerenciar-usuarios" icon={<Users size={20} />} label="Gerenciar Usuários" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            >
 
-                          <NavItem to="/gerenciar-acessos" icon={<UserCheck size={20} />} label="Gerenciar Acessos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+              <NavItem to="/gerenciar-usuarios" icon={<Users size={20} />} label="Gerenciar Usuários" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-                          <NavItem to="/gerenciar-dados" icon={<Database size={20} />} label="Gerenciar Dados" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+              <NavItem to="/gerenciar-acessos" icon={<UserCheck size={20} />} label="Gerenciar Acessos" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-                          <NavItem to="/auditoria" icon={<ShieldAlert size={20} />} label="Logs de Auditoria" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+              <NavItem to="/gerenciar-dados" icon={<Database size={20} />} label="Gerenciar Dados" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-                        </DropdownMenu>
+              <NavItem to="/auditoria" icon={<ShieldAlert size={20} />} label="Logs de Auditoria" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
 
-                      </>
+            </DropdownMenu>
 
-                    )}
+          </>
 
-            
+        )}
+
+
 
       </nav>
 
@@ -446,12 +428,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isCollapsed, setIsCollapsed
               </div>
             )}
           </div>
-          {!isCollapsed && (isUserMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
+          {(isUserMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
         </button>
 
-        {isUserMenuOpen && !isCollapsed && (
+        {isUserMenuOpen && (
           <div className="mt-2 space-y-2">
-            <NavItem to="/meu-perfil" icon={<UserCircle size={20} />} label="Meu Perfil" isCollapsed={isCollapsed} onClick={closeMobileMenu} />
+            <NavItem to="/meu-perfil" icon={<UserCircle size={20} />} label="Meu Perfil" isCollapsed={false} onClick={closeMobileMenu} />
             <button
               onClick={onLogout}
               className="flex w-full items-center gap-4 rounded-2xl bg-gradient-to-r from-[#ff5b80] to-[#f87171] px-3 py-2.5 text-left text-white transition-all duration-200 shadow-[0_10px_25px_rgba(248,113,113,0.35)]"
