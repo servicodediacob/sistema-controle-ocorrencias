@@ -23,13 +23,22 @@ if (!connectionString) {
 // - NODE_ENV=production, ou
 // - DATABASE_URL tem sslmode=require/verify-full, ou
 // - FORÇA explicitamente via FORCE_DB_SSL=true
+// Função para remover parâmetros de SSL da string de conexão
+const getCleanConnectionString = (url: string | undefined) => {
+  if (!url) return undefined;
+  // Remove sslmode e outros parâmetros que podem conflitar
+  return url.replace(/[?&]sslmode=[^&]+/, '').replace(/[?&]sslcert=[^&]+/, '');
+};
+
+const cleanConnectionString = getCleanConnectionString(connectionString);
+
 const sslRequired =
   process.env.FORCE_DB_SSL === 'true' ||
   (connectionString && connectionString.includes('sslmode=')) ||
   process.env.NODE_ENV === 'production';
 
 const config: PoolConfig = {
-  connectionString,
+  connectionString: cleanConnectionString, // Usamos a string limpa
   ssl: sslRequired ? { rejectUnauthorized: false } : false,
 };
 
