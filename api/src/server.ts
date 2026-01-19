@@ -60,7 +60,7 @@ const envAllowedOrigins = rawAllowedOrigins
   .map((origin) => origin.trim())
   .filter((origin) => origin.length > 0);
 
-const allowedOrigins = envAllowedOrigins.length > 0 ? envAllowedOrigins : defaultAllowedOrigins;
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
