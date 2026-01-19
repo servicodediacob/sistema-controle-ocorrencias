@@ -45,40 +45,15 @@ initializeSocket(io);
 
 const PORT = process.env.PORT || 3001;
 
-const defaultAllowedOrigins = [
-  'https://sisgpo.vercel.app',
-  'https://sistema-controle-ocorrencias-fronte.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:5174',
-];
-
-const rawAllowedOrigins =
-  process.env.CORS_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? '';
-
-const envAllowedOrigins = rawAllowedOrigins
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter((origin) => origin.length > 0);
-
-const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
-
+// CORS: Aceita todas as origens em produção para garantir funcionamento
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.warn(`[CORS] Origin '${origin}' blocked. Allowed origins: ${allowedOrigins.join(', ')}`);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Cache-Control', 'Pragma', 'Expires'],
+  origin: true, // Aceita qualquer origem
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With'],
   credentials: true,
   exposedHeaders: ['ETag'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
