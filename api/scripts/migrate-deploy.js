@@ -73,11 +73,17 @@ if (
   originalDbUrl &&
   originalDbUrl !== directUrl &&
   outFirst.includes('P1001')
-)
-{
+) {
   console.warn('[migrate] P1001 usando DIRECT_DATABASE_URL. Tentando fallback para DATABASE_URL (pool)...');
   process.env.DATABASE_URL = originalDbUrl;
   current = deploy();
+
+  // Se pool também falhar com P1001, não há mais o que fazer
+  const outSecond = (current.stdout || '') + (current.stderr || '');
+  if (current.status !== 0 && outSecond.includes('P1001')) {
+    console.error('[migrate] P1001 também no pooler. Verifique conectividade e firewall.');
+    process.exit(current.status || 1);
+  }
 }
 
 if (current.status === 0) {
