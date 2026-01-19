@@ -23,14 +23,30 @@ if (!connectionString) {
 // - NODE_ENV=production, ou
 // - DATABASE_URL tem sslmode=require/verify-full, ou
 // - FORÇA explicitamente via FORCE_DB_SSL=true
-// Função para remover parâmetros de SSL da string de conexão
+// Função para remover parâmetros de SSL da string de conexão de forma segura
 const getCleanConnectionString = (url: string | undefined) => {
   if (!url) return undefined;
-  // Remove sslmode e outros parâmetros que podem conflitar
-  return url.replace(/[?&]sslmode=[^&]+/, '').replace(/[?&]sslcert=[^&]+/, '');
+  try {
+    // Usa o parser de URL para manipular os parâmetros corretamente
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.delete('sslmode');
+    parsedUrl.searchParams.delete('sslcert');
+    parsedUrl.searchParams.delete('sslrootcert');
+    parsedUrl.searchParams.delete('sslkey');
+    return parsedUrl.toString();
+  } catch (e) {
+    // Fallback se a URL for inválida, apenas remove string simples
+    return url.replace(/[?&]sslmode=[^&]+/, '').replace(/[?&]sslcert=[^&]+/, '');
+  }
 };
 
 const cleanConnectionString = getCleanConnectionString(connectionString);
+
+// Log para debug (Sanitizado)
+if (cleanConnectionString) {
+  const sanitized = cleanConnectionString.replace(/:([^@]+)@/, ':****@');
+  logger.info(`[DB] Connecting with string: ${sanitized}`);
+}
 
 const sslRequired =
   process.env.FORCE_DB_SSL === 'true' ||
