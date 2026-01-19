@@ -1,22 +1,22 @@
 ﻿{
-    "version":  2,
-    "builds":  [
-                   {
-                       "src":  "frontend/package.json",
-                       "use":  "@vercel/static-build",
-                       "config":  {
-                                      "distDir":  "dist"
-                                  }
-                   }
-               ],
-    "rewrites":  [
-                     {
-                         "source":  "/api/(.*)",
-                         "destination":  "https://siscob.onrender.com/api/$1"
-                     },
-                     {
-                         "source":  "/(.*)",
-                         "destination":  "/index.html"
-                     }
-                 ]
+    "version": 2,
+    "builds": [
+        {
+            "src": "frontend/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "https://api-siscob.onrender.com/api/$1"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
 }
