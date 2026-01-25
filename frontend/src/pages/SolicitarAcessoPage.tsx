@@ -188,7 +188,7 @@ function SolicitarAcessoPage(): ReactElement {
         >
           {/* Inner Content Container */}
           <div
-            className="relative bg-black/40 backdrop-blur-md p-8 pt-10 border border-white/5 shadow-inner rounded-2xl"
+            className="relative bg-black/60 backdrop-blur-xl p-8 pt-10 border-2 border-neon-blue shadow-[0_0_25px_rgba(0,243,255,0.3)] rounded-2xl"
           >
             {/* CSS Override for Chrome Autofill */}
             <style>{`
