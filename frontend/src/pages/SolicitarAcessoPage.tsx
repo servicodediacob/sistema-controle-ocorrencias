@@ -5,8 +5,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { getCidades, solicitarAcesso, ICidade } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
+import LoadingOverlay from '../components/LoadingOverlay'; // Assuming this component exists as used in LoginPage
 
-// Esquema de validação (sem alterações)
+// Validation Schema
 const requestAccessSchema = z.object({
   nome: z.string().min(3, { message: "O nome deve ter no mínimo 3 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
@@ -17,17 +18,17 @@ const requestAccessSchema = z.object({
 type RequestFormInputs = z.infer<typeof requestAccessSchema>;
 type FormErrors = { [key in keyof RequestFormInputs]?: string };
 
-// Componente Spinner (sem alterações)
+// Spinner Component
 const Spinner = (): ReactElement => (
   <div
-    className="h-5 w-5 animate-spin rounded-full border-4 border-white/30 border-t-white"
+    className="h-5 w-5 animate-spin rounded-full border-4 border-neon-blue/30 border-t-neon-blue"
     role="status"
     aria-label="Carregando..."
   />
 );
 
 function SolicitarAcessoPage(): ReactElement {
-  const navigate = useNavigate(); // CORREÇÃO: 'navigate' será usado
+  const navigate = useNavigate();
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState<RequestFormInputs>({
@@ -38,11 +39,24 @@ function SolicitarAcessoPage(): ReactElement {
   });
   const [obms, setObms] = useState<ICidade[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [loading, setLoading] = useState(false); // CORREÇÃO: 'setLoading' será usado
+  const [loading, setLoading] = useState(false);
   const [loadingObms, setLoadingObms] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Animation States
+  const [readyToShowForm, setReadyToShowForm] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  // Initial Load Animation
+  useEffect(() => {
+    // Small delay to allow 'mounting'
+    const timer = setTimeout(() => {
+      setReadyToShowForm(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const fetchObms = async () => {
@@ -70,9 +84,6 @@ function SolicitarAcessoPage(): ReactElement {
     };
   }, []);
 
-  // ======================= INÍCIO DA CORREÇÃO =======================
-  // As funções 'validateForm', 'handleChange' e 'handleSubmit' foram restauradas.
-
   const validateForm = () => {
     const result = requestAccessSchema.safeParse(formData);
     if (!result.success) {
@@ -80,10 +91,10 @@ function SolicitarAcessoPage(): ReactElement {
       result.error.issues.forEach(issue => {
         newErrors[issue.path[0] as keyof RequestFormInputs] = issue.message;
       });
-      setErrors(newErrors); // CORREÇÃO: 'setErrors' agora é usado
+      setErrors(newErrors);
       return false;
     }
-    setErrors({}); // CORREÇÃO: 'setErrors' agora é usado
+    setErrors({});
     return true;
   };
 
@@ -94,27 +105,31 @@ function SolicitarAcessoPage(): ReactElement {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) { // CORREÇÃO: 'validateForm' agora é usado
+    if (!validateForm()) {
       return;
     }
 
-    setLoading(true); // CORREÇÃO: 'setLoading' agora é usado
+    setLoading(true);
     try {
       const payload = {
         ...formData,
         obm_id: parseInt(formData.obm_id, 10),
       };
-      const response = await solicitarAcesso(payload); // CORREÇÃO: 'solicitarAcesso' agora é usado
+      const response = await solicitarAcesso(payload);
       addNotification(response.message, 'success');
-      navigate('/login'); // CORREÇÃO: 'navigate' agora é usado
+
+      // Exit animation
+      setIsLeaving(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
       addNotification(errorMessage, 'error');
-    } finally {
-      setLoading(false); // CORREÇÃO: 'setLoading' agora é usado
+      setLoading(false);
     }
   };
-  // ======================= FIM DA CORREÇÃO =======================
 
   const filteredObms = obms.filter(obm =>
     obm.cidade_nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -127,82 +142,204 @@ function SolicitarAcessoPage(): ReactElement {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-gray-800 p-8 shadow-lg">
-        <h2 className="mb-6 text-center text-2xl font-medium text-gray-200">
-          Solicitar Acesso ao Sistema
-        </h2>
+    <div className={`relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-obsidian text-white font-rajdhani transition-opacity duration-1000 ${isLeaving ? 'opacity-0' : 'opacity-100'}`}>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Campo Nome */}
-          <div>
-            <label htmlFor="nome" className="mb-1 block text-sm text-gray-400">Nome Completo</label>
-            <input id="nome" type="text" name="nome" placeholder="Seu nome completo" value={formData.nome} onChange={handleChange} required disabled={loading} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.nome || ''}</p>
-          </div>
+      {/* Background Grid/Effects - Global */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-50"></div>
+        <div className="absolute inset-0 bg-radial-gradient from-blue-900/20 to-black"></div>
+      </div>
 
-          {/* Campo Email */}
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm text-gray-400">Email</label>
-            <input id="email" type="email" name="email" placeholder="seu.email@cbm.pe.gov.br" value={formData.email} onChange={handleChange} required disabled={loading} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.email || ''}</p>
-          </div>
+      <LoadingOverlay visible={loading} text="ENVIANDO SOLICITAÇÃO..." />
 
-          {/* Campo Senha */}
-          <div>
-            <label htmlFor="senha" className="mb-1 block text-sm text-gray-400">Senha</label>
-            <input id="senha" type="password" name="senha" placeholder="Mínimo de 6 caracteres" value={formData.senha} onChange={handleChange} required disabled={loading} className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.senha || ''}</p>
-          </div>
+      {/* Watermark 1 - Top Left (Lighter) */}
+      <div className="fixed top-0 left-0 z-0 opacity-20 pointer-events-none mix-blend-overlay -translate-x-1/2 -translate-y-1/2">
+        <img
+          src="https://i.postimg.cc/63KGQSt3/image-Photoroom.png"
+          alt="Watermark TL"
+          className="w-[700px] h-auto"
+          style={{
+            clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'
+          }}
+        />
+      </div>
 
-          {/* Campo OBM de Origem */}
-          <div className="relative" ref={dropdownRef}>
-            <label htmlFor="obm_search" className="mb-1 block text-sm text-gray-400">OBM de Origem</label>
-            <input
-              id="obm_search"
-              type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                if (e.target.value === '') {
-                  setFormData(prev => ({ ...prev, obm_id: '' }));
-                }
-              }}
-              onFocus={() => setIsDropdownOpen(true)}
-              placeholder={loadingObms ? 'Carregando OBMs...' : 'Digite para filtrar...'}
-              disabled={loading || loadingObms}
-              className="w-full rounded-md border border-gray-600 bg-gray-700 p-3 text-white transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-            />
-            {isDropdownOpen && !loadingObms && (
-              <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                {filteredObms.length > 0 ? (
-                  filteredObms.map(obm => (
-                    <li
-                      key={obm.id}
-                      onClick={() => handleSelectObm(obm)}
-                      className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-white hover:bg-blue-600"
-                    >
-                      {obm.cidade_nome}
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-3 py-2 text-gray-400">Nenhuma OBM encontrada.</li>
+      {/* Watermark 2 - Bottom Right (Standard) */}
+      <div className="fixed bottom-0 right-0 z-0 opacity-20 pointer-events-none mix-blend-overlay translate-x-1/2 translate-y-1/2">
+        <img
+          src="https://i.postimg.cc/63KGQSt3/image-Photoroom.png"
+          alt="Watermark BR"
+          className="w-[700px] h-auto"
+          style={{
+            clipPath: 'polygon(0 0, 50% 0, 50% 50%, 0 50%)'
+          }}
+        />
+      </div>
+
+      {/* The Card - Centered on Screen */}
+      <div className={`relative z-10 w-full max-w-[500px] p-6 transition-all duration-700 ease-out ${!readyToShowForm ? 'scale-95 opacity-0 translate-y-8' : 'scale-100 opacity-100 translate-y-0'}`}>
+
+        {/* The Metallic Bezel */}
+        <div
+          className="relative p-[6px] shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-3xl"
+          style={{
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 25%, #2a2a2a 50%, #4a4a4a 75%, #1a1a1a 100%)'
+          }}
+        >
+          {/* Inner Content Container */}
+          <div
+            className="relative bg-black/40 backdrop-blur-md p-8 pt-10 border border-white/5 shadow-inner rounded-2xl"
+          >
+            {/* CSS Override for Chrome Autofill */}
+            <style>{`
+                 input:-webkit-autofill,
+                 input:-webkit-autofill:hover, 
+                 input:-webkit-autofill:focus, 
+                 input:-webkit-autofill:active{
+                     -webkit-box-shadow: 0 0 0 30px #0a0a0a inset !important;
+                     -webkit-text-fill-color: white !important;
+                     transition: background-color 5000s ease-in-out 0s;
+                 }
+              `}</style>
+
+            {/* Header */}
+            <div className="mb-8 text-center relative">
+              <h2 className="font-orbitron text-2xl font-bold tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                SOLICITAR <br /><span className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,243,255,0.5)]">ACESSO</span>
+              </h2>
+              <div className="mt-2 h-[1px] w-full bg-gradient-to-r from-transparent via-neon-blue/50 to-transparent"></div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+              {/* Nome */}
+              <div className="group relative">
+                <label htmlFor="nome" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 font-orbitron group-focus-within:text-neon-blue transition-colors">Nome Completo</label>
+                <div className="relative flex items-center bg-black/60 border-l-2 border-r-2 border-gray-700/50 rounded-sm overflow-hidden group-focus-within:border-neon-blue/70 transition-colors">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                  <input
+                    id="nome"
+                    type="text"
+                    name="nome"
+                    placeholder="SEU NOME COMPLETO"
+                    value={formData.nome}
+                    onChange={handleChange}
+                    disabled={loading}
+                    autoComplete="off"
+                    className="w-full bg-transparent p-3 pl-4 text-white placeholder-gray-600 outline-none font-rajdhani tracking-wide text-lg"
+                  />
+                  <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                </div>
+                <p className="mt-1 min-h-[0.5rem] text-[9px] text-red-500 font-mono uppercase text-right">{errors.nome}</p>
+              </div>
+
+              {/* Email */}
+              <div className="group relative">
+                <label htmlFor="email" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 font-orbitron group-focus-within:text-neon-blue transition-colors">Email Institucional</label>
+                <div className="relative flex items-center bg-black/60 border-l-2 border-r-2 border-gray-700/50 rounded-sm overflow-hidden group-focus-within:border-neon-blue/70 transition-colors">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                  <input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="SEU.EMAIL@CBM.PE.GOV.BR"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={loading}
+                    autoComplete="off"
+                    className="w-full bg-transparent p-3 pl-4 text-white placeholder-gray-600 outline-none font-rajdhani tracking-wide text-lg"
+                  />
+                  <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                </div>
+                <p className="mt-1 min-h-[0.5rem] text-[9px] text-red-500 font-mono uppercase text-right">{errors.email}</p>
+              </div>
+
+              {/* Senha */}
+              <div className="group relative">
+                <label htmlFor="senha" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 font-orbitron group-focus-within:text-neon-blue transition-colors">Senha Desejada</label>
+                <div className="relative flex items-center bg-black/60 border-l-2 border-r-2 border-gray-700/50 rounded-sm overflow-hidden group-focus-within:border-neon-blue/70 transition-colors">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                  <input
+                    id="senha"
+                    type="password"
+                    name="senha"
+                    placeholder="MINIMO 6 CARACTERES"
+                    value={formData.senha}
+                    onChange={handleChange}
+                    disabled={loading}
+                    autoComplete="off"
+                    className="w-full bg-transparent p-3 pl-4 text-white placeholder-gray-600 outline-none font-rajdhani tracking-wide text-lg"
+                  />
+                  <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                </div>
+                <p className="mt-1 min-h-[0.5rem] text-[9px] text-red-500 font-mono uppercase text-right">{errors.senha}</p>
+              </div>
+
+              {/* OBM Dropdown */}
+              <div className="group relative" ref={dropdownRef}>
+                <label htmlFor="obm_search" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400 font-orbitron group-focus-within:text-neon-blue transition-colors">OBM de Origem</label>
+                <div className="relative flex items-center bg-black/60 border-l-2 border-r-2 border-gray-700/50 rounded-sm overflow-hidden group-focus-within:border-neon-blue/70 transition-colors">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                  <input
+                    id="obm_search"
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (e.target.value === '') {
+                        setFormData(prev => ({ ...prev, obm_id: '' }));
+                      }
+                    }}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    placeholder={loadingObms ? 'CARREGANDO OBMS...' : 'DIGITE PARA FILTRAR...'}
+                    disabled={loading || loadingObms}
+                    autoComplete="off"
+                    className="w-full bg-transparent p-3 pl-4 text-white placeholder-gray-600 outline-none font-rajdhani tracking-wide text-lg"
+                  />
+                  <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-neon-blue opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                </div>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && !loadingObms && (
+                  <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-sm bg-gray-900 border border-gray-700 py-1 text-base shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm custom-scrollbar">
+                    {filteredObms.length > 0 ? (
+                      filteredObms.map(obm => (
+                        <li
+                          key={obm.id}
+                          onClick={() => handleSelectObm(obm)}
+                          className="relative cursor-pointer select-none py-3 pl-4 pr-9 text-gray-300 hover:bg-neon-blue/20 hover:text-white font-rajdhani tracking-wide transition-colors border-b border-gray-800 last:border-0"
+                        >
+                          {obm.cidade_nome}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-3 py-2 text-gray-500 font-rajdhani">Nenhuma OBM encontrada.</li>
+                    )}
+                  </ul>
                 )}
-              </ul>
-            )}
-            <p className="mt-1 min-h-[1.25rem] text-left text-sm text-red-500">{errors.obm_id || ''}</p>
-          </div>
+                <p className="mt-1 min-h-[0.5rem] text-[9px] text-red-500 font-mono uppercase text-right">{errors.obm_id}</p>
+              </div>
 
-          {/* Botões */}
-          <div className="mt-4 flex flex-col gap-4">
-            <button type="submit" disabled={loading || loadingObms} className="flex items-center justify-center rounded-md bg-teal-600 p-3 text-lg font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70">
-              {loading ? <><Spinner /><span className="ml-2">Enviando...</span></> : 'Enviar Solicitação'}
-            </button>
-            <Link to="/login" className="text-center rounded-md bg-gray-600 p-3 font-semibold text-white transition hover:bg-gray-500">
-              Voltar para o Login
-            </Link>
+              {/* Botões */}
+              <div className="mt-4 flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={loading || loadingObms}
+                  className="group relative w-full overflow-hidden rounded-sm bg-gradient-to-r from-blue-900 to-blue-800 py-3 text-white border border-blue-500/50 transition-all hover:border-neon-blue hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] active:scale-[0.99] disabled:opacity-50"
+                >
+                  <div className="relative z-10 flex items-center justify-center gap-2 font-orbitron font-bold tracking-[0.1em] uppercase text-xs">
+                    {loading ? <><Spinner /><span className="ml-2">ENVIANDO...</span></> : 'ENVIAR SOLICITAÇÃO'}
+                  </div>
+                </button>
+
+                <Link to="/login" className="flex w-full items-center justify-center gap-2 bg-white/5 py-3 text-xs font-medium text-gray-300 border border-white/5 transition-all hover:bg-white/10 hover:text-white hover:border-white/20 active:scale-[0.99] rounded-sm font-orbitron tracking-widest uppercase">
+                  VOLTAR PARA O LOGIN
+                </Link>
+              </div>
+
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
