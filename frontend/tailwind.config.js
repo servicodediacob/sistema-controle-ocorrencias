@@ -26,7 +26,7 @@ export default {
           warning: 'var(--color-warning)',
           danger: 'var(--color-danger)',
         },
-        
+
         teal: {
           300: '#81e6d9',
           400: '#4fd1c5',
@@ -43,7 +43,15 @@ export default {
           600: '#dd6b20',
           700: '#c05621',
         },
-      }
+        obsidian: '#050510',
+        charcoal: '#0a0a14',
+        'neon-blue': '#00f3ff',
+        'neon-amber': '#ffb000',
+      },
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        rajdhani: ['Rajdhani', 'sans-serif'],
+      },
     },
   },
   plugins: [],
