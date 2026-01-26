@@ -15,7 +15,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
   // ======================= INÍCIO DA CORREÇÃO =======================
   const { logout } = useAuth(); // 2. Obter a função de logout correta
-  
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Animação de entrada ao vir do login
@@ -56,7 +56,38 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      <div className={`grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-background text-text transition-all duration-300 ease-out ${shouldEnterAnim ? (entered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6') : ''}`}>
+      <div className={`relative grid h-screen w-screen grid-cols-[auto_1fr] overflow-hidden bg-obsidian text-white font-rajdhani transition-all duration-300 ease-out ${shouldEnterAnim ? (entered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6') : ''}`}>
+
+        {/* Background Grid/Effects - Global */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-50"></div>
+          <div className="absolute inset-0 bg-radial-gradient from-blue-900/20 to-black"></div>
+        </div>
+
+        {/* Watermark 1 - Top Left (Lighter) */}
+        <div className="fixed top-0 left-0 z-0 opacity-20 pointer-events-none mix-blend-overlay -translate-x-1/2 -translate-y-1/2">
+          <img
+            src="https://i.postimg.cc/63KGQSt3/image-Photoroom.png"
+            alt="Watermark TL"
+            className="w-[700px] h-auto"
+            style={{
+              clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'
+            }}
+          />
+        </div>
+
+        {/* Watermark 2 - Bottom Right (Standard) */}
+        <div className="fixed bottom-0 right-0 z-0 opacity-20 pointer-events-none mix-blend-overlay translate-x-1/2 translate-y-1/2">
+          <img
+            src="https://i.postimg.cc/63KGQSt3/image-Photoroom.png"
+            alt="Watermark BR"
+            className="w-[700px] h-auto"
+            style={{
+              clipPath: 'polygon(0 0, 50% 0, 50% 50%, 0 50%)'
+            }}
+          />
+        </div>
+
         <div
           className={`
             fixed top-0 left-0 h-full z-[60]
@@ -73,12 +104,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
           />
         </div>
 
-        <div className="flex flex-col overflow-hidden">
-          <header className="flex h-[73px] flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 md:px-10 shadow-[0_15px_35px_rgba(0,0,0,0.45)]">
+        <div className="flex flex-col overflow-hidden relative z-10">
+          <header className="relative flex h-[73px] flex-shrink-0 items-center justify-between border-b border-white/5 bg-black/20 backdrop-blur-xl px-6 md:px-10 shadow-[0_4px_30px_rgba(0,0,0,0.5)] z-20">
+            {/* Header Ambient Glow */}
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-neon-blue/30 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent"></div>
+
             <div className="flex items-center">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="text-text-strong lg:hidden"
+                className="text-white lg:hidden"
                 aria-label="Abrir menu"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -86,18 +121,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, pageTitle }) => {
                 </svg>
               </button>
               {pageTitle && (
-                <h1 className="ml-4 text-2xl font-medium text-text-strong lg:ml-0 md:text-3xl">
-                  {pageTitle}
-                </h1>
+                <div className="ml-4 lg:ml-0 flex flex-col">
+                  <h1 className="text-2xl font-bold text-white md:text-3xl font-orbitron tracking-wider drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                    {pageTitle}
+                  </h1>
+                  <div className="h-[2px] w-12 bg-neon-blue mt-1 shadow-[0_0_8px_#00f3ff]"></div>
+                </div>
               )}
             </div>
-            
+
             <div className="flex items-center">
               <OnlineUsersPopover />
             </div>
           </header>
 
-          <main className="flex-grow overflow-auto bg-background-alt p-6 md:p-8">
+          <main className="flex-grow overflow-auto bg-transparent p-6 md:p-8 custom-scrollbar relative">
+            {/* Content Glow Effect */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-20 bg-neon-blue/5 blur-[100px] pointer-events-none rounded-full"></div>
             {children}
           </main>
         </div>

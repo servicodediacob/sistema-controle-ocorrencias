@@ -33,27 +33,27 @@ import ViewOcorrenciaDetalhadaModal from '../components/ViewOcorrenciaDetalhadaM
 import Icon from '../components/Icon';
 import CidadesPendentesModal from '../components/CidadesPendentesModal'; // New import
 import OcorrenciaDetalhadaCards from '../components/OcorrenciaDetalhadaCards'; // New component for detailed occurrence cards
-import { offlineSyncService, PendingLancamento } from '../services/offlineSyncService'; // Importar serviço offline
+// import { offlineSyncService, PendingLancamento } from '../services/offlineSyncService'; // Importar serviço offline
 
 // ======================= INÍCIO DA CORREÇÃO PRINCIPAL =======================
 // 1. LISTA MESTRE: Define a ordem e as abreviações exatas, alinhadas aos nomes do banco (grupo|subgrupo).
 const ORDEM_E_ABREVIACOES_COLUNAS = [
-  { grupo: 'Resgate',              subgrupo: 'Resgate - Salvamento em Emergências', abreviacao: 'RESGATE' },
-  { grupo: 'Incêndio',             subgrupo: 'Vegetação',                            abreviacao: 'INC. VEG' },
-  { grupo: 'Incêndio',             subgrupo: 'Edificações',                          abreviacao: 'INC. EDIF' },
-  { grupo: 'Incêndio',             subgrupo: 'Outros',                               abreviacao: 'INC. OUT.' },
-  { grupo: 'Busca e Salvamento',   subgrupo: 'Cadáver',                              abreviacao: 'B. CADÁVER' },
-  { grupo: 'Busca e Salvamento',   subgrupo: 'Diversos',                             abreviacao: 'B. SALV.' },
-  { grupo: 'Ações Preventivas',    subgrupo: 'Palestras',                            abreviacao: 'AP. PAL' },
-  { grupo: 'Ações Preventivas',    subgrupo: 'Eventos',                              abreviacao: 'AP. EVE' },
-  { grupo: 'Ações Preventivas',    subgrupo: 'Folders/Panfletos',                    abreviacao: 'AP. FOL' },
-  { grupo: 'Ações Preventivas',    subgrupo: 'Outros',                               abreviacao: 'AP. OUT.' },
-  { grupo: 'Atividades Técnicas',  subgrupo: 'Inspeções',                            abreviacao: 'AT. INS' },
-  { grupo: 'Atividades Técnicas',  subgrupo: 'Análise de Projetos',                  abreviacao: 'AN. PROJ' },
-  { grupo: 'Produtos Perigosos',   subgrupo: 'Vazamentos',                           abreviacao: 'PPV' },
-  { grupo: 'Produtos Perigosos',   subgrupo: 'Outros / Diversos',                    abreviacao: 'PPO' },
-  { grupo: 'Defesa Civil',         subgrupo: 'Preventiva',                           abreviacao: 'DC PREV.' },
-  { grupo: 'Defesa Civil',         subgrupo: 'De Resposta',                          abreviacao: 'DC RESP.' },
+  { grupo: 'Resgate', subgrupo: 'Resgate - Salvamento em Emergências', abreviacao: 'RESGATE' },
+  { grupo: 'Incêndio', subgrupo: 'Vegetação', abreviacao: 'INC. VEG' },
+  { grupo: 'Incêndio', subgrupo: 'Edificações', abreviacao: 'INC. EDIF' },
+  { grupo: 'Incêndio', subgrupo: 'Outros', abreviacao: 'INC. OUT.' },
+  { grupo: 'Busca e Salvamento', subgrupo: 'Cadáver', abreviacao: 'B. CADÁVER' },
+  { grupo: 'Busca e Salvamento', subgrupo: 'Diversos', abreviacao: 'B. SALV.' },
+  { grupo: 'Ações Preventivas', subgrupo: 'Palestras', abreviacao: 'AP. PAL' },
+  { grupo: 'Ações Preventivas', subgrupo: 'Eventos', abreviacao: 'AP. EVE' },
+  { grupo: 'Ações Preventivas', subgrupo: 'Folders/Panfletos', abreviacao: 'AP. FOL' },
+  { grupo: 'Ações Preventivas', subgrupo: 'Outros', abreviacao: 'AP. OUT.' },
+  { grupo: 'Atividades Técnicas', subgrupo: 'Inspeções', abreviacao: 'AT. INS' },
+  { grupo: 'Atividades Técnicas', subgrupo: 'Análise de Projetos', abreviacao: 'AN. PROJ' },
+  { grupo: 'Produtos Perigosos', subgrupo: 'Vazamentos', abreviacao: 'PPV' },
+  { grupo: 'Produtos Perigosos', subgrupo: 'Outros / Diversos', abreviacao: 'PPO' },
+  { grupo: 'Defesa Civil', subgrupo: 'Preventiva', abreviacao: 'DC PREV.' },
+  { grupo: 'Defesa Civil', subgrupo: 'De Resposta', abreviacao: 'DC RESP.' },
 ];
 // ======================= FIM DA CORREÇÃO PRINCIPAL =======================
 
@@ -97,12 +97,12 @@ function LancamentoPage() {
   const [loadingPagina, setLoadingPagina] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemParaEditar, setItemParaEditar] = useState<{ cidade: ICidade; dados: Record<string, number> } | null>(null);
-  
+
   const [isDetalheModalOpen, setIsDetalheModalOpen] = useState(false);
   const [ocorrenciaParaEditar, setOcorrenciaParaEditar] = useState<IOcorrenciaDetalhada | null>(null);
   const [ocorrenciaParaVisualizar, setOcorrenciaParaVisualizar] = useState<IOcorrenciaDetalhada | null>(null);
 
-  const [isOnline, setIsOnline] = useState(navigator.onLine); // Estado para status online/offline
+
 
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640); // New state for mobile view
@@ -183,8 +183,9 @@ function LancamentoPage() {
 
   // Efeito para gerenciar o status online/offline
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    // Listeners mantidos para expansão futura
+    const handleOnline = () => { }; // Placeholder
+    const handleOffline = () => { }; // Placeholder
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -326,10 +327,10 @@ function LancamentoPage() {
 
   return (
     <MainLayout pageTitle="Lançar Ocorrências">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-lg bg-surface p-6">
-        <div className="flex flex-wrap items-end gap-4">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 rounded-sm border border-white/10 bg-black/40 p-6 backdrop-blur-md shadow-lg">
+        <div className="flex flex-wrap items-end gap-6">
           <div className="flex flex-col gap-2">
-            <label htmlFor="data-hora-inicial" className="text-sm text-text">
+            <label htmlFor="data-hora-inicial" className="font-orbitron text-xs font-bold uppercase tracking-widest text-gray-400">
               Data/Horário Inicial
             </label>
             <input
@@ -349,11 +350,11 @@ function LancamentoPage() {
                 setDataHoraInicial(e.target.value);
                 setDataHoraFinal(formatLocalDateTime(newEnd));
               }}
-              className="rounded-md border border-border bg-background p-3 text-text-strong"
+              className="rounded-sm border border-white/10 bg-black/60 p-3 text-white font-rajdhani focus:outline-none focus:border-neon-blue focus:shadow-[0_0_15px_rgba(0,243,255,0.2)] transition-all"
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="data-hora-final" className="text-sm text-text">
+            <label htmlFor="data-hora-final" className="font-orbitron text-xs font-bold uppercase tracking-widest text-gray-400">
               Data/Horário Final
             </label>
             <input
@@ -361,11 +362,11 @@ function LancamentoPage() {
               type="datetime-local"
               value={dataHoraFinal}
               onChange={e => setDataHoraFinal(e.target.value)}
-              className="rounded-md border border-border bg-background p-3 text-text-strong"
+              className="rounded-sm border border-white/10 bg-black/60 p-3 text-white font-rajdhani focus:outline-none focus:border-neon-blue focus:shadow-[0_0_15px_rgba(0,243,255,0.2)] transition-all"
             />
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           {isAdmin && (
             <button
@@ -374,50 +375,50 @@ function LancamentoPage() {
                 loadingPagina ||
                 (dadosTabela.length === 0 && ocorrenciasDetalhadas.length === 0)
               }
-              className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-sm border border-orange-500/50 bg-orange-900/20 px-6 py-3 font-orbitron text-xs font-bold uppercase tracking-wider text-orange-400 transition-all hover:bg-orange-900/40 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Limpar Lançamentos do Dia
+              Limpar Dia
             </button>
           )}
           <button
             onClick={() => { setOcorrenciaParaEditar(null); setIsDetalheModalOpen(true); }}
             disabled={loadingPagina}
-            className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-sm border border-neon-blue/50 bg-neon-blue/10 px-6 py-3 font-orbitron text-xs font-bold uppercase tracking-wider text-neon-blue transition-all hover:bg-neon-blue/20 hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Adicionar Ocorrência Detalhada
+            + Detalhada
           </button>
           <button
             onClick={() => { setItemParaEditar(null); setIsModalOpen(true); }}
             disabled={loadingPagina}
-            className="rounded-md bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-sm border border-teal-500/50 bg-teal-900/20 px-6 py-3 font-orbitron text-xs font-bold uppercase tracking-wider text-teal-400 transition-all hover:bg-teal-900/40 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Lançamento em Lote
+            + Lote
           </button>
         </div>
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-4 text-center">
-          <h3 className="text-sm text-text">Total de Cidades</h3>
-          <p className="text-2xl font-bold text-text-strong">{cidades.length}</p>
+        <div className="rounded-sm border border-white/10 bg-black/40 p-4 text-center backdrop-blur-sm group hover:border-white/20 transition-all">
+          <h3 className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-white transition-colors">Total de Cidades</h3>
+          <p className="mt-2 font-orbitron text-4xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{cidades.length}</p>
         </div>
         <button
           onClick={() => setIsCidadesPendentesModalOpen(true)}
-          className="rounded-lg border border-border bg-surface p-4 cursor-pointer hover:bg-surface-hover transition-colors"
+          className="rounded-sm border border-white/10 bg-black/40 p-4 text-center backdrop-blur-sm cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all group"
         >
-          <h3 className="text-sm text-text">Cidades Pendentes</h3>
-          <p className={`text-2xl font-bold ${cidadesPendentes > 0 ? 'text-orange-500' : 'text-green-500'}`}>{cidadesPendentes}</p>
+          <h3 className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-white transition-colors">Cidades Pendentes</h3>
+          <p className={`mt-2 font-orbitron text-4xl font-bold ${cidadesPendentes > 0 ? 'text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]' : 'text-green-500 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]'}`}>{cidadesPendentes}</p>
         </button>
-        <div className="rounded-lg border border-border bg-surface p-4 text-center">
-          <h3 className="text-sm text-text">Total Geral (Lote)</h3>
-          <p className="text-2xl font-bold text-teal-400">{totalGeralLote}</p>
+        <div className="rounded-sm border border-white/10 bg-black/40 p-4 text-center backdrop-blur-sm group hover:border-white/20 transition-all">
+          <h3 className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-white transition-colors">Total Geral (Lote)</h3>
+          <p className="mt-2 font-orbitron text-4xl font-bold text-teal-400 drop-shadow-[0_0_10px_rgba(45,212,191,0.5)]">{totalGeralLote}</p>
         </div>
       </div>
 
 
 
       <h2 className="text-2xl font-bold text-text-strong mb-4">Lançamentos em Lote (Estatísticas)</h2>
-      
+
       {naturezasParaTabela.length > 0 ? (
         <LancamentoTabela
           dadosApi={dadosTabela}
@@ -437,7 +438,7 @@ function LancamentoPage() {
 
       <div className="mt-12">
         <h2 className="text-2xl font-bold text-text-strong mb-4">Ocorrências Detalhadas do Dia</h2>
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface text-text">
+        <div className="overflow-x-auto rounded-sm border border-white/10 bg-black/40 backdrop-blur-md">
           {loadingPagina ? (
             <div className="flex justify-center p-10"><Spinner text="Carregando ocorrências detalhadas..." /></div>
           ) : (
@@ -451,38 +452,38 @@ function LancamentoPage() {
               />
             ) : (
               <table className="min-w-full w-full border-collapse text-sm">
-                <thead className="bg-gray-200 dark:bg-gray-700 text-text-strong">
+                <thead className="bg-black/60 border-b border-white/10">
                   <tr>
-                    <th className="p-3 text-left">Horário</th>
-                    <th className="p-3 text-left">Natureza</th>
-                    <th className="p-3 text-left">Cidade</th>
-                    <th className="p-3 text-left">Resumo</th>
-                    <th className="p-3 text-center">Ações</th>
+                    <th className="p-4 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">Horário</th>
+                    <th className="p-4 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">Natureza</th>
+                    <th className="p-4 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">Cidade</th>
+                    <th className="p-4 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">Resumo</th>
+                    <th className="p-4 text-center font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-white/5 font-rajdhani text-gray-300">
                   {ocorrenciasDetalhadas.length > 0 ? ocorrenciasDetalhadas.map(item => (
-                    <tr key={item.id} className="border-b border-border hover:bg-border/50">
-                      <td className="p-3 text-left whitespace-nowrap">{item.horario_ocorrencia?.substring(0, 5) || '--:--'}</td>
-                      <td className="p-3 text-left">{item.natureza_nome}</td>
-                      <td className="p-3 text-left">{item.cidade_nome}</td>
-                      <td className="p-3 text-left max-w-md truncate" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center items-center gap-2">
-                          <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-blue-400 hover:text-blue-300">
-                            <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={20} />
+                    <tr key={item.id} className="transition-colors hover:bg-white/5">
+                      <td className="p-4 text-left whitespace-nowrap font-mono text-neon-blue">{item.horario_ocorrencia?.substring(0, 5) || '--:--'}</td>
+                      <td className="p-4 text-left text-white font-medium">{item.natureza_nome}</td>
+                      <td className="p-4 text-left uppercase tracking-wide text-gray-400">{item.cidade_nome}</td>
+                      <td className="p-4 text-left max-w-md truncate opacity-80" title={item.resumo_ocorrencia}>{item.resumo_ocorrencia}</td>
+                      <td className="p-4 text-center">
+                        <div className="flex justify-center items-center gap-3">
+                          <button onClick={() => setOcorrenciaParaVisualizar(item)} title="Visualizar" className="text-cyan-400 hover:text-cyan-200 transition-colors">
+                            <Icon path="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" size={18} />
                           </button>
-                          <button onClick={() => { setOcorrenciaParaEditar(item); setIsDetalheModalOpen(true); }} title="Editar" className="text-yellow-400 hover:text-yellow-300">
-                            <Icon path="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" size={20} />
+                          <button onClick={() => { setOcorrenciaParaEditar(item); setIsDetalheModalOpen(true); }} title="Editar" className="text-yellow-500 hover:text-yellow-300 transition-colors">
+                            <Icon path="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" size={18} />
                           </button>
-                          <button onClick={() => handleDeleteDetalhada(item.id)} title="Excluir" className="text-red-500 hover:text-red-400">
-                            <Icon path="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" size={20} />
+                          <button onClick={() => handleDeleteDetalhada(item.id)} title="Excluir" className="text-red-500 hover:text-red-400 transition-colors">
+                            <Icon path="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" size={18} />
                           </button>
                         </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
+                    <tr><td colSpan={5} className="p-8 text-center text-gray-500 uppercase tracking-widest text-xs">Nenhuma ocorrência detalhada lançada para esta data.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -499,7 +500,7 @@ function LancamentoPage() {
           naturezas={naturezas.filter(n => n.grupo !== 'Relatório de Óbitos')}
           itemParaEditar={itemParaEditar}
           obmsComDados={obmsComDados}
-          dataFinal={dataHoraFinal}
+
         />
       )}
 

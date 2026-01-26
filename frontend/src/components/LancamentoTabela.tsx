@@ -37,35 +37,35 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
   const [isExpanded, setIsExpanded] = useState(false);
   const hasData = total > 0;
 
-  const cardClasses = hasData 
-    ? 'border-green-700/50 dark:bg-green-900/20 bg-green-50' 
-    : 'border-red-800/50 dark:bg-red-900/20 bg-red-50';
-  const totalColor = hasData ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+  const cardClasses = hasData
+    ? 'border-green-500/30 bg-green-900/10'
+    : 'border-red-500/30 bg-red-900/10';
+  const totalColor = hasData ? 'text-green-400' : 'text-red-400';
 
   return (
-    <div className={`rounded-lg border ${cardClasses}`}>
-      <div 
+    <div className={`rounded-sm border ${cardClasses} backdrop-blur-sm transition-all hover:bg-white/5`}>
+      <div
         className="flex items-center justify-between p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div>
-          <p className="font-bold text-text-strong">{cidade.cidade_nome}</p>
-          <p className="text-sm text-text">{cidade.crbm_nome}</p>
+          <p className="font-bold text-white font-rajdhani">{cidade.cidade_nome}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider font-orbitron">{cidade.crbm_nome}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-text">Total</p>
-          <p className={`text-xl font-bold ${totalColor}`}>{total}</p>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-orbitron">Total</p>
+          <p className={`text-xl font-bold font-orbitron ${totalColor}`}>{total}</p>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-border p-4">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div className="border-t border-white/10 p-4 bg-black/20">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-rajdhani">
             {Object.entries(ocorrencias).map(([natureza, qtd]) => (
               qtd > 0 && (
-                <div key={natureza} className="flex justify-between border-b border-dashed border-border py-1">
-                  <span className="text-text">{natureza}</span>
-                  <span className="font-semibold text-text-strong">{qtd}</span>
+                <div key={natureza} className="flex justify-between border-b border-dashed border-white/10 py-1 text-gray-300">
+                  <span>{natureza}</span>
+                  <span className="font-bold text-white">{qtd}</span>
                 </div>
               )
             ))}
@@ -73,7 +73,7 @@ const MobileCard: React.FC<CardProps> = ({ cidade, ocorrencias, total, onEdit, s
           {showActions && (
             <button
               onClick={onEdit}
-              className="mt-4 w-full rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
+              className="mt-4 w-full rounded-sm border border-yellow-500/50 bg-yellow-900/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-yellow-500 transition hover:bg-yellow-900/40 hover:shadow-[0_0_10px_rgba(234,179,8,0.3)] font-orbitron"
             >
               Editar Lançamento
             </button>
@@ -110,26 +110,26 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
   }, [cidadesDoCrbm, dadosMapa, naturezas]);
 
   return (
-    <div className="rounded-lg border border-border bg-surface">
+    <div className="rounded-sm border border-white/10 bg-black/40 backdrop-blur-md">
       <div
-        className="flex cursor-pointer items-center justify-between p-4"
+        className="flex cursor-pointer items-center justify-between p-4 hover:bg-white/5 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
-          <Icon 
+          <Icon
             path="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
-            className={`transform text-text-strong transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
+            className={`transform text-white transition-transform duration-300 ${isOpen ? 'rotate-90 text-neon-blue' : ''}`}
           />
-          <p className="font-bold text-text-strong">{crbmNome}</p>
+          <p className="font-bold text-white font-rajdhani tracking-wide">{crbmNome}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-text">Total</p>
-          <p className={`text-xl font-bold ${totalCrbm > 0 ? 'text-blue-400' : 'text-text'}`}>{totalCrbm}</p>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-orbitron">Total</p>
+          <p className={`text-xl font-bold font-orbitron ${totalCrbm > 0 ? 'text-neon-blue drop-shadow-[0_0_5px_rgba(0,243,255,0.5)]' : 'text-gray-600'}`}>{totalCrbm}</p>
         </div>
       </div>
 
       {isOpen && (
-        <div className="space-y-2 border-t border-border p-4">
+        <div className="space-y-2 border-t border-white/10 p-4 bg-black/20">
           {cidadesDoCrbm.map(cidade => {
             const podeEditarCidade = !!(isAdmin || (canEditObmId !== undefined && canEditObmId !== null && canEditObmId === cidade.id));
             const ocorrencias: Record<string, number> = {};
@@ -141,10 +141,10 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
               }
               totalLinha += qtd;
             });
-            
+
             const dadosParaEdicao = naturezas.reduce((acc, nat) => {
-                acc[nat.codigo] = dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0;
-                return acc;
+              acc[nat.codigo] = dadosMapa[keyForLocal(cidade.cidade_nome, nat.codigo)] || 0;
+              return acc;
             }, {} as Record<string, number>);
 
             return (
@@ -166,7 +166,7 @@ const CrbmAccordion: React.FC<CrbmAccordionProps> = ({ crbmNome, cidadesDoCrbm, 
 // --- Fim dos componentes Mobile ---
 
 
-const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({ 
+const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
   dadosApi,
   cidades,
   naturezas,
@@ -208,14 +208,14 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
 
       return acc;
     }, {} as Record<string, string>)
-  , [naturezas]);
+    , [naturezas]);
 
   const naturezaAbrevParaCodigo = useMemo(() =>
     naturezas.reduce((acc, nat) => {
       if (nat.abreviacao) acc[normalize(nat.abreviacao)] = nat.codigo;
       return acc;
     }, {} as Record<string, string>)
-  , [naturezas]);
+    , [naturezas]);
 
   const codigosDisponiveis = useMemo(() => {
     const set = new Set<string>();
@@ -338,10 +338,10 @@ const LancamentoTabela: React.FC<LancamentoTabelaProps> = ({
               )}
             </tr>
           </thead>
-          
+
           {Object.entries(cidadesAgrupadas).map(([crbm, listaCidades]) => (
             <tbody key={crbm} className="bg-surface">
-            {listaCidades.map((cidade, index) => {
+              {listaCidades.map((cidade, index) => {
                 const podeEditar = !!(isAdmin || (canEditObmId !== undefined && canEditObmId !== null && canEditObmId === cidade.id));
                 const dadosParaEdicao: Record<string, number> = {};
                 let totalLinha = 0;

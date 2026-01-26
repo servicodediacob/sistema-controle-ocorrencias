@@ -28,30 +28,27 @@ const OnlineUsersPopover: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative" ref={popoverRef}>
+    <div className="relative z-50" ref={popoverRef}>
       <button
         onClick={() => setIsOpen((open) => !open)}
-        className={`relative rounded-full p-2 transition focus:outline-none focus:ring-2 focus:ring-white ${
-          hasUnreadMessages
-            ? 'bg-red-600/20 text-red-300 hover:bg-red-600/30 hover:text-red-100'
-            : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-        }`}
+        className={`relative rounded-full p-2 transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-neon-blue ${hasUnreadMessages
+            ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+            : 'text-gray-400 hover:text-white hover:bg-white/10'
+          }`}
         aria-label={hasUnreadMessages ? 'Novas mensagens privadas' : 'Usuarios online'}
       >
         <Icon path={USER_ICON_PATH} size={24} />
         {hasUnreadMessages && (
           <>
-            <span className="pointer-events-none absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white shadow-lg">
+            <span className="pointer-events-none absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-sm bg-red-600 text-[10px] font-bold font-orbitron text-white shadow-lg border border-red-400">
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
-            <span className="pointer-events-none absolute -top-1 -right-1 inline-flex h-5 w-5 rounded-full bg-red-600 opacity-75 blur-[1px] animate-ping" />
+            <span className="pointer-events-none absolute -top-1 -right-1 inline-flex h-5 w-5 rounded-sm bg-red-600 opacity-75 blur-[2px] animate-ping" />
           </>
         )}
-        {otherOnlineUsers.length > 0 && (
+        {otherOnlineUsers.length > 0 && !hasUnreadMessages && (
           <span
-            className={`pointer-events-none absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white ${
-              hasUnreadMessages ? 'bg-red-600' : 'bg-green-600'
-            }`}
+            className="pointer-events-none absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-sm text-[10px] font-bold font-orbitron text-white bg-green-600 shadow-[0_0_10px_#22c55e] border border-green-400"
           >
             {otherOnlineUsers.length}
           </span>
@@ -59,12 +56,17 @@ const OnlineUsersPopover: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 origin-top-right rounded-md border border-border bg-surface shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div className="absolute right-0 mt-4 w-80 origin-top-right rounded-sm border border-white/10 bg-black/80 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+          {/* Header Glint */}
+          <div className="absolute top-0 left-0 h-[1px] w-full bg-gradient-to-r from-transparent via-neon-blue/50 to-transparent"></div>
+
           <div className="py-1">
-            <div className="border-b border-border px-4 py-2 text-sm font-semibold text-text-strong">
-              Usuarios Online ({otherOnlineUsers.length})
+            <div className="border-b border-white/10 px-4 py-3 text-xs font-bold font-orbitron uppercase tracking-widest text-gray-300 flex justify-between items-center bg-white/5">
+              <span>Usuários Online</span>
+              <span className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,243,255,0.5)]">{otherOnlineUsers.length}</span>
             </div>
-            <div className="max-h-80 overflow-y-auto">
+
+            <div className="max-h-80 overflow-y-auto custom-scrollbar">
               {otherOnlineUsers.length > 0 ? (
                 otherOnlineUsers.map((user) => (
                   <button
@@ -74,22 +76,24 @@ const OnlineUsersPopover: React.FC = () => {
                       markConversationAsRead(user.id);
                       setIsOpen(false);
                     }}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm text-text transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm text-gray-300 transition-colors hover:bg-white/10 font-rajdhani border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-green-500" />
+                      <div className="relative">
+                        <span className="block h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]" />
+                      </div>
                       <div className="truncate">
-                        <p className="font-semibold text-text-strong">{user.nome}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                        <p className="font-bold text-white tracking-wide">{user.nome}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500">{user.email}</p>
                       </div>
                     </div>
                     {unreadCounts[user.id] ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="relative inline-flex h-2.5 w-2.5">
+                        <span className="relative inline-flex h-2 w-2">
                           <span className="absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75 animate-ping" />
-                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600 shadow-[0_0_8px_#ef4444]" />
                         </span>
-                        <span className="text-xs font-semibold text-red-600">
+                        <span className="text-[10px] font-bold font-orbitron text-red-500">
                           {unreadCounts[user.id] > 99 ? '99+' : unreadCounts[user.id]}
                         </span>
                       </div>
@@ -97,8 +101,8 @@ const OnlineUsersPopover: React.FC = () => {
                   </button>
                 ))
               ) : (
-                <p className="px-4 py-4 text-center text-sm text-text">
-                  Nenhum outro usuario online no momento.
+                <p className="px-4 py-6 text-center text-xs text-gray-500 font-rajdhani uppercase tracking-widest">
+                  Nenhum outro usuário online.
                 </p>
               )}
             </div>

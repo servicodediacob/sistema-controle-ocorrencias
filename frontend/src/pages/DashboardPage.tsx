@@ -1,11 +1,10 @@
 // frontend/src/pages/DashboardPage.tsx
 
-import { useState, useEffect, useCallback, ReactElement } from 'react';
+import { useEffect, ReactElement } from 'react';
 import MainLayout from '../components/MainLayout';
-import { getPlantaoRange } from '../utils/date';
-import { getDashboardStats, getPlantao, IDashboardStats, IPlantao } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { useData } from '../contexts/DataProvider'; // Importar useData
+import { useData } from '../contexts/DataProvider';
+import { useDashboardStats, usePlantaoData } from '../hooks/useDashboard';
 
 // Os componentes de widget permanecem os mesmos
 import DestaqueDetalhadoWidget from '../components/DestaqueDetalhadoWidget';
@@ -22,11 +21,26 @@ interface StatCardProps {
 }
 function StatCard({ title, value, loading }: StatCardProps) {
   return (
-    <div className="flex-1 rounded-lg bg-surface border border-border p-6 text-center min-w-[200px]">
-      <h3 className="text-base font-medium text-text">{title}</h3>
-      <p className="mt-2 text-4xl font-bold text-text-strong">
-        {loading ? '...' : value}
+    <div className="group relative flex-1 overflow-hidden rounded-sm border border-white/10 bg-black/40 p-6 backdrop-blur-md transition-all hover:border-white/20">
+      {/* Glints */}
+      <div className="absolute left-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50"></div>
+      <div className="absolute bottom-0 right-0 h-[20px] w-[20px] border-b border-r border-white/20"></div>
+
+      <h3 className="mb-2 font-orbitron text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 group-hover:text-white transition-colors">{title}</h3>
+
+      <p className="font-orbitron text-5xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+        {loading ? (
+          <span className="animate-pulse opacity-50">...</span>
+        ) : (
+          <>
+            {value}
+            <span className="text-4xl text-neon-blue/50"></span>
+          </>
+        )}
       </p>
+
+      {/* Glow */}
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-neon-blue/5 blur-3xl transition-opacity opacity-0 group-hover:opacity-100"></div>
     </div>
   );
 }
@@ -39,70 +53,73 @@ interface DataTableProps<T> {
 }
 function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
   return (
-    <div className="flex-1 rounded-lg bg-surface border border-border p-6 min-w-[300px]">
-      <h3 className="mt-0 border-b border-border pb-4 text-lg font-semibold text-text-strong">
-        {title}
-      </h3>
-      {loading ? (
-        <p className="py-4 text-center text-text">Carregando...</p>
-      ) : data && data.length > 0 ? (
-        <div className="mt-4 overflow-y-auto max-h-80">
-          <table className="w-full border-collapse">
-            <thead className="bg-gray-800">
-              <tr>
-                {columns.map((col) => (
-                  <th key={String(col.key)} className="border-b border-border p-3 text-left text-sm font-medium text-text">{col.header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.map((row, index) => (
-                <tr key={index} className="hover:bg-gray-700/50">
+    <div className="flex-1 rounded-sm border border-white/10 bg-black/40 backdrop-blur-md min-w-[300px] flex flex-col">
+      <div className="border-b border-white/5 p-4 flex justify-between items-center bg-white/5">
+        <h3 className="font-orbitron text-sm font-bold uppercase tracking-wider text-white">
+          {title}
+        </h3>
+        <div className="h-1.5 w-1.5 rounded-full bg-neon-blue shadow-[0_0_8px_#00f3ff]"></div>
+      </div>
+
+      <div className="flex-1 p-4">
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-neon-blue"></div>
+          </div>
+        ) : data && data.length > 0 ? (
+          <div className="overflow-y-auto max-h-80 custom-scrollbar pr-2">
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 bg-black/80 backdrop-blur-sm z-10">
+                <tr>
                   {columns.map((col) => (
-                    <td key={String(col.key)} className="p-3 text-text-strong">{String(row[col.key])}</td>
+                    <th key={String(col.key)} className="pb-3 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 font-orbitron border-b border-white/10">
+                      {col.header}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="py-8 text-center text-text">Nenhum dado para exibir.</p>
-      )}
+              </thead>
+              <tbody className="divide-y divide-white/5 font-rajdhani text-sm">
+                {data.map((row, index) => (
+                  <tr key={index} className="group transition-colors hover:bg-white/5">
+                    {columns.map((col) => (
+                      <td key={String(col.key)} className="py-3 text-gray-300 group-hover:text-white transition-colors">
+                        {String(row[col.key])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="py-8 text-center text-gray-600 font-rajdhani italic">Sem dados registrados.</p>
+        )}
+      </div>
     </div>
   );
 }
 
 
 function DashboardPage(): ReactElement {
+  // React Query Hooks
+  const { data: stats, isLoading: loadingStats, error: errorStats } = useDashboardStats();
+  const { data: plantaoData, isLoading: loadingPlantao, error: errorPlantao } = usePlantaoData();
+
+  const loading = loadingStats || loadingPlantao;
+
+  // Handle errors via notification (useEffect for side effect)
   const { addNotification } = useNotification();
-  const { refetch: refetchGlobalData } = useData(); // Obter a função refetch do DataProvider
-  
-  const [stats, setStats] = useState<IDashboardStats | null>(null);
-  const [plantaoData, setPlantaoData] = useState<IPlantao | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { inicioISO, fimISO } = getPlantaoRange();
-      const [statsData, plantaoInfo] = await Promise.all([
-        getDashboardStats(inicioISO, fimISO),
-        getPlantao(inicioISO, fimISO)
-      ]);
-      setStats(statsData);
-      setPlantaoData(plantaoInfo);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Não foi possível carregar os dados do dashboard.';
-      addNotification(message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [addNotification]);
-
   useEffect(() => {
-    fetchData();
-  }, [fetchData, refetchGlobalData]); // Adicionar refetchGlobalData como dependência
+    if (errorStats) addNotification('Erro ao carregar estatísticas.', 'error');
+    if (errorPlantao) addNotification('Erro ao carregar dados do plantão.', 'error');
+  }, [errorStats, errorPlantao, addNotification]);
+
+  // Refetch global when needed (optional syncing)
+  const { refetch: refetchGlobalData } = useData();
+  useEffect(() => {
+    // If DataProvider triggers a global refetch, we might want to invalidate queries
+    // For now, React Query handles its own staleTime
+  }, [refetchGlobalData]);
 
   // Renderiza conteúdo dentro do MainLayout para usar sidebar, header e chat
   return (

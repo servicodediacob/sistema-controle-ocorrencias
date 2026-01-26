@@ -445,9 +445,10 @@ const PlantoesSisgpoPage = () => {
     <button
       key={tab}
       onClick={() => setActiveTab(tab)}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
-        activeTab === tab ? 'bg-blue-600 text-white' : 'bg-surface text-text hover:bg-surface/80'
-      }`}
+      className={`flex flex-1 items-center justify-center gap-2 rounded-sm px-4 py-2 text-xs font-bold uppercase tracking-wider font-orbitron transition-all ${activeTab === tab
+          ? 'bg-neon-blue/20 text-neon-blue shadow-[0_0_15px_rgba(0,243,255,0.4)] border border-neon-blue/50'
+          : 'bg-transparent text-gray-500 hover:text-white hover:bg-white/5 border border-transparent'
+        }`}
     >
       <IconComponent size={16} />
       <span>{label}</span>
@@ -524,9 +525,9 @@ const PlantoesSisgpoPage = () => {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 rounded-lg border border-border bg-surface p-4 md:grid-cols-3">
+      <div className="mt-6 grid gap-4 rounded-sm border border-white/10 bg-black/40 p-4 md:grid-cols-3 backdrop-blur-md shadow-2xl">
         <div>
-          <Label htmlFor="dataInicio">Data Inicio</Label>
+          <Label htmlFor="dataInicio" className="font-orbitron text-xs font-bold uppercase tracking-widest text-gray-500">Data Inicio</Label>
           <Input
             id="dataInicio"
             type="date"
@@ -534,10 +535,11 @@ const PlantoesSisgpoPage = () => {
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               handleFilterChange('data_inicio', event.target.value)
             }
+            className="border-white/10 bg-black/60 text-white font-rajdhani focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,243,255,0.2)]"
           />
         </div>
         <div>
-          <Label htmlFor="dataFim">Data Fim</Label>
+          <Label htmlFor="dataFim" className="font-orbitron text-xs font-bold uppercase tracking-widest text-gray-500">Data Fim</Label>
           <Input
             id="dataFim"
             type="date"
@@ -545,12 +547,13 @@ const PlantoesSisgpoPage = () => {
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               handleFilterChange('data_fim', event.target.value)
             }
+            className="border-white/10 bg-black/60 text-white font-rajdhani focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,243,255,0.2)]"
           />
         </div>
         <div className="flex items-end">
           <Button
             variant="secondary"
-            className="w-full"
+            className="w-full border border-neon-blue/50 bg-transparent text-neon-blue hover:bg-neon-blue/10 font-orbitron text-xs font-bold uppercase tracking-wider transition-all hover:shadow-[0_0_10px_rgba(0,243,255,0.3)]"
             onClick={() => {
               setFilters({ data_inicio: '', data_fim: '' });
               setCurrentPlantaoPage(1);
@@ -561,7 +564,7 @@ const PlantoesSisgpoPage = () => {
         </div>
       </div>
 
-      <div className="mt-4 rounded-lg border border-border bg-surface p-2">
+      <div className="mt-4 rounded-sm border border-white/10 bg-black/40 p-2 backdrop-blur-md">
         <div className="flex flex-col gap-2 sm:flex-row">
           {renderTabButton('plantoes', 'Viaturas', Car)}
           {renderTabButton('escalaMedicos', 'Medicos', Stethoscope)}
@@ -572,62 +575,62 @@ const PlantoesSisgpoPage = () => {
 
       <div className="mt-4">
         {activeTab === 'plantoes' && (
-          <div className="rounded-lg border border-border bg-surface">
+          <div className="rounded-sm border border-white/10 bg-black/20 overflow-hidden">
             {isLoadingPlantoes ? (
               <div className="py-16">
                 <Spinner text="Carregando plantoes..." />
               </div>
             ) : plantoes.length === 0 ? (
-              <p className="py-8 text-center text-text">Nenhum plantao encontrado.</p>
+              <p className="py-8 text-center text-gray-500 font-orbitron text-sm">Nenhum plantao encontrado.</p>
             ) : (
               <>
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-surface/80">
+                  <table className="min-w-full divide-y divide-white/5">
+                    <thead className="bg-black/60">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Data
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Horario Inicial
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Horario Final
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Viatura
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           OBM
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-left font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Guarnicao
                         </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-text">
+                        <th className="px-4 py-3 text-center font-orbitron text-[10px] font-bold uppercase tracking-widest text-gray-500">
                           Acoes
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody className="divide-y divide-white/5 font-rajdhani">
                       {plantoes.map((plantao) => (
-                        <tr key={plantao.id}>
-                          <td className="px-4 py-3 text-sm text-text">{formatDate(plantao.data_plantao)}</td>
-                          <td className="px-4 py-3 text-sm text-text">{formatTime(plantao.horario_inicio)}</td>
-                          <td className="px-4 py-3 text-sm text-text">{formatTime(plantao.horario_fim)}</td>
-                          <td className="px-4 py-3 text-sm text-text-strong">{plantao.viatura_prefixo}</td>
-                          <td className="px-4 py-3 text-sm text-text">{plantao.obm_abreviatura}</td>
-                          <td className="px-4 py-3 text-sm text-text">
+                        <tr key={plantao.id} className="transition-colors hover:bg-white/5">
+                          <td className="px-4 py-3 text-sm text-gray-300 font-mono">{formatDate(plantao.data_plantao)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300">{formatTime(plantao.horario_inicio)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300">{formatTime(plantao.horario_fim)}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-neon-blue">{plantao.viatura_prefixo}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400">{plantao.obm_abreviatura}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300">
                             <ul className="space-y-1">
                               {plantao.guarnicao?.map((membro, index) => (
                                 <li
                                   key={`${plantao.id}-${index}`}
                                   className="flex flex-wrap items-center gap-2"
                                 >
-                                  <span className="font-medium text-text-strong">
+                                  <span className="font-semibold text-white">
                                     {membro.nome_exibicao}
                                   </span>
                                   {membro.funcao && (
-                                    <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-200">
+                                    <span className="rounded-sm border border-blue-500/30 bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-300">
                                       {membro.funcao}
                                     </span>
                                   )}
@@ -639,10 +642,10 @@ const PlantoesSisgpoPage = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500"
+                                className="inline-flex items-center gap-1 rounded-sm border border-yellow-500/50 bg-yellow-900/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-yellow-500 hover:bg-yellow-900/40 hover:shadow-[0_0_10px_rgba(234,179,8,0.3)] transition-all font-orbitron"
                                 onClick={() => handleEditPlantao(plantao.id)}
                               >
-                                <Edit size={14} /> Editar
+                                <Edit size={12} /> Editar
                               </button>
                               <button
                                 type="button"
@@ -670,9 +673,8 @@ const PlantoesSisgpoPage = () => {
                         <button
                           type="button"
                           aria-expanded={isExpanded}
-                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-surface/60 ${
-                            isExpanded ? 'bg-surface/60' : ''
-                          }`}
+                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-surface/60 ${isExpanded ? 'bg-surface/60' : ''
+                            }`}
                           onClick={() => toggleMobilePlantaoDetails(plantao.id)}
                         >
                           <div>
@@ -683,16 +685,14 @@ const PlantoesSisgpoPage = () => {
                           </div>
                           <ChevronDown
                             size={18}
-                            className={`text-text transition-transform ${
-                              isExpanded ? 'rotate-180' : ''
-                            }`}
+                            className={`text-text transition-transform ${isExpanded ? 'rotate-180' : ''
+                              }`}
                           />
                         </button>
 
                         <div
-                          className={`border-t border-border px-4 pb-4 pt-3 ${
-                            isExpanded ? 'block' : 'hidden'
-                          }`}
+                          className={`border-t border-border px-4 pb-4 pt-3 ${isExpanded ? 'block' : 'hidden'
+                            }`}
                           aria-hidden={!isExpanded}
                         >
                           <div>
@@ -812,11 +812,10 @@ const PlantoesSisgpoPage = () => {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span
-                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                registro.status_servico === 'Presente'
-                                  ? 'bg-green-500/20 text-green-300'
-                                  : 'bg-yellow-500/20 text-yellow-200'
-                              }`}
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${registro.status_servico === 'Presente'
+                                ? 'bg-green-500/20 text-green-300'
+                                : 'bg-yellow-500/20 text-yellow-200'
+                                }`}
                             >
                               {registro.status_servico}
                             </span>
@@ -850,11 +849,10 @@ const PlantoesSisgpoPage = () => {
                           )}
                         </div>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            registro.status_servico === 'Presente'
-                              ? 'bg-green-500/20 text-green-300'
-                              : 'bg-yellow-500/20 text-yellow-200'
-                          }`}
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${registro.status_servico === 'Presente'
+                            ? 'bg-green-500/20 text-green-300'
+                            : 'bg-yellow-500/20 text-yellow-200'
+                            }`}
                         >
                           {registro.status_servico}
                         </span>

@@ -10,6 +10,17 @@ import { ChatProvider } from './contexts/ChatProvider.tsx';
 import { ThemeProvider } from './contexts/ThemeProvider.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { SocketProvider } from './hooks/useSocket';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Evita refetch ao trocar de aba (opcional)
+      staleTime: 1000 * 60 * 5, // Cache por 5 minutos
+    },
+  },
+});
 
 const rootElement = document.getElementById('root');
 
@@ -20,19 +31,22 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <SocketProvider>
-              <DataProvider>
-                <ChatProvider>
-                  <App />
-                </ChatProvider>
-              </DataProvider>
-            </SocketProvider>
-          </AuthProvider>
-        </NotificationProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <SocketProvider>
+                <DataProvider>
+                  <ChatProvider>
+                    <App />
+                  </ChatProvider>
+                </DataProvider>
+              </SocketProvider>
+            </AuthProvider>
+          </NotificationProvider>
+        </ThemeProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 );

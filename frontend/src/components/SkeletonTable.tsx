@@ -10,14 +10,14 @@ interface SkeletonTableProps {
 const SkeletonTable: React.FC<SkeletonTableProps> = ({ 'data-testid': dataTestId }) => {
   return (
     // 2. Aplicando a prop na div principal do componente
-    <div data-testid={dataTestId} className="animate-pulse p-4 border border-border rounded-lg">
-      <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded w-full mb-4"></div>
+    <div data-testid={dataTestId} className="animate-pulse p-4 border border-white/10 bg-black/40 rounded-sm backdrop-blur-md">
+      <div className="h-10 bg-white/10 rounded w-full mb-4"></div>
       <div className="space-y-3">
-        <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
-        <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
-        <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
-        <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-4/6"></div>
-        <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+        <div className="h-8 bg-white/10 rounded w-full"></div>
+        <div className="h-8 bg-white/10 rounded w-5/6"></div>
+        <div className="h-8 bg-white/10 rounded w-full"></div>
+        <div className="h-8 bg-white/10 rounded w-4/6"></div>
+        <div className="h-8 bg-white/10 rounded w-full"></div>
       </div>
     </div>
   );

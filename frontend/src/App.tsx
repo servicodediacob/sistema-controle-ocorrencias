@@ -1,26 +1,28 @@
 // frontend/src/App.tsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthProvider';
 import { offlineSyncService } from './services/offlineSyncService';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import LancamentoPage from './pages/LancamentoPage';
-import RelatorioPage from './pages/RelatorioPage';
-import GestaoUsuariosPage from './pages/GestaoUsuariosPage';
-import GestaoAcessoPage from './pages/GestaoAcessoPage';
-import GestaoDadosApoioPage from './pages/GestaoDadosApoioPage';
-import PerfilPage from './pages/PerfilPage';
-import AuditoriaPage from './pages/AuditoriaPage';
-import OcorrenciaPage from './pages/OcorrenciaPage';
-import RelatorioObitosPage from './pages/RelatorioObitosPage';
-import PlantoesSisgpoPage from './pages/PlantoesSisgpoPage';
-import ViaturasSisgpoPage from './pages/ViaturasSisgpoPage';
-import ObmsSisgpoPage from './pages/ObmsSisgpoPage';
-import MilitaresSisgpoPage from './pages/MilitaresSisgpoPage';
 
-import SolicitarAcessoPage from './pages/SolicitarAcessoPage';
+// Lazy loading das páginas para Code Splitting e melhor performance
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const LancamentoPage = React.lazy(() => import('./pages/LancamentoPage'));
+const RelatorioPage = React.lazy(() => import('./pages/RelatorioPage'));
+const GestaoUsuariosPage = React.lazy(() => import('./pages/GestaoUsuariosPage'));
+const GestaoAcessoPage = React.lazy(() => import('./pages/GestaoAcessoPage'));
+const GestaoDadosApoioPage = React.lazy(() => import('./pages/GestaoDadosApoioPage'));
+const PerfilPage = React.lazy(() => import('./pages/PerfilPage'));
+const AuditoriaPage = React.lazy(() => import('./pages/AuditoriaPage'));
+const OcorrenciaPage = React.lazy(() => import('./pages/OcorrenciaPage'));
+const RelatorioObitosPage = React.lazy(() => import('./pages/RelatorioObitosPage'));
+const PlantoesSisgpoPage = React.lazy(() => import('./pages/PlantoesSisgpoPage'));
+const ViaturasSisgpoPage = React.lazy(() => import('./pages/ViaturasSisgpoPage'));
+const ObmsSisgpoPage = React.lazy(() => import('./pages/ObmsSisgpoPage'));
+const MilitaresSisgpoPage = React.lazy(() => import('./pages/MilitaresSisgpoPage'));
+const SolicitarAcessoPage = React.lazy(() => import('./pages/SolicitarAcessoPage'));
+
 import NavigationLogger from './components/NavigationLogger'; // Import the new component
 import LoadingOverlay from './components/LoadingOverlay'; // Importar o LoadingOverlay
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -100,8 +102,10 @@ const App: React.FC = () => {
       {/* O LoadingOverlay agora reage ao estado de loading do AuthProvider */}
       <LoadingOverlay visible={loading} text="Carregando..." />
       <PwaInstallPrompt />
-      <NavigationLogger />
-      <AppContent />
+      <Suspense fallback={<LoadingOverlay visible={true} text="Carregando..." />}>
+        <NavigationLogger />
+        <AppContent />
+      </Suspense>
     </Router>
   );
 };
