@@ -61,6 +61,7 @@ export const proxySisgpoRequest = async (req: RequestWithUser, res: Response): P
   let sisgpoJwt: string;
   try {
     sisgpoJwt = await fetchSisgpoSessionToken(req.usuario);
+    logger.info(`[SISGPO Proxy] Token obtido: ${sisgpoJwt.substring(0, 10)}...`);
   } catch (error: any) {
     const isConnectionError = error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND';
 

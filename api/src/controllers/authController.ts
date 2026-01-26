@@ -5,10 +5,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma'; // Importando o Prisma Client
 import { OAuth2Client } from 'google-auth-library';
-import { notifyAdmins } from '@/services/socketService';
-import logger from '@/config/logger';
-import { registrarAcao } from '@/services/auditoriaService';
-import { RequestWithUser } from '@/middleware/authMiddleware';
+import { notifyAdmins } from '../services/socketService';
+import logger from '../config/logger';
+import { registrarAcao } from '../services/auditoriaService';
+import { RequestWithUser } from '../middleware/authMiddleware';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, senha } = req.body;

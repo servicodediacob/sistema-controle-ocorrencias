@@ -1,3 +1,4 @@
+// Restart trigger 2026-01-25 23:55
 import './config/envLoader';
 
 // Tratamento de Erros Globais (deve vir antes de qualquer outro código)
