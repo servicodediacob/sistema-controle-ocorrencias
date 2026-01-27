@@ -51,6 +51,25 @@ function LoginPage(): ReactElement {
     return () => clearTimeout(t);
   }, [showIntro]);
 
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    try {
+      const authErr = sessionStorage.getItem('authError');
+      if (authErr) {
+        setApiError(authErr);
+        addNotification(authErr, 'error');
+        sessionStorage.removeItem('authError');
+      }
+    } catch (e) {
+      console.warn('[LoginPage] Falha ao ler authError:', e);
+    }
+  }, [addNotification]);
+
   const navigateWithExit = (to: string) => {
     try { sessionStorage.setItem('systemEnterAnim', '1'); } catch { }
     setIsLeaving(true);
@@ -59,11 +78,8 @@ function LoginPage(): ReactElement {
 
   const hasAttemptedLoginRef = useRef(false);
 
-  useEffect(() => {
-    if (user && !authLoading && !isSubmitting && !hasAttemptedLoginRef.current) {
-      navigateWithExit('/');
-    }
-  }, [user, authLoading, isSubmitting, navigate]);
+  // Removed auto-redirect logic - PrivateRoute already handles this
+  // Keeping this effect active prevents F5 from preserving the current URL
 
   const validateForm = () => {
     const result = loginSchema.safeParse(formData);

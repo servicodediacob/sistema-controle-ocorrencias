@@ -28,7 +28,11 @@ import LoadingOverlay from './components/LoadingOverlay'; // Importar o LoadingO
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }> = ({ children, roles }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null; // Ou um spinner específico se preferir, mas App já tem LoadingOverlay
+  }
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -45,7 +49,7 @@ const PrivateRoute: React.FC<{ children: React.ReactElement; roles?: string[] }>
 };
 
 const AppContent: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const handleOnline = () => {
@@ -61,6 +65,10 @@ const AppContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
     };
   }, [user]);
+
+  if (loading) {
+    return null; // Mantém a tela limpa enquanto o LoadingOverlay do App está ativo
+  }
 
   return (
     <Routes>

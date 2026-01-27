@@ -46,6 +46,7 @@ const ObmsSisgpoPage = () => {
         page: String(currentPage),
         limit: String(PAGE_SIZE),
         ...activeFilters,
+        '_': Date.now(),
       });
       setObms(response.data ?? []);
       setPagination(
@@ -357,7 +358,7 @@ const ObmsSisgpoPage = () => {
 
       <ConfirmationModal
         isOpen={Boolean(deleteId)}
-        onClose={() => setDeleteId(null)}
+        onCancel={() => setDeleteId(null)}
         onConfirm={handleDelete}
         isLoading={isDeleting}
         title="Excluir OBM"
@@ -366,7 +367,7 @@ const ObmsSisgpoPage = () => {
 
       <ConfirmationModal
         isOpen={confirmClear}
-        onClose={() => setConfirmClear(false)}
+        onCancel={() => setConfirmClear(false)}
         onConfirm={handleClearAll}
         isLoading={clearingAll}
         title="Limpar todas as OBMs"

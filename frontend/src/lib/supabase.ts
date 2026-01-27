@@ -10,6 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase URL ou Key não definidas nas variáveis de ambiente.');
 }
 
-// Criação do cliente único
-// "persistSession: true" é o padrão, usa localStorage para manter o usuário logado
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+// Criação do cliente único - configuração balanceada para OAuth funcionar
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
+    auth: {
+        persistSession: true,
+        storage: window.localStorage,
+        autoRefreshToken: true, // Necessário para renovar token automaticamente
+        detectSessionInUrl: true // Necessário para OAuth (Google login) funcionar
+    }
+});
+

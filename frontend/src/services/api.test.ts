@@ -1,32 +1,32 @@
-
-import { api, ICrbm, IUser } from './api';
+import { vi } from 'vitest';
+import * as api from './api';
+import { ICrbm } from './api';
 import { supabase } from '../lib/supabase';
 
 // Mock do módulo supabase
-jest.mock('../lib/supabase', () => ({
+vi.mock('../lib/supabase', () => ({
     supabase: {
-        from: jest.fn(),
+        from: vi.fn(),
         auth: {
-            updateUser: jest.fn(),
-            getUser: jest.fn()
+            updateUser: vi.fn(),
+            getUser: vi.fn()
         }
     },
 }));
 
 describe('API Service (Supabase Integration)', () => {
-    const mockSelect = jest.fn();
-    const mockOrder = jest.fn();
-    const mockInsert = jest.fn();
-    const mockUpdate = jest.fn();
-    const mockDelete = jest.fn();
-    const mockSingle = jest.fn();
-    const mockEq = jest.fn();
+    const mockSelect = vi.fn();
+    const mockOrder = vi.fn();
+    const mockInsert = vi.fn();
+    const mockUpdate = vi.fn();
+    const mockDelete = vi.fn();
+    const mockEq = vi.fn();
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
 
         // Setup da cadeia de chamadas básica do Supabase
-        (supabase.from as jest.Mock).mockReturnValue({
+        (supabase.from as any).mockReturnValue({
             select: mockSelect,
             insert: mockInsert,
             update: mockUpdate,
@@ -42,7 +42,7 @@ describe('API Service (Supabase Integration)', () => {
             eq: mockEq,
             select: mockSelect,
             // Mock data response
-            then: jest.fn().mockResolvedValue({ data: [], error: null })
+            then: vi.fn().mockResolvedValue({ data: [], error: null })
         });
     });
 
@@ -52,7 +52,6 @@ describe('API Service (Supabase Integration)', () => {
         // Configurando o retorno da cadeia
         mockOrder.mockResolvedValueOnce({ data: mockData, error: null });
 
-        // Reconstruindo a cadeia específica usada em getCrbms
         // .from('crbms').select('*').order('nome')
         const chainSelect = { order: mockOrder };
         mockSelect.mockReturnValue(chainSelect);

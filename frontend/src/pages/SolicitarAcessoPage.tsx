@@ -48,6 +48,7 @@ function SolicitarAcessoPage(): ReactElement {
   // Animation States
   const [readyToShowForm, setReadyToShowForm] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   // Initial Load Animation
   useEffect(() => {
@@ -71,6 +72,25 @@ function SolicitarAcessoPage(): ReactElement {
     };
     fetchObms();
   }, [addNotification]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('oauthPrefill');
+      if (!raw) return;
+      const prefill = JSON.parse(raw) as { nome?: string; email?: string };
+      if (prefill?.nome || prefill?.email) {
+        setFormData(prev => ({
+          ...prev,
+          nome: prefill.nome || prev.nome,
+          email: prefill.email || prev.email,
+        }));
+        setOauthNotice('Detectamos um login via Google. Finalize sua solicitação de acesso informando a OBM.');
+      }
+      sessionStorage.removeItem('oauthPrefill');
+    } catch {
+      // ignora falhas de parse
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -209,6 +229,12 @@ function SolicitarAcessoPage(): ReactElement {
               </h2>
               <div className="mt-2 h-[1px] w-full bg-gradient-to-r from-transparent via-neon-blue/50 to-transparent"></div>
             </div>
+
+            {oauthNotice && (
+              <div className="mb-6 rounded-sm border border-neon-blue/40 bg-neon-blue/10 px-4 py-2 text-[10px] uppercase tracking-widest text-neon-blue font-orbitron">
+                {oauthNotice}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 

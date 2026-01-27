@@ -1,5 +1,6 @@
 // frontend/src/components/LancamentoTabela.test.tsx
 
+import { vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import LancamentoTabela, { NaturezaTabela } from './LancamentoTabela';
@@ -14,17 +15,17 @@ const mockNaturezasTabela: NaturezaTabela[] = [
 ];
 
 const mockCidades: ICidade[] = [
-    { id: 1, cidade_nome: 'Unidade A', crbm_id: 1, crbm_nome: 'CRBM I' },
-    { id: 2, cidade_nome: 'Unidade B', crbm_id: 2, crbm_nome: 'CRBM II' },
+  { id: 1, cidade_nome: 'Unidade A', crbm_id: 1, crbm_nome: 'CRBM I' },
+  { id: 2, cidade_nome: 'Unidade B', crbm_id: 2, crbm_nome: 'CRBM II' },
 ];
 
 const mockDadosApi: IEstatisticaAgrupada[] = [
-    { quantidade: 5, crbm_nome: 'CRBM I', cidade_nome: 'Unidade A', natureza_nome: 'Incêndio em Vegetação', natureza_abreviacao: 'Inc. Veg.' },
-    { quantidade: 2, crbm_nome: 'CRBM I', cidade_nome: 'Unidade A', natureza_nome: 'Busca e Salvamento', natureza_abreviacao: 'Busca Salv.' },
-    { quantidade: 10, crbm_nome: 'CRBM II', cidade_nome: 'Unidade B', natureza_nome: 'Incêndio em Edificação', natureza_abreviacao: 'Inc. Edif.' },
+  { quantidade: 5, crbm_nome: 'CRBM I', cidade_nome: 'Unidade A', natureza_nome: 'Incêndio em Vegetação', natureza_abreviacao: 'Inc. Veg.' },
+  { quantidade: 2, crbm_nome: 'CRBM I', cidade_nome: 'Unidade A', natureza_nome: 'Busca e Salvamento', natureza_abreviacao: 'Busca Salv.' },
+  { quantidade: 10, crbm_nome: 'CRBM II', cidade_nome: 'Unidade B', natureza_nome: 'Incêndio em Edificação', natureza_abreviacao: 'Inc. Edif.' },
 ];
 
-const mockOnEdit = jest.fn();
+const mockOnEdit = vi.fn();
 
 // --- Helper ---
 
@@ -54,21 +55,21 @@ const renderComponent = (props: Partial<LancamentoTabelaProps> = {}) => {
 
 describe('LancamentoTabela', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('deve renderizar os cabeçalhos e os dados corretamente', () => {
     renderComponent();
-    
+
     expect(screen.getByRole('columnheader', { name: /Inc. Veg./i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /Quartel \/ Cidade/i })).toBeInTheDocument();
 
     const linhaUnidadeA = screen.getByRole('row', { name: /Unidade A/i });
     expect(within(linhaUnidadeA).getByText('5')).toBeInTheDocument();
     expect(within(linhaUnidadeA).getByText('2')).toBeInTheDocument();
-    
+
     const linhaUnidadeB = screen.getByRole('row', { name: /Unidade B/i });
-    
+
     const celulasUnidadeB = within(linhaUnidadeB).getAllByRole('cell');
     // Índices: 0=CRBM, 1=Cidade, 2=Inc.Veg, 3=Inc.Edif, 4=Busca Salv., 5=TOTAL, 6=AÇÕES
     expect(celulasUnidadeB[3]).toHaveTextContent('10');
@@ -95,7 +96,7 @@ describe('LancamentoTabela', () => {
 
   it('deve exibir um estado de carregamento quando loading for true', () => {
     renderComponent({ loading: true });
-    
+
     const loadingIndicator = screen.queryByTestId('skeleton-table');
     expect(loadingIndicator).toBeInTheDocument();
   });

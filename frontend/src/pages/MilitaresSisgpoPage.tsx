@@ -51,6 +51,7 @@ const MilitaresSisgpoPage = () => {
         page: String(currentPage),
         limit: String(PAGE_SIZE),
         ...activeFilters,
+        '_': Date.now(),
       });
       setMilitares(response.data ?? []);
       setPagination(
@@ -260,9 +261,8 @@ const MilitaresSisgpoPage = () => {
                         <td className="px-4 py-3 text-sm text-text">{militar.telefone || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm">
                           <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
-                            }`}
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                              }`}
                           >
                             {militar.ativo ? 'Ativo' : 'Inativo'}
                           </span>
@@ -315,9 +315,8 @@ const MilitaresSisgpoPage = () => {
                         )}
                       </div>
                       <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
-                        }`}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${militar.ativo ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                          }`}
                       >
                         {militar.ativo ? 'Ativo' : 'Inativo'}
                       </span>
@@ -417,7 +416,7 @@ const MilitaresSisgpoPage = () => {
 
       <ConfirmationModal
         isOpen={Boolean(deleteId)}
-        onClose={() => setDeleteId(null)}
+        onCancel={() => setDeleteId(null)}
         onConfirm={handleDelete}
         isLoading={isDeleting}
         title="Excluir militar"
