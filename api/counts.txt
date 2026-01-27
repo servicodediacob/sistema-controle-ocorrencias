@@ -1,0 +1,3 @@
+OBMs: 57
+Militares: 1000
+Viaturas: 1

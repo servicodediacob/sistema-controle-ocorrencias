@@ -10,6 +10,8 @@ import { getMilitaresSisgpo, getMilitarSisgpoPorId } from '@/controllers/militar
 import { getViaturasSisgpo, getViaturaSisgpoPorId } from '@/controllers/viaturasController';
 import { proteger } from '@/middleware/authMiddleware';
 
+import { getObmsSisgpo } from '@/controllers/obmController';
+
 const router = Router();
 
 // Garante que requisições JSON/urlencoded cheguem ao proxy com o body preenchido.
@@ -25,6 +27,9 @@ router.get('/militares/:id', proteger, getMilitarSisgpoPorId);
 // Viaturas (do Banco Replicado)
 router.get('/viaturas', proteger, getViaturasSisgpo);
 router.get('/viaturas/:id', proteger, getViaturaSisgpoPorId);
+
+// OBMs (do Banco Replicado)
+router.get('/obms', proteger, getObmsSisgpo);
 
 router.get('/plantao/sso-token', proteger, issueSisgpoPlantaoToken);
 router.get('/settings', proteger, getSisgpoSettings);

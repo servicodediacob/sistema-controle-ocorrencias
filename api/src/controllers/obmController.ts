@@ -55,8 +55,21 @@ export const getObmsPendentesPorIntervalo = async (req: RequestWithUser, res: Re
       crbm_nome: obm.crbm.nome,
     })));
 
+
   } catch (error) {
     logger.error({ err: error, dataInicio, dataFim }, 'Erro ao buscar OBMs pendentes por data.');
     res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+export const getObmsSisgpo = async (req: RequestWithUser, res: Response): Promise<void> => {
+  try {
+    const obms = await prisma.obmSisgpo.findMany({
+      orderBy: { nome: 'asc' },
+    });
+    res.status(200).json({ data: obms });
+  } catch (error) {
+    logger.error(error, 'Erro ao buscar OBMs do SISGPO (Replicado).');
+    res.status(500).json({ message: 'Erro ao buscar OBMs.' });
   }
 };

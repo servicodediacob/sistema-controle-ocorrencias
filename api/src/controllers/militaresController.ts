@@ -33,6 +33,8 @@ export const getMilitaresSisgpo = async (req: Request, res: Response) => {
         const limit = Number(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
+        logger.info({ query: req.query, where }, 'Buscando militares SISGPO');
+
         const [militares, total] = await Promise.all([
             prisma.militarSisgpo.findMany({
                 where,
