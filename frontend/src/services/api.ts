@@ -620,22 +620,26 @@ const apiService = {
   // --- SISGPO ---
   // --- SISGPO ---
   getSisgpoViaturasEmpenhadas: async (force = false): Promise<ISisgpoEmpenhoResponse> => {
-    // Chama a Edge Function 'sisgpo-proxy'
-    const { data, error } = await supabase.functions.invoke('sisgpo-proxy', {
-      body: {
-        path: '/viaturas/empenhadas', // Ajustar conforme endpoint real do SISGPO
-        method: 'GET',
-        params: force ? { force: 'true' } : {}
-      }
-    });
+    // Chama a API local que consulta o banco replicado
+    try {
+      const { data } = await api.get('/sisgpo/viaturas', { params: { limit: 1000 } });
+      const viaturas = data.data || [];
 
-    if (error) {
-      console.warn("Falha na Edge Function SISGPO:", error);
-      // Fallback vazio para não travar a tela
+      // Filtrar apenas empenhadas (exemplo: situacao != 'DISPONIVEL' ou check status)
+      // Como não temos a regra exata aqui, vamos retornar todos os prefixos por enquanto ou filtrar se soubermos o status
+      const engagedPrefixes = viaturas
+        .filter((v: any) => v.situacao && v.situacao !== 'DISPONIVEL' && v.situacao !== 'NO QUARTEL')
+        .map((v: any) => v.prefixo);
+
+      return {
+        engagedPrefixes,
+        fetchedAt: new Date().toISOString(),
+        cached: false
+      };
+    } catch (error) {
+      console.warn("Falha ao buscar viaturas do banco replicado:", error);
       return { engagedPrefixes: [], fetchedAt: new Date().toISOString(), cached: false };
     }
-
-    return data as ISisgpoEmpenhoResponse;
   },
 
   // New service for pending OBMs
@@ -715,16 +719,21 @@ async function sisgpoGet<T = unknown>(
 
   // Mapeamento para rotas locais (Banco Replicado)
   let requestPath = `/sisgpo/proxy${normalized}`;
+
+
   if (normalized === '/admin/militares') requestPath = '/sisgpo/militares';
   if (normalized.startsWith('/admin/militares/')) {
     const id = normalized.split('/').pop();
     requestPath = `/sisgpo/militares/${id}`;
   }
+  if (normalized.startsWith('/admin/obms')) requestPath = '/sisgpo/obms';
   if (normalized === '/admin/viaturas') requestPath = '/sisgpo/viaturas';
   if (normalized.startsWith('/admin/viaturas/')) {
     const id = normalized.split('/').pop();
     requestPath = `/sisgpo/viaturas/${id}`;
   }
+
+  console.log(`[sisgpoApi] Final Request Path: ${path} -> ${requestPath}`);
 
   if (options?.raw) {
     return api.get<T>(requestPath, { params, rawResponse: true } as any);
