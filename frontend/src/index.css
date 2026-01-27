@@ -28,17 +28,37 @@
     min-height: 100vh;
   }
 
-  /* Escala global de 80% via font-size para desktop (≥768px), mantém preenchimento da tela */
+  /* Escala global de 90% via font-size para desktop (≥768px), mantém preenchimento da tela */
   @media (min-width: 768px) {
     html {
-      font-size: 12.8px;
-      /* 16px * 0.8 = 12.8px */
+      font-size: 14.4px;
+      /* 16px * 0.9 = 14.4px */
     }
 
     /* Ajusta elementos para preencher melhor a tela */
     body {
       font-size: 1rem;
-      /* Agora 1rem = 12.8px em vez de 16px */
+      /* Agora 1rem = 14.4px em vez de 16px */
+    }
+  }
+
+  /* Escala de 80% para páginas de login em mobile */
+  @media (max-width: 767px) {
+    .login-mobile-scale {
+      transform: scale(0.8);
+      transform-origin: center center;
+    }
+  }
+
+  /* Fonte de 16px para tabelas do dashboard em desktop */
+  @media (min-width: 768px) {
+    .dashboard-table-text {
+      font-size: 16px !important;
+    }
+
+    .dashboard-table-text th,
+    .dashboard-table-text td {
+      font-size: 16px !important;
     }
   }
 

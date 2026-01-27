@@ -68,7 +68,7 @@ function DataTable<T>({ title, data, columns, loading }: DataTableProps<T>) {
           </div>
         ) : data && data.length > 0 ? (
           <div className="overflow-y-auto max-h-80 custom-scrollbar pr-2">
-            <table className="w-full border-collapse text-left">
+            <table className="w-full border-collapse text-left dashboard-table-text">
               <thead className="sticky top-0 bg-black/80 backdrop-blur-sm z-10">
                 <tr>
                   {columns.map((col) => (

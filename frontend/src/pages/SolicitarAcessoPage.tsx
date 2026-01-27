@@ -197,7 +197,7 @@ function SolicitarAcessoPage(): ReactElement {
       </div>
 
       {/* The Card - Centered on Screen */}
-      <div className={`relative z-10 w-full max-w-[500px] p-6 transition-all duration-700 ease-out ${!readyToShowForm ? 'scale-95 opacity-0 translate-y-8' : 'scale-100 opacity-100 translate-y-0'}`}>
+      <div className={`relative z-10 w-full max-w-[500px] p-6 transition-all duration-700 ease-out login-mobile-scale ${!readyToShowForm ? 'scale-95 opacity-0 translate-y-8' : 'scale-100 opacity-100 translate-y-0'}`}>
 
         {/* The Metallic Bezel */}
         <div
