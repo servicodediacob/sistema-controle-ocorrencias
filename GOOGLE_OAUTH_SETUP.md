@@ -62,12 +62,13 @@ BEGIN
   -- Verifica se o usuário já existe na tabela usuarios
   IF NOT EXISTS (SELECT 1 FROM public.usuarios WHERE email = NEW.email) THEN
     -- Insere o novo usuário
-    INSERT INTO public.usuarios (email, nome, perfil, ativo)
+    INSERT INTO public.usuarios (email, nome, perfil, senha_hash, criado_em)
     VALUES (
       NEW.email,
       COALESCE(NEW.raw_user_meta_data->>'nome', NEW.raw_user_meta_data->>'name', 'Usuário'),
       'user', -- perfil padrão
-      false   -- usuário inativo até aprovação de admin
+      'GOOGLE_AUTH', -- placeholder para login OAuth
+      NOW()
     );
   END IF;
   RETURN NEW;
@@ -80,6 +81,8 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_oauth_user();
 ```
+
+Nota: esse trigger cria o usuario automaticamente. Se quiser aprovacao manual, nao use este trigger; use o fluxo de solicitacao de acesso.
 
 #### Opção B: Criar manualmente via script
 

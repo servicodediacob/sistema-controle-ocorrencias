@@ -1,5 +1,6 @@
 // api/src/lib/prisma.ts
 
+import '../config/envLoader';
 import { PrismaClient } from '@prisma/client';
 
 declare global {

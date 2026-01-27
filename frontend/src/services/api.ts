@@ -713,12 +713,25 @@ async function sisgpoGet<T = unknown>(
 ): Promise<T | AxiosResponse<T>> {
   const normalized = normalizeSisgpoPath(path);
 
+  // Mapeamento para rotas locais (Banco Replicado)
+  let requestPath = `/sisgpo/proxy${normalized}`;
+  if (normalized === '/admin/militares') requestPath = '/sisgpo/militares';
+  if (normalized.startsWith('/admin/militares/')) {
+    const id = normalized.split('/').pop();
+    requestPath = `/sisgpo/militares/${id}`;
+  }
+  if (normalized === '/admin/viaturas') requestPath = '/sisgpo/viaturas';
+  if (normalized.startsWith('/admin/viaturas/')) {
+    const id = normalized.split('/').pop();
+    requestPath = `/sisgpo/viaturas/${id}`;
+  }
+
   if (options?.raw) {
-    return api.get<T>(`/sisgpo/proxy${normalized}`, { params, rawResponse: true } as any);
+    return api.get<T>(requestPath, { params, rawResponse: true } as any);
   }
 
   try {
-    const { data } = await api.get<T>(`/sisgpo/proxy${normalized}`, { params });
+    const { data } = await api.get<T>(requestPath, { params });
     return data;
   } catch (error) {
     console.warn(`[sisgpoGet] Falha na requisição real (${path}). Retornando dados MOCKADOS para demonstração.`);

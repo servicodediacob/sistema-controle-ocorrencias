@@ -11,7 +11,7 @@ module.exports = {
   ],
 
   setupFilesAfterEnv: [
-    '<rootDir>/src/tests/setup.ts'
+    '<rootDir>/src/tests/integration-setup.ts'
   ],
 
   transform: {

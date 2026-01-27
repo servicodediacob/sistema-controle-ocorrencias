@@ -11,6 +11,7 @@
     "dev:3002": "cross-env PORT=3002 nodemon",
     "create:admin": "ts-node -r tsconfig-paths/register scripts/create-admin.ts",
     "test": "jest",
+    "test:unit": "jest -c jest.unit.config.js",
     "lint": "eslint . --ext .ts"
   },
   "prisma": {
@@ -47,6 +48,7 @@
     "eslint": "^9.39.0",
     "globals": "^16.5.0",
     "jest": "^29.x.x",
+    "jest-mock-extended": "^4.0.0",
     "nodemon": "^3.x.x",
     "pino-pretty": "^13.1.2",
     "prisma": "^5.x.x",

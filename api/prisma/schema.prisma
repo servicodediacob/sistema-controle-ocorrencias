@@ -13,6 +13,7 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
+  output   = "../node_modules/@prisma/client"
 }
 
 // --- ENUMS ---
@@ -131,6 +132,7 @@ model OcorrenciaDetalhada {
   destaque OcorrenciaDestaque?
 
   @@map("ocorrencias_detalhadas")
+  @@index([data_ocorrencia])
 }
 
 model OcorrenciaDestaque {
@@ -202,6 +204,8 @@ model AuditoriaLog {
   usuario Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
 
   @@map("auditoria_logs")
+  @@index([criado_em])
+  @@index([usuario_id])
 }
 
 model ChatMessage {
@@ -217,4 +221,49 @@ model ChatMessage {
   recipient   Usuario     @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
+  @@index([senderId, recipientId])
+  @@index([createdAt])
+}
+
+model ObmSisgpo {
+  id          Int       @id
+  nome        String    @db.VarChar(100)
+  abreviatura String    @db.VarChar(20)
+  cidade      String?   @db.VarChar(50)
+  telefone    String?   @db.VarChar(20)
+  crbm        String?   @db.VarChar(10)
+  created_at  DateTime? @default(now()) @db.Timestamptz()
+  updated_at  DateTime? @default(now()) @db.Timestamptz()
+
+  @@map("OBMS-SISGPO")
+}
+
+model MilitarSisgpo {
+  id              Int       @id
+  matricula       String    @unique @db.VarChar(20)
+  nome_completo   String    @db.VarChar(255)
+  nome_guerra     String?   @db.VarChar(100)
+  posto_graduacao String?   @db.VarChar(50)
+  tipo            String?   @default("Militar") @db.VarChar(20)
+  ativo           Boolean   @default(true)
+  obm_nome        String?   @db.VarChar(100)
+  telefone        String?   @db.VarChar(20)
+  created_at      DateTime? @default(now()) @db.Timestamptz()
+  updated_at      DateTime? @default(now()) @db.Timestamptz()
+
+  @@map("MILITARES-SISGPO")
+}
+
+model ViaturaSisgpo {
+  id         Int       @id
+  prefixo    String    @unique @db.VarChar(20)
+  tipo       String?   @db.VarChar(50)
+  ativa      Boolean   @default(true)
+  cidade     String?   @db.VarChar(50)
+  obm        String?   @db.VarChar(100)
+  telefone   String?   @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamptz()
+  updated_at DateTime? @default(now()) @db.Timestamptz()
+
+  @@map("VIATURAS-SISGPO")
 }

@@ -1,4 +1,4 @@
-﻿// api/src/tests/setup.ts
+﻿// api/src/tests/integration-setup.ts
 
 process.env.NODE_ENV = 'test';
 process.env.PORT = '0';
